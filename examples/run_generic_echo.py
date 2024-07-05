@@ -119,6 +119,7 @@ data = generic(
     nPoints=nPoints,
     time_per_segment_ms=config_dict["acq_time_ms"],
     SW_kHz=config_dict["SW_kHz"],
+    amplitude=config_dict["amplitude"],
     ret_data=None,
 )
 # }}}

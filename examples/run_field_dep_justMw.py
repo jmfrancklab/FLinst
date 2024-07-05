@@ -109,6 +109,7 @@ with power_control() as p:
             repetition_us = config_dict["repetition_us"],
             tau_us = config_dict["tau_us"],
             SW_kHz = config_dict["SW_kHz"],
+            amplitude = config_dict["amplitude"],
             indirect_fields = ("Field", "carrierFreq"),
             ret_data = None,
         )
@@ -136,6 +137,7 @@ with power_control() as p:
                 repetition_us=config_dict["repetition_us"],
                 tau_us=config_dict["tau_us"],
                 SW_kHz=config_dict["SW_kHz"],
+                amplitude=["amplitude"],
                 ret_data=sweep_data,
             )
 sweep_data.set_prop("acq_params", config_dict.asdict())
@@ -191,7 +193,7 @@ if os.path.exists(f"{filename_out}"):
     print("this file already exists so we will add a node to it!")
     with h5py.File(
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
-    ) as fp:
+    ) as fpu:
         if nodename in fp.keys():
             print("this nodename already exists, so I will call it temp_field_sweep")
             sweep_data.name("temp_field_sweep")
