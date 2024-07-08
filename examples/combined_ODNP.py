@@ -9,10 +9,12 @@ This needs to be run in sync with the power control server. To do so:
 """
 import numpy as np
 from numpy import r_
-from pyspecdata import *
+#from pyspecdata import *
 from pyspecdata.file_saving.hdf_save_dict_to_group import hdf_save_dict_to_group
 from pyspecdata import strm
-import os, sys, time
+import os
+import sys
+import time
 import h5py
 import SpinCore_pp
 from SpinCore_pp.power_helper import gen_powerlist, Ep_spacing_from_phalf
@@ -165,6 +167,7 @@ except:
         filename = "temp_ctrl.h5"
         DNP_data.hdf5_write(filename, directory=target_directory)
         final_log.append("change the name accordingly once this is done running!")
+    raise    
 # }}}
 logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 logger.debug(strm("Name of saved data", control_thermal.name()))
@@ -331,6 +334,7 @@ with power_control() as p:
             final_log.append(
                 "if I got this far, that probably worked -- be sure to move/rename temp_ODNP.h5 to the correct name!!"
             )
+        raise    
     logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     logger.debug(strm("Name of saved data", DNP_data.name()))
     # }}}
