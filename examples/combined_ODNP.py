@@ -9,12 +9,12 @@ This needs to be run in sync with the power control server. To do so:
 """
 import numpy as np
 from numpy import r_
+from pyspecdata.file_saving.hdf_save_dict_to_group import (
+    hdf_save_dict_to_group,
+)
 import pyspecdata as psd
-from pyspecdata.file_saving.hdf_save_dict_to_group import hdf_save_dict_to_group
-from pyspecdata import strm, DNP_data
-import os
-import sys
-import time
+from pyspecdata import strm
+import os, sys, time
 import h5py
 import SpinCore_pp
 from SpinCore_pp.power_helper import gen_powerlist, Ep_spacing_from_phalf
@@ -57,7 +57,9 @@ vd_kwargs = {
     if j in config_dict.keys()
 }
 vd_list_us = (
-    SpinCore_pp.vdlist_from_relaxivities(config_dict["concentration"], **vd_kwargs)
+    SpinCore_pp.vdlist_from_relaxivities(
+        config_dict["concentration"], **vd_kwargs
+    )
     * 1e6
 )  # convert to microseconds
 FIR_rep = (
@@ -118,7 +120,8 @@ assert total_pts < 2**14, (
 # {{{ check for file
 if os.path.exists(filename):
     raise ValueError(
-        "the file %s already exists, so I'm not going to let you proceed!" % filename
+        "the file %s already exists, so I'm not going to let you proceed!"
+        % filename
     )
 input(
     "B12 needs to be unplugged and turned off for the thermal! Don't have the power server running just yet"
@@ -166,8 +169,10 @@ except Exception:
         target_directory = os.path.getcwd()
         filename = "temp_ctrl.h5"
         DNP_data.hdf5_write(filename, directory=target_directory)
-        final_log.append("change the name accordingly once this is done running!")
-    raise    
+        final_log.append(
+            "change the name accordingly once this is done running!"
+        )
+    raise
 # }}}
 logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 logger.debug(strm("Name of saved data", control_thermal.name()))
@@ -201,7 +206,9 @@ for vd_idx, vd in enumerate(vd_list_us):
 vd_data.rename("indirect", "vd")
 vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
 if phase_cycling:
-    vd_data.chunk("t", ["ph2", "ph1", "t2"], [len(IR_ph1_cyc), len(IR_ph2_cyc), -1])
+    vd_data.chunk(
+        "t", ["ph2", "ph1", "t2"], [len(IR_ph1_cyc), len(IR_ph2_cyc), -1]
+    )
     vd_data.setaxis("ph1", IR_ph1_cyc / 4)
     vd_data.setaxis("ph2", IR_ph2_cyc / 4)
 vd_data.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
@@ -212,9 +219,13 @@ vd_data.set_prop("acq_params", config_dict.asdict())
 vd_data.set_prop("postproc_type", IR_postproc)
 nodename = vd_data.name()
 # {{{ again, implement a file fallback
-with h5py.File(os.path.normpath(os.path.join(target_directory, f"{filename}"))) as fp:
+with h5py.File(
+    os.path.normpath(os.path.join(target_directory, f"{filename}"))
+) as fp:
     if nodename in fp.keys():
-        final_log.append("this nodename already exists, so I will call it temp")
+        final_log.append(
+            "this nodename already exists, so I will call it temp"
+        )
         nodename = "temp_noPower"
         final_log.append(
             f"I had problems writing to the correct file {filename} so I'm going to try to save this node as temp_noPower"
@@ -272,12 +283,19 @@ with power_control() as p:
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
-            "SETTING THIS POWER", this_dB, "(", dB_settings[j - 1], powers[j], "W)"
+            "SETTING THIS POWER",
+            this_dB,
+            "(",
+            dB_settings[j - 1],
+            powers[j],
+            "W)",
         )
         if j == 0:
             retval = p.dip_lock(
-                config_dict["uw_dip_center_GHz"] - config_dict["uw_dip_width_GHz"] / 2,
-                config_dict["uw_dip_center_GHz"] + config_dict["uw_dip_width_GHz"] / 2,
+                config_dict["uw_dip_center_GHz"]
+                - config_dict["uw_dip_width_GHz"] / 2,
+                config_dict["uw_dip_center_GHz"]
+                + config_dict["uw_dip_width_GHz"] / 2,
             )
         p.set_power(this_dB)
         for k in range(10):
@@ -328,13 +346,14 @@ with power_control() as p:
         target_directory = os.path.getcwd()
         filename = "temp_ctrl.h5"
         if os.path.exists("temp_ODNP.h5"):
-            final_log.append("there is a temp_ODNP.h5 already! -- I'm removing it")
+            final_log.append(
+                "there is a temp_ODNP.h5 already! -- I'm removing it"
+            )
             os.remove("temp_ODNP.h5")
             DNP_data.hdf5_write(filename, directory=target_directory)
             final_log.append(
                 "if I got this far, that probably worked -- be sure to move/rename temp_ODNP.h5 to the correct name!!"
             )
-        raise    
     logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     logger.debug(strm("Name of saved data", DNP_data.name()))
     # }}}
@@ -394,7 +413,9 @@ with power_control() as p:
         vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
         if phase_cycling:
             vd_data.chunk(
-                "t", ["ph2", "ph1", "t2"], [len(IR_ph2_cyc), len(IR_ph1_cyc), -1]
+                "t",
+                ["ph2", "ph1", "t2"],
+                [len(IR_ph2_cyc), len(IR_ph1_cyc), -1],
             )
             vd_data.setaxis("ph1", IR_ph1_cyc / 4)
             vd_data.setaxis("ph2", IR_ph2_cyc / 4)
@@ -420,7 +441,9 @@ with power_control() as p:
     this_log = p.stop_log()
 # }}}
 config_dict.write()
-with h5py.File(os.path.normpath(os.path.join(target_directory, filename)), "a") as f:
+with h5py.File(
+    os.path.normpath(os.path.join(target_directory, filename)), "a"
+) as f:
     log_grp = f.create_group("log")
     hdf_save_dict_to_group(log_grp, this_log.__getstate__())
 print("*" * 30 + "\n" + "\n".join(final_log))

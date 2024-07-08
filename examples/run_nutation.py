@@ -25,7 +25,9 @@ config_dict = SpinCore_pp.configuration("active.ini")
     nPoints,
     config_dict["SW_kHz"],
     config_dict["acq_time_ms"],
-) = get_integer_sampling_intervals(config_dict["SW_kHz"], config_dict["acq_time_ms"])
+) = get_integer_sampling_intervals(
+    config_dict["SW_kHz"], config_dict["acq_time_ms"]
+)
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "nutation"

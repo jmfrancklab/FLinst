@@ -9,11 +9,12 @@ the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print "I am listening..."
 """
 import pyspecdata as psd
-import os
+import os, time, logging
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
 import numpy as np
+from numpy import r_
 from Instruments import power_control
 from Instruments.XEPR_eth import xepr
 import h5py
@@ -35,9 +36,10 @@ right = (
 right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
-field_axis = np.r_[left:right:1.0]
-psd.logger.info("Your field axis is:", field_axis)
-myinput = input("Does this look okay?")
+field_axis = r_[left:right:1.0]
+myinput = input(
+    strm("Your field axis is:", field_axis, "\nDoes this look okay?")
+)
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
@@ -46,19 +48,21 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "field"
 config_dict["date"] = date
 config_dict["field_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
 if phase_cycling:
-    ph1_cyc = np.r_[0, 1, 2, 3]
+    ph1_cyc = r_[0, 1, 2, 3]
     nPhaseSteps = 4
 if not phase_cycling:
     ph1_cyc = 0.0
     nPhaseSteps = 1
 # }}}
 # {{{ Parameters for Bridge12
-powers = np.r_[config_dict["max_power"]]
+powers = r_[config_dict["max_power"]]
 min_dBm_step = 0.5
 for x in range(len(powers)):
     dB_settings = (
@@ -85,7 +89,7 @@ with power_control() as p:
     dip_f /= 1e9
     p.set_power(dB_settings)
     for k in range(10):
-        psd.time.sleep(0.5)
+        time.sleep(0.5)
         if p.get_power_setting() >= dB_settings:
             break
     if p.get_power_setting() < dB_settings:
@@ -93,7 +97,7 @@ with power_control() as p:
     meter_powers = np.zeros_like(dB_settings)
     with xepr() as x_server:
         first_B0 = x_server.set_field(field_axis[0])
-        psd.time.sleep(3.0)
+        time.sleep(3.0)
         carrierFreq_MHz = config_dict["gamma_eff_MHz_G"] * first_B0
         sweep_data = run_spin_echo(
             nScans=config_dict["nScans"],
@@ -117,12 +121,12 @@ with power_control() as p:
         myfreqs_fields[0]["carrierFreq"] = config_dict["carrierFreq_MHz"]
         for B0_index, desired_B0 in enumerate(field_axis[1:]):
             true_B0 = x_server.set_field(desired_B0)
-            psd.logging.info("My field in G is %f" % true_B0)
-            psd.time.sleep(3.0)
+            logging.info("My field in G is %f" % true_B0)
+            time.sleep(3.0)
             new_carrierFreq_MHz = config_dict["gamma_eff_MHz_G"] * true_B0
             myfreqs_fields[B0_index + 1]["Field"] = true_B0
             myfreqs_fields[B0_index + 1]["carrierFreq"] = new_carrierFreq_MHz
-            psd.logging.info("My frequency in MHz is", new_carrierFreq_MHz)
+            logging.info("My frequency in MHz is", new_carrierFreq_MHz)
             run_spin_echo(
                 nScans=config_dict["nScans"],
                 indirect_idx=B0_index + 1,
@@ -144,9 +148,9 @@ sweep_data.set_prop("acq_params", config_dict.asdict())
 # {{{chunk and save data
 if phase_cycling:
     sweep_data.chunk("t", ["ph1", "t2"], [4, -1])
-    sweep_data.setaxis("ph1", np.r_[0.0, 1.0, 2.0, 3.0] / 4)
+    sweep_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
     if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
+        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     sweep_data.reorder(["ph1", "indirect", "t2"])
     sweep_data.squeeze()
     sweep_data.set_units("t2", "s")
@@ -168,7 +172,7 @@ if phase_cycling:
     )
 else:
     if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
+        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     sweep_data.rename("t", "t2")
     fl.next("Raw - time")
     fl.image(
@@ -196,7 +200,9 @@ if os.path.exists(f"{filename_out}"):
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
     ) as fp:
         if nodename in fp.keys():
-            print("this nodename already exists, so I will call it temp_field_sweep")
+            print(
+                "this nodename already exists, so I will call it temp_field_sweep"
+            )
             sweep_data.name("temp_field_sweep")
             nodename = "temp_field_sweep"
     sweep_data.hdf5_write(f"{filename_out}", directory=target_directory)
@@ -214,7 +220,6 @@ else:
             print(
                 "if I got this far, that probably worked -- be sure to move/rename temp_field_sweep.h5 to the correct name!!"
             )
-        raise
 print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 print(("Name of saved data", sweep_data.name()))
 config_dict.write()
