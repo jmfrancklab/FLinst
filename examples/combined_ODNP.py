@@ -9,9 +9,9 @@ This needs to be run in sync with the power control server. To do so:
 """
 import numpy as np
 from numpy import r_
-#from pyspecdata import *
+import pyspecdata as psd
 from pyspecdata.file_saving.hdf_save_dict_to_group import hdf_save_dict_to_group
-from pyspecdata import strm
+from pyspecdata import strm, DNP_data
 import os
 import sys
 import time
@@ -24,9 +24,9 @@ from datetime import datetime
 
 final_log = []
 
-logger = init_logging(level="debug")
-target_directory = getDATADIR(exp_type="ODNP_NMR_comp/ODNP")
-fl = figlist_var()
+logger = sys.init_logging(level="debug")
+target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/ODNP")
+fl = psd.figlist_var()
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
@@ -156,7 +156,7 @@ nodename = control_thermal.name()
 # {{{ on first write, if we can't access the directory, write to a temp file
 try:
     control_thermal.hdf5_write(filename, directory=target_directory)
-except:
+except Exception:
     final_log.append(
         f"I had problems writing to the correct file {filename}, so I'm going to try to save your file to temp_ctrl.h5 in the current directory"
     )
@@ -321,7 +321,7 @@ with power_control() as p:
     nodename = DNP_data.name()
     try:
         DNP_data.hdf5_write(filename, directory=target_directory)
-    except:
+    except Exception:
         print(
             f"I had problems writing to the correct file {filename}, so I'm going to try to save your file to temp_ODNP.h5 in the current h5 file"
         )

@@ -9,10 +9,10 @@ the field as is without adjustment follow the 'py run_generic_echo.py'
 command with 'stayput' (e.g. 'py run_generic_echo.py stayput')
 """
 
-from pylab import *
-from pyspecdata import *
-import os, sys
-from numpy import *
+import pyspecdata as psd
+import os
+import sys
+import numpy as np
 import SpinCore_pp
 from SpinCore_pp import prog_plen, get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import generic
@@ -20,7 +20,7 @@ from datetime import datetime
 from Instruments.XEPR_eth import xepr
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
-assert os.path.exists(getDATADIR(exp_type=my_exp_type))
+assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -62,11 +62,11 @@ if adjust_field:
 # {{{set phase cycling
 # NOTE: The overall phase and the 90-180 phase difference are phase cycled
 # in a nested way
-ph2 = r_[0, 1, 2, 3]
-ph_diff = r_[0, 2]
+ph2 = np.r_[0, 1, 2, 3]
+ph_diff = np.r_[0, 2]
 # the following puts ph_diff on the inside, which I would not have expected
-ph1_cyc = array([(j + k) % 4 for k in ph2 for j in ph_diff])
-ph2_cyc = array([(k + 1) % 4 for k in ph2 for j in ph_diff])
+ph1_cyc = np.array([(j + k) % 4 for k in ph2 for j in ph_diff])
+ph2_cyc = np.array([(k + 1) % 4 for k in ph2 for j in ph_diff])
 nPhaseSteps = len(ph2) * len(ph_diff)
 # }}}
 # {{{ calibrate pulse lengths
@@ -81,7 +81,7 @@ prog_p180_us = prog_plen(2 * config_dict["p90_us"])
 # echo of CPMG), we use 3.5 ms,
 # which is enough to use Hermitian symmetry, but not so
 # much that we suffer from T₂ decay.
-assert config_dict["tau_us"] > 2 * prog_p90_us / pi + config_dict["deblank_us"]
+assert config_dict["tau_us"] > 2 * prog_p90_us / np.pi + config_dict["deblank_us"]
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
@@ -97,9 +97,7 @@ data = generic(
         ("pulse_TTL", prog_p90_us, "ph_cyc", ph1_cyc),
         (
             "delay",
-            config_dict["tau_us"]
-            - 2 * prog_p90_us / pi
-            - config_dict["deblank_us"],
+            config_dict["tau_us"] - 2 * prog_p90_us / np.pi - config_dict["deblank_us"],
         ),
         # NOTE: here the tau_us is defined as
         # the evolution time from the start of
