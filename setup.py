@@ -7,8 +7,8 @@ import os
 ext_modules = []
 exec(
     compile(
-        open("Instruments/version.py", "rb").read(),
-        "Instruments/version.py",
+        open("SpinCore_pp/version.py", "rb").read(),
+        "SpinCore_pp/version.py",
         "exec",
     )
 )
