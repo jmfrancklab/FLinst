@@ -172,7 +172,7 @@ except Exception:
         final_log.append(
             "change the name accordingly once this is done running!"
         )
-    raise
+        # I removed the "raise" command here, which didn't make sense
 # }}}
 logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 logger.debug(strm("Name of saved data", control_thermal.name()))
