@@ -12,7 +12,8 @@ import os
 import sys
 import time
 import random
-long_delay = 1e-3
+import h5py
+long_delay = 0.18 # 0.1 gives 205k, we need 300k for failure, 0.18 gives failure with total log len of 16446, total size 527349
 short_delay = 1e-4
 def gen_powerlist(max_power, steps, min_dBm_step=0.5):
     "generate a list of (roughly) evenly spaced powers up to max_power"
@@ -33,9 +34,13 @@ def gen_powerlist(max_power, steps, min_dBm_step=0.5):
                     "can't request %d steps between 0 and %f W without going"
                     "below %f a step?")%(steps,max_power,min_dBm_step)
     return dB_settings
+max_power = 4
+power_steps = 25
 #{{{ params for Bridge 12/power
 dB_settings = gen_powerlist(4,25.0)
 powers =1e-3*10**(dB_settings/10.)
+nPoints = 2048
+nEchoes = 1
 #}}}
 #{{{ time of pulse prog
 DNP_data = None
@@ -44,16 +49,16 @@ def run_scans(nScans, power_idx, field_idx, DNP_data=None):
     ph1_cyc = r_[0,1,2,3]
     ph2_cyc = r_[0]
     nPhaseSteps = len(ph1_cyc)*len(ph2_cyc)
-    data_length = 2*2048*1*nPhaseSteps
+    data_length = 2*nPoints*nEchoes*nPhaseSteps
     for x in range(nScans):
-        raw_data = np.random.random(2048) + np.random.random(2048) * 1j#SpinCore_pp.getData(data_length, nPoints, nEchoes, nPhaseSteps, output_name)
+        raw_data = np.random.random(data_length) + np.random.random(data_length) * 1j
         data_array = complex128(raw_data[0::2]+1j*raw_data[1::2])
         dataPoints = int(shape(data_array)[0])
         if DNP_data is None and power_idx ==0 and field_idx == 0:
             time_axis = linspace(0.0,1*nPhaseSteps*85.3*1e-3,dataPoints)
-            DNP_data = ndshape([len(powers),len(r_[3501:3530:0.001]),1,dataPoints],['power','field','nScans','t']).alloc(dtype=complex128)
+            DNP_data = ndshape([len(powers),len(r_[3501:3530:0.1]),1,dataPoints],['power','field','nScans','t']).alloc(dtype=complex128)
             DNP_data.setaxis('power',r_[powers]).set_units('W')
-            DNP_data.setaxis('field',r_[3501:3530:0.001]).set_units('G')
+            DNP_data.setaxis('field',r_[3501:3530:0.1]).set_units('G')
             DNP_data.setaxis('t',time_axis).set_units('t','s')
             DNP_data.setaxis('nScans',r_[0:1])
             DNP_data.name("node_name")
@@ -66,8 +71,9 @@ def run_scans(nScans, power_idx, field_idx, DNP_data=None):
 #}}}
 #{{{where error occurs
 meter_powers = zeros_like(dB_settings)
-carrierFreqs_MHz = zeros_like(r_[3501:3530:0.001], dtype=float)
-fields_Set = zeros_like(r_[3501:3530:0.001],dtype=float)
+carrierFreqs_MHz = zeros_like(r_[3501:3530:0.1], dtype=float)
+# define the array of fields once, at the beginning of the file!
+fields_Set = zeros_like(r_[3501:3530:0.1],dtype=float)
 
 with power_control() as p:
     for j,this_dB in enumerate(dB_settings):
@@ -84,7 +90,7 @@ with power_control() as p:
         if True:
             # the following seems unrealistic for a field sweep -- what's
             # up with that?
-            for B0_index,desired_B0 in enumerate(r_[3501:3530:0.001]):
+            for B0_index,desired_B0 in enumerate(r_[3501:3530:1]):
                 #carrierFreq_MHz = rand()
                 carrierFreqs_MHz[B0_index] = rand()
                 fields_Set[B0_index] = rand()
@@ -96,3 +102,6 @@ with power_control() as p:
 print("EXITING...")    
 #}}}
 
+# save the log, like in the other examples (copy/paste) -- actually call it the
+# same thing, so that we can just use the example that reads + displays the
+# logfile directly
