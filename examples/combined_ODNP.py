@@ -169,6 +169,9 @@ except Exception:
         target_directory = os.path.getcwd()
         filename = "temp_ctrl.h5"
         DNP_data.hdf5_write(filename, directory=target_directory)
+        # this doesn't make any sense -- how
+        # are you trying to write the data
+        # before it has been measured??
         final_log.append(
             "change the name accordingly once this is done running!"
         )
