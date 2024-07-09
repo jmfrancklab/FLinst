@@ -1,4 +1,4 @@
-# this needs a docstring, which should make it clear why we are doing this
+# PR this needs a docstring, which should make it clear why we are doing this
 import SpinCore_pp
 import sys
 
