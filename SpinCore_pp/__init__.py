@@ -1,3 +1,20 @@
+from Instruments.environment import compile_spincore
+if compile_spincore:
+    from .SpinCore_pp import (
+        pause,
+        configureRX,
+        configureTX,
+        init_ppg,
+        stop_ppg,
+        ppg_element,
+        runBoard,
+        load,
+        getData,
+        stopBoard,
+        tune,
+        adc_offset,
+    )
+from .pulse_length_conv import prog_plen
 from .config_parser_fn import configuration
 from .calc_vdlist import vdlist_from_relaxivities, return_vdlist
 from .process_first_arg import process_args
@@ -25,3 +42,5 @@ __all__ = [
     "tune",
     "vdlist_from_relaxivities",
 ]
+if compile_spincore:
+    __all__ += ["SpinCore_pp"]

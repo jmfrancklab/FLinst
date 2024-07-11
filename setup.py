@@ -1,6 +1,7 @@
 # from setuptools import setup
 import setuptools  # I think this is needed for the following
-from setuptools import Extension, setup
+from numpy.distutils.core import Extension, setup
+from distutils.spawn import find_executable
 import os
 
 ext_modules = []
@@ -111,3 +112,5 @@ setup(
         ]
     ),
 )
+with open('Instruments/environment.py','w') as fp:
+    fp.write(f"compile_spincore = {compile_spincore}")
