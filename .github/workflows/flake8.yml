@@ -39,7 +39,7 @@ jobs:
             echo "$($MYCMD)"
             CHANGED_FILES=$($MYCMD | grep '\.py$' | tr '\n' ' ')
           else
-            MYCMD="git diff --name-only origin/${{ github.event.before }} origin/${{ github.event.after }} --diff-filter=AM"
+            MYCMD="git diff --name-only ${{ github.event.before }} ${{ github.event.after }} --diff-filter=AM"
             echo "$MYCMD"
             echo "$($MYCMD)"
             CHANGED_FILES=$($MYCMD | grep '\.py$' | tr '\n' ' ')
