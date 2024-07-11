@@ -1,133 +1,128 @@
 """
-test of logging
-===============
+test of dip locking and logging
+===============================
 
-This test of the logging mimics an ODNP field sweep experiment.
+This is roughly derived from the combined_ODNP.py example in SpinCore.
+Similar in fashion, the script generates a power list, and loops through
+each power generating fake data using the run_scans function defined
+below. At each power the "data" records the start and stop times that
+will correspond to the times and powers inside the log allowing one to
+average over each power step in a later post processing step. 
 """
-from numpy import *
-from numpy.random import rand
-from pyspecdata import *
-from Instruments import *
-import os
-import sys
-import time
-import random
-import h5py
+from numpy import r_
+import numpy as np
+from pyspecdata import ndshape, getDATADIR
+from pyspecdata.file_saving.hdf_save_dict_to_group import (
+    hdf_save_dict_to_group,
+)
+from Instruments import power_control
+import os, time, h5py
+from datetime import datetime
 
-long_delay = 0.18  # 0.1 gives 205k, we need 300k for failure, 0.18 gives failure with total log len of 16446, total size 527349
-short_delay = 1e-4
-
-
-def gen_powerlist(max_power, steps, min_dBm_step=0.5):
-    "generate a list of (roughly) evenly spaced powers up to max_power"
-    lin_steps = steps
-
-    def det_allowed(lin_steps):
-        powers = r_[0 : max_power : 1j * lin_steps][1:]
-        vectorize(powers)
-        rdB_settings = ones_like(powers)
-        for x in range(len(powers)):
-            rdB_settings[x] = (
-                round(10 * (log10(powers[x]) + 3.0) / min_dBm_step)
-                * min_dBm_step
-            )  # round to nearest min_dBm_step
-        return unique(rdB_settings)
-
-    dB_settings = det_allowed(lin_steps)
-    while len(dB_settings) < steps - 1:
-        lin_steps += 1
-        dB_settings = det_allowed(lin_steps)
-        if lin_steps >= 200:
-            raise ValueError(
-                "I think I'm in an infinite loop -- maybe you"
-                "can't request %d steps between 0 and %f W without going"
-                "below %f a step?"
-            ) % (steps, max_power, min_dBm_step)
-    return dB_settings
-
-
-max_power = 4
-power_steps = 25
-# {{{ params for Bridge 12/power
-dB_settings = gen_powerlist(4, 25.0)
-powers = 1e-3 * 10 ** (dB_settings / 10.0)
+filename = datetime.now().strftime("%y%m%d") + "_" + "test_B12_log.h5"
+target_directory = getDATADIR(exp_type="ODNP_NMR_comp/test_equipment")
+# {{{ data properties
 nPoints = 2048
-nEchoes = 1
+nScans = 1
 # }}}
-# {{{ time of pulse prog
-DNP_data = None
+# {{{ params for Bridge 12/power
+dB_settings = np.unique(np.round(np.linspace(0, 35, 5) / 0.5) * 0.5)
+powers = 1e-3 * 10 ** (dB_settings / 10.0)
+uw_dip_center_GHz = 9.818061
+uw_dip_width_GHz = 0.008
+result = input(
+    "to keep this example minimal, it doesn't read from the config file!!\nThe dip frequency is currently set to %0.6f GHz\nIs that correct???"
+    % uw_dip_center_GHz
+)
+if not result.lower().startswith("y"):
+    raise ValueError("Incorrect dip frequency")
+# }}}
+# {{{ delays used in test
+short_delay = 0.5
+long_delay = 10  # this is the delay where it holds the same power
 
 
-# {{{ pulse prog
-def run_scans(nScans, power_idx, field_idx, DNP_data=None):
-    ph1_cyc = r_[0, 1, 2, 3]
-    ph2_cyc = r_[0]
-    nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
-    data_length = 2 * nPoints * nEchoes * nPhaseSteps
-    for x in range(nScans):
-        raw_data = (
-            np.random.random(data_length) + np.random.random(data_length) * 1j
-        )
-        data_array = complex128(raw_data[0::2] + 1j * raw_data[1::2])
-        dataPoints = int(shape(data_array)[0])
-        if DNP_data is None and power_idx == 0 and field_idx == 0:
-            time_axis = linspace(
-                0.0, 1 * nPhaseSteps * 85.3 * 1e-3, dataPoints
+# }}}
+# {{{ function that generates fake data with two indirect dimensions
+def run_scans(indirect_idx, indirect_len, nScans, indirect_fields=None, ret_data=None):
+    "this is a dummy replacement to run_scans that generates random data"
+    data_length = 2 * nPoints
+    for nScans_idx in range(nScans):
+        data_array = np.random.random(2 * data_length).view(
+            np.complex128
+        )  # enough random numbers for both real and imaginary, then use view to alternate real,imag
+        if ret_data is None:
+            times_dtype = np.dtype(
+                [
+                    (indirect_fields[0], np.double),
+                    (indirect_fields[1], np.double),
+                ]  # typically, the two columns/fields give start and stop times
             )
-            DNP_data = ndshape(
-                [len(powers), len(r_[3501:3530:0.1]), 1, dataPoints],
-                ["power", "field", "nScans", "t"],
-            ).alloc(dtype=complex128)
-            DNP_data.setaxis("power", r_[powers]).set_units("W")
-            DNP_data.setaxis("field", r_[3501:3530:0.1]).set_units("G")
-            DNP_data.setaxis("t", time_axis).set_units("t", "s")
-            DNP_data.setaxis("nScans", r_[0:1])
-            DNP_data.name("node_name")
-        DNP_data["power", power_idx]["field", field_idx][
-            "nScans", x
-        ] = data_array
-        if nScans > 1:
-            DNP_data.setaxis("nScans", r_[0:1])
-        return DNP_data
+            mytimes = np.zeros(indirect_len, dtype=times_dtype)
+            direct_time_axis = r_[0 : np.shape(data_array)[0]] / (
+                3.9e3
+            )  # fake it like this is 3.9 kHz SW data
+            ret_data = ndshape(
+                [indirect_len, nScans, len(direct_time_axis)],
+                ["indirect", "nScans", "t"],
+            ).alloc(dtype=np.complex128)
+            ret_data.setaxis("indirect", mytimes)
+            ret_data.setaxis("t", direct_time_axis).set_units("t", "s")
+            ret_data.setaxis("nScans", r_[0:nScans])
+        ret_data["indirect", indirect_idx]["nScans", nScans_idx] = data_array
+    return ret_data
 
 
 # }}}
-
-# }}}
-# {{{where error occurs
-meter_powers = zeros_like(dB_settings)
-carrierFreqs_MHz = zeros_like(r_[3501:3530:0.1], dtype=float)
-# define the array of fields once, at the beginning of the file!
-fields_Set = zeros_like(r_[3501:3530:0.1], dtype=float)
-
+power_settings_dBm = np.zeros_like(dB_settings)
 with power_control() as p:
+    DNP_data = None
     for j, this_dB in enumerate(dB_settings):
         print("I'm going to pretend to run", this_dB, "dBm")
         if j == 0:
             time.sleep(short_delay)
             p.start_log()
+            time.sleep(short_delay)
         p.set_power(this_dB)
         for k in range(10):
             time.sleep(short_delay)
             if p.get_power_setting() >= this_dB:
                 break
         time.sleep(long_delay)
-        meter_powers[j] = p.get_power_setting()
-        if True:
-            # the following seems unrealistic for a field sweep -- what's
-            # up with that?
-            for B0_index, desired_B0 in enumerate(r_[3501:3530:1]):
-                # carrierFreq_MHz = rand()
-                carrierFreqs_MHz[B0_index] = rand()
-                fields_Set[B0_index] = rand()
-                time.sleep(short_delay)
-                if True:
-                    DNP_data = run_scans(1, j, B0_index, DNP_data)
-                    time.sleep(long_delay)
-    log_array, log_dict = p.stop_log()  # where error occurred originally!
-print("EXITING...")
-# }}}
-
-# save the log, like in the other examples (copy/paste) -- actually call it the
-# same thing, so that we can just use the example that reads + displays the
-# logfile directly
+        power_settings_dBm[j] = p.get_power_setting()
+        DNP_ini_time = time.time()
+        if j == 0:
+            retval = p.dip_lock(
+                uw_dip_center_GHz - uw_dip_width_GHz / 2,
+                uw_dip_center_GHz + uw_dip_width_GHz / 2,
+            )  # test the dip lock!
+        DNP_data = run_scans(
+            indirect_idx=j,
+            indirect_len=len(powers),
+            nScans=nScans,
+            indirect_fields=("start_times", "stop_times"),
+            ret_data=DNP_data,
+        )
+        DNP_done = time.time()
+        if j == 0:
+            time_axis_coords = DNP_data.getaxis("indirect")
+        time_axis_coords[j]["start_times"] = DNP_ini_time
+        time_axis_coords[j]["stop_times"] = DNP_done
+    DNP_data.name("nodename_test")
+    DNP_data.set_prop("power_settings", power_settings_dBm)
+    nodename = DNP_data.name()
+    try:
+        DNP_data.hdf5_write(filename, directory=target_directory)
+    except:
+        print(
+            "***Warning*** Writing to",
+            filename,
+            " failed, so saving to temp.h5",
+        )
+        if os.path.exists("temp.h5"):
+            os.remove("temp.h5")
+            DNP_data.hdf5_write("temp.h5")
+    this_log = p.stop_log()
+with h5py.File(os.path.normpath(os.path.join(target_directory, filename)), "a") as f:
+    log_grp = f.create_group("log")
+    hdf_save_dict_to_group(log_grp, this_log.__getstate__())

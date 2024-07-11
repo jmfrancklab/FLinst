@@ -18,7 +18,7 @@ def main():
                     cmd = cmd.strip()
                     print("I am processing",cmd)
                     if this_logobj.currently_logging:
-                        this_logobj.add(Rx = b.rxpowermv_float(),
+                        this_logobj.add(Rx = b.rxpowerdbm_float(),
                                 power = g.read_power(),
                                 cmd=cmd)
                     args = cmd.split(b' ')
@@ -138,5 +138,5 @@ def main():
                                 for j in range(len(timelist)-1)] + [timelabels[-1]]))
                         except socket.timeout as e:
                             if this_logobj.currently_logging:
-                                this_logobj.add(Rx=b.rxpowermv_float(),
+                                this_logobj.add(Rx=b.rxpowerdbm_float(),
                                         power=g.read_power())
