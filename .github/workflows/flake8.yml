@@ -21,6 +21,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8
 
+      - name: Fetch all branches
+        run: git fetch --all
+
       - name: Get changed files
         id: get_changed_files
         run: |
