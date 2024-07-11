@@ -15,16 +15,13 @@ from .XEPR_eth import xepr as xepr_from_module
 from scipy.interpolate import interp1d
 import time
 import sys, os, random
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+import PyQt5 as qt
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
 from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
 
 
@@ -47,7 +44,9 @@ class NMRWindow(QMainWindow):
     def save_plot(self):
         file_choices = "PNG (*.png)|*.png"
 
-        path, ext = QFileDialog.getSaveFileName(self, "Save file", "", file_choices)
+        path, ext = QFileDialog.getSaveFileName(
+            self, "Save file", "", file_choices
+        )
         path = path.encode("utf-8")
         if not path[-4:] == file_choices[-4:].encode("utf-8"):
             path += file_choices[-4:].encode("utf-8")
@@ -121,7 +120,9 @@ class NMRWindow(QMainWindow):
             self.myconfig["carrierFreq_MHz"],
             "since that's what's in your .ini file",
         )
-        Field = self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"]
+        Field = (
+            self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"]
+        )
         print(
             "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
             % Field
@@ -193,7 +194,12 @@ class NMRWindow(QMainWindow):
         self.echo_data.ift("t2")
         filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
-            -abs((self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6))
+            -abs(
+                (
+                    self.echo_data.fromaxis("t2")
+                    - self.myconfig["tau_us"] * 1e-6
+                )
+            )
             / filter_timeconst
         )
         self.echo_data.ft("t2")
@@ -205,7 +211,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set((longest_dim,))
+                all_but_longest = set(range(len(myy.data.shape))) ^ set(
+                    (longest_dim,)
+                )
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
@@ -214,7 +222,9 @@ class NMRWindow(QMainWindow):
             if len(myy.data.shape) == 1:
                 myy = myy.data
             else:
-                myy = np.squeeze(myy.data.transpose([longest_dim] + all_but_longest))
+                myy = np.squeeze(
+                    myy.data.transpose([longest_dim] + all_but_longest)
+                )
             self.axes.plot(myx, myy, **kwargs)
             self.axes.set_xlabel(myxlabel)
 
@@ -230,7 +240,9 @@ class NMRWindow(QMainWindow):
         signal = abs(self.echo_data["ph1", 1])
         signal -= noise
         for j in self.echo_data.getaxis("ph1"):
-            pyspec_plot(abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5)
+            pyspec_plot(
+                abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5
+            )
             if many_scans and j == 1:
                 for k in range(psp.ndshape(multiscan_copy)["nScans"]):
                     pyspec_plot(
@@ -241,18 +253,25 @@ class NMRWindow(QMainWindow):
         centerfrq = signal.C.argmax("t2").item()
         self.axes.axvline(x=centerfrq, ls=":", color="r", alpha=0.25)
         pyspec_plot(noise, color="k", label=f"Noise std", alpha=0.75)
-        pyspec_plot(signal, color="r", label=f"abs of signal - noise", alpha=0.75)
+        pyspec_plot(
+            signal, color="r", label=f"abs of signal - noise", alpha=0.75
+        )
         self.axes.legend()
         # }}}
         noise = noise["t2":centerfrq]
         signal = signal["t2":centerfrq]
         if signal > 3 * noise:
-            Field = self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"]
+            Field = (
+                self.myconfig["carrierFreq_MHz"]
+                / self.myconfig["gamma_eff_MHz_G"]
+            )
             self.myconfig["gamma_eff_MHz_G"] -= centerfrq * 1e-6 / Field
             self.myconfig.write()
         else:
             print(
-                "*" * 5 + "warning! SNR looks bad! I'm not adjusting γ!!!" + "*" * 5
+                "*" * 5
+                + "warning! SNR looks bad! I'm not adjusting γ!!!"
+                + "*" * 5
             )  # this is not yet tested!
         self.canvas.draw()
         return
@@ -264,7 +283,7 @@ class NMRWindow(QMainWindow):
         #
         self.dpi = 100
         self.fig = Figure((5.0, 4.0), dpi=self.dpi)
-        self.canvas = FigureCanvas(self.fig)
+        self.canvas = mplqt5.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self.main_frame)
         # {{{ need both of these to get background of figure transparent,
         #     rather than white
@@ -280,7 +299,9 @@ class NMRWindow(QMainWindow):
         # Bind the 'pick' event
         self.canvas.mpl_connect("pick_event", self.on_pick)
         # Create the navigation toolbar, tied to the canvas
-        self.mpl_toolbar = NavigationToolbar(self.canvas, self.main_frame)
+        self.mpl_toolbar = mplqt5.NavigationToolbar2QT(
+            self.canvas, self.main_frame
+        )
         # {{{ bottom left with SW, apo, and acquire
         #     button
         self.bottomleft_vbox = QVBoxLayout()
@@ -319,7 +340,10 @@ class NMRWindow(QMainWindow):
         self.bottom_right_vbox.addWidget(self.adc_offset_button)
         self.slider_min = QSlider(Qt.Horizontal)
         self.slider_max = QSlider(Qt.Horizontal)
-        for ini_val, w in [(9819000, self.slider_min), (9825000, self.slider_max)]:
+        for ini_val, w in [
+            (9819000, self.slider_min),
+            (9825000, self.slider_max),
+        ]:
             self.on_textchange()
             w.setValue(ini_val)
             w.setTracking(True)
@@ -333,7 +357,9 @@ class NMRWindow(QMainWindow):
         bottom_hbox.addLayout(self.boxes_vbox)
         bottom_hbox.addWidget(slider_label)
         bottom_hbox.setAlignment(slider_label, Qt.AlignVCenter)
-        bottom_hbox.addLayout(self.bottom_right_vbox)  # requires a different command!
+        bottom_hbox.addLayout(
+            self.bottom_right_vbox
+        )  # requires a different command!
         # }}}
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.canvas)
@@ -355,10 +381,16 @@ class NMRWindow(QMainWindow):
         self.file_menu = self.menuBar().addMenu("&File")
 
         load_file_action = self.create_action(
-            "&Save plot", shortcut="Ctrl+S", slot=self.save_plot, tip="Save the plot"
+            "&Save plot",
+            shortcut="Ctrl+S",
+            slot=self.save_plot,
+            tip="Save the plot",
         )
         quit_action = self.create_action(
-            "&Quit", slot=self.close, shortcut="Ctrl+Q", tip="Close the application"
+            "&Quit",
+            slot=self.close,
+            shortcut="Ctrl+Q",
+            tip="Close the application",
         )
 
         self.add_actions(self.file_menu, (load_file_action, None, quit_action))
@@ -378,7 +410,13 @@ class NMRWindow(QMainWindow):
                 target.addAction(action)
 
     def create_action(
-        self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False
+        self,
+        text,
+        slot=None,
+        shortcut=None,
+        icon=None,
+        tip=None,
+        checkable=False,
     ):
         action = QAction(text, self)
         if icon is not None:
