@@ -29,6 +29,8 @@ jobs:
           else
             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} --diff-filter=AM | grep '\.py$' | tr '\n' ' ')
           fi
+          echo "Here are the changed files:"
+          echo "$CHANGED_FILES"
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
 
       - name: Run Flake8 on changed files
