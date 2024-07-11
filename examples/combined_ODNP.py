@@ -15,7 +15,6 @@ from pyspecdata.file_saving.hdf_save_dict_to_group import (
 import pyspecdata as psd
 from pyspecdata import strm
 import os
-import sys
 import time
 import h5py
 import SpinCore_pp
@@ -26,7 +25,7 @@ from datetime import datetime
 
 final_log = []
 
-logger = sys.init_logging(level="debug")
+logger = psd.init_logging(level="debug")
 target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/ODNP")
 fl = psd.figlist_var()
 # {{{importing acquisition parameters
