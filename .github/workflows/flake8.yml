@@ -24,18 +24,19 @@ jobs:
       - name: Fetch all branches
         run: |
           git fetch --all
-          git branch # show the branch names
+          echo "$(git branch)" # show the branch names
 
       - name: Get changed files
         id: get_changed_files
         run: |
-          MYCMD="git diff --name-only ${{ github.base_ref }}...${{ github.event.pull_request.head.ref }} --diff-filter=AM | grep '\.py$' | tr '\n' ' '" 
-          echo $MYCMD
-          echo $( "$MYCMD" )
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            CHANGED_FILES=$( "$MYCMD" )
+            MYCMD="git diff --name-only ${{ github.base_ref }}...${{ github.event.pull_request.head.ref }} --diff-filter=AM | grep '\.py$' | tr '\n' ' '" 
+            echo "$MYCMD"
+            CHANGED_FILES=$($MYCMD)
           else
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} --diff-filter=AM | grep '\.py$' | tr '\n' ' ')
+            MYCMD="git diff --name-only ${{ github.event.before }} ${{ github.event.after }} --diff-filter=AM | grep '\.py$' | tr '\n' ' '"
+            echo "$MYCMD"
+            CHANGED_FILES=$($MYCMD)
           fi
           echo "Here are the changed files:"
           echo "$CHANGED_FILES"
