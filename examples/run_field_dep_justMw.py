@@ -9,7 +9,9 @@ the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print "I am listening..."
 """
 import pyspecdata as psd
-import os, time, logging
+import os
+import time
+import logging
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
@@ -38,7 +40,7 @@ assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
 field_axis = r_[left:right:1.0]
 myinput = input(
-    strm("Your field axis is:", field_axis, "\nDoes this look okay?")
+    psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?")
 )
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")

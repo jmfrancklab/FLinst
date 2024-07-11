@@ -10,7 +10,8 @@ command with 'stayput' (e.g. 'py run_generic_echo.py stayput')
 """
 
 import pyspecdata as psd
-import os, sys
+import os
+import sys
 import numpy as np
 from numpy import r_, pi
 import SpinCore_pp
