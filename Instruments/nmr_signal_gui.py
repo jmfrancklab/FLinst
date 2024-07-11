@@ -12,15 +12,16 @@ JF updated to plot a sine wave
 from numpy import r_
 import numpy as np
 from .XEPR_eth import xepr as xepr_from_module
-from scipy.interpolate import interp1d
 import time
-import sys, os, random
-import PyQt5 as qt
+import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget  # QtWidgets is for GUI components
+from PyQt5.QtCore import Qt  # QtCore is for core non-GUI functionalities
+from PyQt5.QtGui import QIcon  # QtGui is for handling icons and images
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLineEdit, QComboBox, QPushButton, QCheckBox, QSlider, QHBoxLayout, QAction
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
 from pyspecdata import gammabar_H
 import pyspecdata as psp
-import matplotlib
 import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
 
@@ -168,6 +169,7 @@ class NMRWindow(QMainWindow):
         print("adc was ", self.myconfig["adc_offset"], end=" and ")
         counter = 0
         first = True
+        result1 = result2 = result3 = None
         while first or not (result1 == result2) and (result2 == result3):
             first = False
             result1 = SpinCore_pp.adc_offset()
@@ -252,9 +254,9 @@ class NMRWindow(QMainWindow):
                     )
         centerfrq = signal.C.argmax("t2").item()
         self.axes.axvline(x=centerfrq, ls=":", color="r", alpha=0.25)
-        pyspec_plot(noise, color="k", label=f"Noise std", alpha=0.75)
+        pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
-            signal, color="r", label=f"abs of signal - noise", alpha=0.75
+            signal, color="r", label="abs of signal - noise", alpha=0.75
         )
         self.axes.legend()
         # }}}
