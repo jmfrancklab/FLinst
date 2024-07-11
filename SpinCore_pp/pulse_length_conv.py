@@ -1,5 +1,5 @@
 from pylab import array
-from numpy import zeros, polyval
+import numpy as np
 from pyspecdata import r_, nddata
 
 
@@ -20,7 +20,7 @@ def prog_plen(desired_actual):
     """
     # {{{ list of programmed p90, actual p90 and actual 180 - used in
     # generating the calibrated fit
-    # list of the programmed pulse length, the actual p90 length 
+    # list of the programmed pulse length, the actual p90 length
     # and the actual p180 length based on the programmed p90
     datapoints = [
         (1, 2.25869, 5.75412),
@@ -51,18 +51,26 @@ def prog_plen(desired_actual):
     # }}}
     # {{{ prepare data into arrays for interpolation
     # gather programmed pulse lengths in array
-    plen_prog = r_[0, prog90, 2 * prog90] 
+    plen_prog = r_[0, prog90, 2 * prog90]
     # assume the longest pulse is about the correct length
     # and again gather into an array
-    plen_actual = r_[0, act90, act180] * 2 * prog90[-1] / act180[-1] 
+    plen_actual = r_[0, act90, act180] * 2 * prog90[-1] / act180[-1]
+
     # }}}
-    calibration_data = nddata(plen_prog, [-1], ["plen"]).setaxis("plen", plen_actual)
-    calibration_data.sort("plen")
-    # fit the programmed vs actual lengths to a polynomial
-    c = calibration_data.polyfit("plen", order=10)
-    # {{{ Make an array out of the fitting coefficients from the polyfit
-    coeffs = zeros(len(c))
-    for j in range(len(c)):
-        coeffs[j] = c[j]
-    # }}}
-    return polyval(coeffs[::-1],desired_actual)
+    def zonefit(desired_actual):
+        if desired_actual < 25:
+            mask = np.ones_like(plen_prog, dtype=bool)
+        else:
+            mask = plen_prog > 10
+        calibration_data = nddata(plen_prog[mask], [-1], ["plen"]).setaxis(
+            "plen", plen_actual[mask]
+        )
+        calibration_data.sort("plen")
+        # fit the programmed vs actual lengths to a polynomial
+        if desired_actual < 25:
+            c = calibration_data.polyfit("plen", order=10)
+        else:
+            c = calibration_data.polyfit("plen", order=1)
+        return np.polyval(c[::-1], desired_actual)
+
+    return np.vectorize(zonefit)(desired_actual)
