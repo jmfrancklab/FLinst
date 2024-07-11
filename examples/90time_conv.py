@@ -1,5 +1,5 @@
-""" Ninety pulse length conversion
-==================================
+""" Pulse length conversion
+===========================
 The programmed SpinCore pulse length does not
 match the actual output pulse length. This example
 finds what pulse length should be fed to SpinCore
