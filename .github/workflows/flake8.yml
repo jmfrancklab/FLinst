@@ -29,10 +29,11 @@ jobs:
       - name: Get changed files
         id: get_changed_files
         run: |
-          echo "git diff --name-only ${{ github.base_ref }}...${{ github.event.pull_request.head.ref }} --diff-filter=AM"
-          git diff --name-only ${{ github.base_ref }}...${{ github.event.pull_request.head.ref }} --diff-filter=AM
+          MYCMD = "git diff --name-only ${{ github.base_ref }}...${{ github.event.pull_request.head.ref }} --diff-filter=AM | grep '\.py$' | tr '\n' ' '" 
+          echo $MYCMD
+          echo $( "$MYCMD" )
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only ${{ github.base_ref }}...${{ github.event.pull_request.head.ref }} --diff-filter=AM | grep '\.py$' | tr '\n' ' ')
+            CHANGED_FILES=$( "$MYCMD" )
           else
             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} --diff-filter=AM | grep '\.py$' | tr '\n' ' ')
           fi
