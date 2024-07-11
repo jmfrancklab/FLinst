@@ -1,0 +1,61 @@
+The following commands illustrate interfacing with the Xepr through python.
+These are the commands needed to set the field, which is relevant to operation
+of the NMR spectrometer, but the routine is similar for other commands.
+
+DIRECTIONS FOR USE:
+(1) Turn on spectrometer
+(2) Enable Xepr API via Processing --> Xepr API -->  Enable Xepr API
+(3) For use of the below code (setting field values), it is easier to manually load a 
+    past experiment for a static field, create an experiment from that dataset, and then
+    hit run. Wait some time and then abort.
+    This is the only way to make the field updatable by simply setting it through the
+    parameters panel.
+(4) Once this is set up, run the bruker_server.py script and send a field value
+    using the bruker_sender.py script (the latter from the NMR computer). Verify that
+    field updates.
+
+In [1]: import time, os, sys
+
+In [2]: sys.path.append('/opt/Bruker/xepr/sharedProDeL/Standard/XeprAPI/')
+
+In [3]: import XeprAPI
+
+In [4]: Xepr = XeprAPI.Xepr()
+
+In [5]: exp = Xepr.XeprExperiment()
+
+In [6]: exp.isActive
+Out[6]: False
+
+In [7]: exp.aqGetExpName
+Out[7]: <bound method Experiment.aqGetExpName of <XeprAPImod.Experiment object at 0x54a8550>>
+
+In [8]: exp.aqGetExpName()
+Out[8]: 'static_field'
+
+In [9]: exp["SweepTime"].value = 3.00
+
+In [10]: print exp["SweepTime"].value
+3.00027
+
+In [11]: exp["SweepWidth"].value = 0.001
+
+In [12]: print exp["SweepWidth"].value
+0.0
+
+In [13]: exp["SweepWidth"].value = 0.00
+
+In [14]: exp["SweepWidth"].value = 0.000
+
+In [15]: print exp["SweepWidth"].value
+0.0
+
+In [16]: exp["CenterField"].value = 3400.00
+
+In [17]: exp.aqExpRun()
+
+In [18]: exp["CenterField"].value = 3401.00
+
+In [19]: exp["CenterField"].value = 3402.00
+
+In [20]: 
