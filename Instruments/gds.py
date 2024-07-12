@@ -86,12 +86,15 @@ class GDS_scope (SerialInstrument):
         logger.debug("I should have just opened the serial connection")
         self.CH1 = GDS_Channel_Properties(1,self)
         self.CH2 = GDS_Channel_Properties(2,self)
+        self.CH3 = GDS_Channel_Properties(3,self)
         return
     def __getitem__(self,arg):
         if arg == 0:
             return self.CH1
         if arg == 1:
             return self.CH2
+        if arg == 2:
+            return self.CH3
         else:
             raise ValueError("There is no channel "+str(arg))
 
