@@ -88,7 +88,7 @@ class TuningWindow(QMainWindow):
         # a plot with the dip centered
         #
         # dip shown on slack (https://jmfrancklab.slack.com/archives/CLMMYDD98/p1705090019740609)
-        for ini_val, w in [("9816000", self.textbox1), ("9823000", self.textbox2)]:
+        for ini_val, w in [("9703000", self.textbox1), ("9710000", self.textbox2)]:
             w.setText(ini_val)
             w.setMinimumWidth(8)
             w.editingFinished.connect(self.on_textchange)
@@ -312,7 +312,7 @@ class TuningWindow(QMainWindow):
         self.slider_min = QSlider(Qt.Horizontal)
         self.slider_max = QSlider(Qt.Horizontal)
         # original settings of MWtune
-        for ini_val, w in [(9816000, self.slider_min), (9823000, self.slider_max)]:
+        for ini_val, w in [(9703000, self.slider_min), (9710000, self.slider_max)]:
             self.on_textchange()
             w.setValue(ini_val)
             w.setTracking(True)
