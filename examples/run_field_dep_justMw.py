@@ -8,18 +8,19 @@ active.ini and the field width parameter. To run this in sync with
 the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print "I am listening..."
 """
-from pyspecdata import logger, figlist_var, getDATADIR, logging
+import pyspecdata as psd
 import os
 import time
+import logging
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
-import numpy as np
+from numpy import r_
 from Instruments import power_control
 from Instruments.XEPR_eth import xepr
 import h5py
 
-fl = figlist_var()
+fl = psd.figlist_var()
 mw_freqs = []
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
@@ -36,9 +37,10 @@ right = (
 right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
-field_axis = np.r_[left:right:1.0]
-logger.info("Your field axis is:", field_axis)
-myinput = input("Does this look okay?")
+field_axis = r_[left:right:1.0]
+myinput = input(
+    psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?")
+)
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
@@ -109,6 +111,7 @@ with power_control() as p:
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
+            amplitude=config_dict["amplitude"],
             indirect_fields=("Field", "carrierFreq"),
             ret_data=None,
         )
@@ -136,6 +139,7 @@ with power_control() as p:
                 repetition_us=config_dict["repetition_us"],
                 tau_us=config_dict["tau_us"],
                 SW_kHz=config_dict["SW_kHz"],
+                amplitude=["amplitude"],
                 ret_data=sweep_data,
             )
 sweep_data.set_prop("acq_params", config_dict.asdict())
@@ -186,7 +190,7 @@ else:
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
 sweep_data.set_prop("postproc_type", "field_sweep_v3")
 sweep_data.set_prop("acq_params", config_dict.asdict())
-target_directory = getDATADIR(exp_type="ODNP_NMR_comp/field_dependent")
+target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/field_dependent")
 filename_out = filename + ".h5"
 nodename = sweep_data.name()
 if os.path.exists(f"{filename_out}"):

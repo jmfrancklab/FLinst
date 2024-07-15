@@ -7,11 +7,11 @@ This needs to be run in sync with the power control server. To do so:
         wait until you see "I am listening" before continuing with the experiment.
     At the end of the experiment you will have a series of FIR experiments, a progressive power saturation dataset, and a log of the power over time saved as nodes in an h5 file.
 """
-import numpy as np
-from numpy import r_
-from pyspecdata import init_logging, getDATADIR, figlist_var
-from pyspecdata.file_saving.hdf_save_dict_to_group import hdf_save_dict_to_group
-from pyspecdata import strm
+from numpy import r_, zeros_like
+from pyspecdata.file_saving.hdf_save_dict_to_group import (
+    hdf_save_dict_to_group,
+)
+import pyspecdata as psd
 import os
 import time
 import h5py
@@ -23,9 +23,9 @@ from datetime import datetime
 
 final_log = []
 
-logger = init_logging(level="debug")
-target_directory = getDATADIR(exp_type="ODNP_NMR_comp/ODNP")
-fl = figlist_var()
+logger = psd.init_logging(level="debug")
+target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/ODNP")
+fl = psd.figlist_var()
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
@@ -136,6 +136,7 @@ control_thermal = run_spin_echo(
     nPoints=nPoints,
     nEchoes=config_dict["nEchoes"],
     p90_us=config_dict["p90_us"],
+    amplitude=config_dict["amplitude"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
     SW_kHz=config_dict["SW_kHz"],
@@ -168,7 +169,7 @@ except Exception:
         final_log.append("change the name accordingly once this is done running!")
 # }}}
 logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-logger.debug(strm("Name of saved data", control_thermal.name()))
+logger.debug(psd.strm("Name of saved data", control_thermal.name()))
 # }}}
 # {{{IR at no power
 #   this is outside the log, so to deal with this during processing, just check
@@ -191,6 +192,7 @@ for vd_idx, vd in enumerate(vd_list_us):
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         p90_us=config_dict["p90_us"],
+        amplitude=config_dict["amplitude"],
         tau_us=config_dict["tau_us"],
         repetition_us=FIR_rep,
         SW_kHz=config_dict["SW_kHz"],
@@ -222,7 +224,7 @@ with h5py.File(os.path.normpath(os.path.join(target_directory, f"{filename}"))) 
 vd_data.hdf5_write(filename, directory=target_directory)
 # }}}
 logger.debug("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-logger.debug(strm("Name of saved data", vd_data.name()))
+logger.debug(psd.strm("Name of saved data", vd_data.name()))
 # }}}
 # {{{run enhancement
 input(
@@ -255,6 +257,7 @@ with power_control() as p:
             ph1_cyc=Ep_ph1_cyc,
             amplitude=config_dict["amplitude"],
             p90_us=config_dict["p90_us"],
+            amplitude=config_dict["amplitude"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
@@ -266,7 +269,7 @@ with power_control() as p:
             time_axis_coords = DNP_data.getaxis("indirect")
         time_axis_coords[j]["start_times"] = DNP_ini_time
         time_axis_coords[j]["stop_times"] = DNP_thermal_done
-    power_settings_dBm = np.zeros_like(dB_settings)
+    power_settings_dBm = zeros_like(dB_settings)
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
@@ -300,6 +303,7 @@ with power_control() as p:
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
             p90_us=config_dict["p90_us"],
+            amplitude=config_dict["amplitude"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
@@ -333,7 +337,7 @@ with power_control() as p:
                 "if I got this far, that probably worked -- be sure to move/rename temp_ODNP.h5 to the correct name!!"
             )
     logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-    logger.debug(strm("Name of saved data", DNP_data.name()))
+    logger.debug(psd.strm("Name of saved data", DNP_data.name()))
     # }}}
     # {{{run IR
     last_dB_setting = 10
@@ -378,6 +382,7 @@ with power_control() as p:
                 adcOffset=config_dict["adc_offset"],
                 carrierFreq_MHz=config_dict["carrierFreq_MHz"],
                 p90_us=config_dict["p90_us"],
+                amplitude=config_dict["amplitude"],
                 tau_us=config_dict["tau_us"],
                 repetition_us=FIR_rep,
                 SW_kHz=config_dict["SW_kHz"],

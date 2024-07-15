@@ -18,7 +18,7 @@ from numpy import r_
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
-p90_range_us = np.linspace(1.0, 10.0, 20, endpoint=False)
+p90_range_us = np.linspace(0.5, 5.5, 20, endpoint=False)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
