@@ -6,7 +6,8 @@ A ppg that performs a series of echoes at a range of designated field
 values that are determined from the guessed_MHz_to_GHz value in your 
 active.ini and the field width parameter. 
 """
-from pyspecdata import init_logging, figlist_var, r_, logging, getDATADIR
+from pyspecdata import init_logging, figlist_var, logging, getDATADIR
+from numpy import r_
 import os
 import time
 import SpinCore_pp
