@@ -87,7 +87,7 @@ class TuningWindow(QMainWindow):
         # a plot with the dip centered
         #
         # dip shown on slack (https://jmfrancklab.slack.com/archives/CLMMYDD98/p1705090019740609)
-        for ini_val, w in [((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.textbox1), ((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.textbox2)]:
+        for ini_val, w in [((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.textbox1), ((myconfig["uw_dip_center_ghz"]+myconfig["uw_dip_width_ghz"]), self.textbox2)]:
             w.setText(ini_val)
             w.setMinimumWidth(8)
             w.editingFinished.connect(self.on_textchange)
@@ -311,7 +311,7 @@ class TuningWindow(QMainWindow):
         self.slider_min = QSlider(Qt.Horizontal)
         self.slider_max = QSlider(Qt.Horizontal)
         # original settings of MWtune
-        for ini_val, w in [((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.slider_min), ((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.slider_max)]:
+        for ini_val, w in [((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.slider_min), ((myconfig["uw_dip_center_ghz"]+myconfig["uw_dip_width_ghz"]), self.slider_max)]:
             self.on_textchange()
             w.setValue(ini_val)
             w.setTracking(True)
