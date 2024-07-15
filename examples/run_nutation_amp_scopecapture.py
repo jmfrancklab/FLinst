@@ -1,16 +1,13 @@
-from pyspecdata import *
-import os, sys, time
+from pyspecdata import figlist_var, getDATADIR, ndshape
+import os
 import SpinCore_pp
 from datetime import datetime
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
 import numpy as np
 import h5py
 from Instruments.XEPR_eth import xepr
+from Instruments.gds import GDS_scope
 from SpinCore_pp.ppg import run_spin_echo
 
-fl = figlist_var()
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/nutation")
 raise RuntimeError(
     "This pulse program has been updated to use active.ini, and the spin echo ppg function, but has not yet been tested!"
@@ -24,9 +21,7 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "nutation"
 config_dict["date"] = date
 config_dict["echo_counter"] += 1
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
-)
+filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
 # }}}
 # {{{let computer set field
 print(
@@ -46,16 +41,16 @@ with xepr() as x:
     print("field set to ", Field)
 # }}}
 # {{{ phase cycling
-tx_phases = r_[0.0, 90.0, 180.0, 270.0]
+tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 phase_cycling = True
 if phase_cycling:
-    ph1 = r_[0, 1, 2, 3]
-    ph2 = r_[0, 2]
+    ph1 = np.r_[0, 1, 2, 3]
+    ph2 = np.r_[0, 2]
     nPhaseSteps = 8
 if not phase_cycling:
     nPhaseSteps = 1
 # NOTE: Number of segments is nEchoes * nPhaseSteps
-data_length = 2 * nPoints * nEchoes * nPhaseSteps
+data_length = 2 * nPoints * config_dict["nEchoes"] * nPhaseSteps
 # }}}
 # {{{ ppg
 amp_range = np.linspace(0, 0.5, 200)[1:]  # ,endpoint=False)
@@ -81,9 +76,9 @@ with GDS_scope() as g:
             ret_data=None,
         )
         datalist.append(g.waveform(ch=1))
-nutation_data = concat(datalist, "repeats").reorder("t")
+nutation_data = np.concat(datalist, "repeats").reorder("t")
 nutation_data.chunk("t", ["ph2", "ph1", "t2"], [2, 4, -1])
-nutation_data.setaxis("ph2", r_[0:2] / 4).setaxis("ph1", r_[0:4] / 4)
+nutation_data.setaxis("ph2", np.r_[0:2] / 4).setaxis("ph1", np.r_[0:4] / 4)
 nutation_data.set_units("t2", "s")
 nutation_data.set_prop("postproc_type", "nutation_scopecapture_v1")
 nutation_data.name(config_dict["type"] + config_dict["echo_counter"])
@@ -100,9 +95,7 @@ with h5py.File(
             "this nodename already exists, so I will call it temp_nutation_amp_%d"
             % config_dict["echo_counter"]
         )
-        nutation_data.name(
-            "temp__nutation_amp_%d" % config_dict["echo_counter"]
-        )
+        nutation_data.name("temp__nutation_amp_%d" % config_dict["echo_counter"])
         nodename = "temp_nutation_amp_%d" % config_dict["echo_counter"]
         nutation_data.hdf5_write(f"{filename_out}", directory=target_directory)
     else:
@@ -113,10 +106,11 @@ print(("Shape of saved data", ndshape(nutation_data)))
 config_dict.write()
 # }}}
 # {{{image data
-fl.next("raw data")
-fl.image(nutation_data)
-nutation_data.ft("t2", shift=True)
-fl.next("FT raw data")
-fl.image(nutation_data)
-fl.show()
+with figlist_var() as fl:
+    fl.next("raw data")
+    fl.image(nutation_data)
+    nutation_data.ft("t2", shift=True)
+    fl.next("FT raw data")
+    fl.image(nutation_data)
+    fl.show()
 # }}}
