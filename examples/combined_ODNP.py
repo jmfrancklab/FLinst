@@ -273,7 +273,12 @@ with power_control() as p:
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
-            "SETTING THIS POWER", this_dB, "(", dB_settings[j - 1], powers[j], "W)"
+            "SETTING THIS POWER",
+            this_dB,
+            "(",
+            dB_settings[j - 1],
+            powers[j],
+            "W)",
         )
         if j == 0:
             retval = p.dip_lock(
@@ -396,7 +401,9 @@ with power_control() as p:
         vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
         if phase_cycling:
             vd_data.chunk(
-                "t", ["ph2", "ph1", "t2"], [len(IR_ph2_cyc), len(IR_ph1_cyc), -1]
+                "t",
+                ["ph2", "ph1", "t2"],
+                [len(IR_ph2_cyc), len(IR_ph1_cyc), -1],
             )
             vd_data.setaxis("ph1", IR_ph1_cyc / 4)
             vd_data.setaxis("ph2", IR_ph2_cyc / 4)

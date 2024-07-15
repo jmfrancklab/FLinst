@@ -54,14 +54,14 @@ filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type'
 # {{{set phase cycling
 phase_cycling = True
 if phase_cycling:
-    ph1_cyc = np.r_[0, 1, 2, 3]
+    ph1_cyc = r_[0, 1, 2, 3]
     nPhaseSteps = 4
 if not phase_cycling:
     ph1_cyc = 0.0
     nPhaseSteps = 1
 # }}}
 # {{{ Parameters for Bridge12
-powers = np.r_[config_dict["max_power"]]
+powers = r_[config_dict["max_power"]]
 min_dBm_step = 0.5
 for x in range(len(powers)):
     dB_settings = (
@@ -147,9 +147,9 @@ sweep_data.set_prop("acq_params", config_dict.asdict())
 # {{{chunk and save data
 if phase_cycling:
     sweep_data.chunk("t", ["ph1", "t2"], [4, -1])
-    sweep_data.setaxis("ph1", np.r_[0.0, 1.0, 2.0, 3.0] / 4)
+    sweep_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
     if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
+        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     sweep_data.reorder(["ph1", "indirect", "t2"])
     sweep_data.squeeze()
     sweep_data.set_units("t2", "s")
@@ -171,7 +171,7 @@ if phase_cycling:
     )
 else:
     if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
+        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     sweep_data.rename("t", "t2")
     fl.next("Raw - time")
     fl.image(

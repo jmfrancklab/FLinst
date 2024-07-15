@@ -16,7 +16,6 @@ from pyspecdata import strm
 import time
 import logging
 
-
 # {{{spin echo ppg
 def run_spin_echo(
     nScans,
