@@ -12,23 +12,17 @@ JF updated to plot a sine wave
 from numpy import r_
 import numpy as np
 from .XEPR_eth import xepr as xepr_from_module
-from scipy.interpolate import interp1d
 import time
-import sys, os, random
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget  # QtWidgets is for GUI components
+from PyQt5.QtCore import Qt  # QtCore is for core non-GUI functionalities
+from PyQt5.QtGui import QIcon  # QtGui is for handling icons and images
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLineEdit, QComboBox, QPushButton, QCheckBox, QSlider, QHBoxLayout, QAction
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
 from pyspecdata import gammabar_H
 import pyspecdata as psp
-import matplotlib
-from matplotlib.backends.backend_qt5agg import (
-    FigureCanvasQTAgg as FigureCanvas,
-)
-from matplotlib.backends.backend_qt5agg import (
-    NavigationToolbar2QT as NavigationToolbar,
-)
+import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
 
 
@@ -149,6 +143,7 @@ class NMRWindow(QMainWindow):
             nEchoes=self.myconfig["nEchoes"],
             p90_us=self.myconfig["p90_us"],
             repetition_us=self.myconfig["repetition_us"],
+            amplitude=self.myconfig["amplitude"],
             tau_us=self.myconfig["tau_us"],
             SW_kHz=self.myconfig["SW_kHz"],
             ret_data=None,
@@ -174,6 +169,7 @@ class NMRWindow(QMainWindow):
         print("adc was ", self.myconfig["adc_offset"], end=" and ")
         counter = 0
         first = True
+        result1 = result2 = result3 = None
         while first or not (result1 == result2) and (result2 == result3):
             first = False
             result1 = SpinCore_pp.adc_offset()
@@ -258,9 +254,9 @@ class NMRWindow(QMainWindow):
                     )
         centerfrq = signal.C.argmax("t2").item()
         self.axes.axvline(x=centerfrq, ls=":", color="r", alpha=0.25)
-        pyspec_plot(noise, color="k", label=f"Noise std", alpha=0.75)
+        pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
-            signal, color="r", label=f"abs of signal - noise", alpha=0.75
+            signal, color="r", label="abs of signal - noise", alpha=0.75
         )
         self.axes.legend()
         # }}}
@@ -289,7 +285,7 @@ class NMRWindow(QMainWindow):
         #
         self.dpi = 100
         self.fig = Figure((5.0, 4.0), dpi=self.dpi)
-        self.canvas = FigureCanvas(self.fig)
+        self.canvas = mplqt5.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self.main_frame)
         # {{{ need both of these to get background of figure transparent,
         #     rather than white
@@ -305,7 +301,9 @@ class NMRWindow(QMainWindow):
         # Bind the 'pick' event
         self.canvas.mpl_connect("pick_event", self.on_pick)
         # Create the navigation toolbar, tied to the canvas
-        self.mpl_toolbar = NavigationToolbar(self.canvas, self.main_frame)
+        self.mpl_toolbar = mplqt5.NavigationToolbar2QT(
+            self.canvas, self.main_frame
+        )
         # {{{ bottom left with SW, apo, and acquire
         #     button
         self.bottomleft_vbox = QVBoxLayout()
