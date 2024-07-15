@@ -214,13 +214,6 @@ vd_data.set_prop("acq_params", config_dict.asdict())
 vd_data.set_prop("postproc_type", IR_postproc)
 nodename = vd_data.name()
 # {{{ again, implement a file fallback
-
-# variable_containg_saved_data = save_data(inputdata, target_directory, outputfile, nodename_in_outputfile?)
-exp_type = "ODNP_NMR_comp/ODNP"
-
-saving_data = psd.save_data(vd_data, exp_type, filename, "temp_noPower")
-saving_data.write()
-
 with h5py.File(os.path.normpath(os.path.join(target_directory, f"{filename}"))) as fp:
     if nodename in fp.keys():
         final_log.append("this nodename already exists, so I will call it temp")
