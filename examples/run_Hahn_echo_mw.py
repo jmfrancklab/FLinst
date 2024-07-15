@@ -6,7 +6,7 @@ Uses power control server so this will need to be running in sync. To do so:
     3. On the NMR computer, open a separate terminal in git/inst_notebooks/Instruments and run winpty power_control_server(). When ready to go it will say 'I am listening'.
     4. run this program to collect data
 """
-from pyspecdata import figlist_var, r_, logger, getDATADIR
+from pyspecdata import figlist_var, logger, getDATADIR
 import numpy as np
 import os
 import h5py
@@ -32,7 +32,7 @@ filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type'
 # {{{set phase cycling
 phase_cycling = True
 if phase_cycling:
-    ph1_cyc = r_[0, 1, 2, 3]
+    ph1_cyc = np.r_[0, 1, 2, 3]
     nPhaseSteps = 4
 if not phase_cycling:
     ph1_cyc = 0.0
@@ -125,7 +125,7 @@ if phase_cycling:
     echo_data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
     echo_data.setaxis("ph1", ph1_cyc / 4)
     if config_dict["nScans"] > 1:
-        echo_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+        echo_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
     echo_data.reorder(["ph1", "nScans", "t2"])
     echo_data.squeeze()
     echo_data.set_units("t2", "s")
@@ -139,7 +139,7 @@ if phase_cycling:
     fl.image(for_plot.C.mean("nScans"))
 else:
     if config_dict["nScans"] > 1:
-        echo_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+        echo_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
     echo_data.rename("t", "t2")
     fl.next("Raw - time")
     fl.image(echo_data.C.mean("nScans"))
@@ -149,7 +149,7 @@ else:
     fl.next("FTed data")
     fl.image(for_plot)
 echo_data.name(config_dict["type"] + "_" + str(config_dict["echo_counter"]))
-echo_data.set_prop("postproc_type", "proc_Hahn_echoph_v2")
+echo_data.set_prop("postproc_type", "spincore_SE_v3")
 echo_data.set_prop("acq_params", config_dict.asdict())
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/Echoes")
 filename_out = filename + ".h5"

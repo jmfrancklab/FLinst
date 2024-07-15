@@ -8,7 +8,7 @@ active.ini and the field width parameter. To run this in sync with
 the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print "I am listening..."
 """
-from pyspecdata import r_,logger, figlist_var, getDATADIR, logging
+from pyspecdata import logger, figlist_var, getDATADIR, logging
 import os
 import time
 import SpinCore_pp
@@ -36,7 +36,7 @@ right = (
 right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
-field_axis = r_[left:right:1.0]
+field_axis = np.r_[left:right:1.0]
 logger.info("Your field axis is:", field_axis)
 myinput = input("Does this look okay?")
 if myinput.lower().startswith("n"):
@@ -52,14 +52,14 @@ filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type'
 # {{{set phase cycling
 phase_cycling = True
 if phase_cycling:
-    ph1_cyc = r_[0, 1, 2, 3]
+    ph1_cyc = np.r_[0, 1, 2, 3]
     nPhaseSteps = 4
 if not phase_cycling:
     ph1_cyc = 0.0
     nPhaseSteps = 1
 # }}}
 # {{{ Parameters for Bridge12
-powers = r_[config_dict["max_power"]]
+powers = np.r_[config_dict["max_power"]]
 min_dBm_step = 0.5
 for x in range(len(powers)):
     dB_settings = (
@@ -143,9 +143,9 @@ sweep_data.set_prop("acq_params", config_dict.asdict())
 # {{{chunk and save data
 if phase_cycling:
     sweep_data.chunk("t", ["ph1", "t2"], [4, -1])
-    sweep_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
+    sweep_data.setaxis("ph1", np.r_[0.0, 1.0, 2.0, 3.0] / 4)
     if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+        sweep_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
     sweep_data.reorder(["ph1", "indirect", "t2"])
     sweep_data.squeeze()
     sweep_data.set_units("t2", "s")
@@ -167,7 +167,7 @@ if phase_cycling:
     )
 else:
     if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+        sweep_data.setaxis("nScans", np.r_[0 : config_dict["nScans"]])
     sweep_data.rename("t", "t2")
     fl.next("Raw - time")
     fl.image(
