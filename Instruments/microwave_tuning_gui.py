@@ -210,7 +210,6 @@ class TuningWindow(qt5c.QMainWindow):
             # {{{ for the last trace, interpolate, and find the min
             if hasattr(self, "interpdata"):
                 xx, yy = self.interpdata
-                dip_frq_GHz = self.dip_frq_GHz
             else:
                 x, y = self.x[-1], self.line_data[-1]
                 minidx = np.argmin(y)
