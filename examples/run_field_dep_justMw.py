@@ -8,19 +8,14 @@ active.ini and the field width parameter. To run this in sync with
 the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print "I am listening..."
 """
-from pylab import *
-from pyspecdata import *
+from pyspecdata import r_,logger, figlist_var, getDATADIR, logging
 import os
+import time
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
 import numpy as np
-from Instruments import (
-    power_control,
-    Bridge12,
-    prologix_connection,
-    gigatronics,
-)
+from Instruments import power_control
 from Instruments.XEPR_eth import xepr
 import h5py
 
@@ -52,9 +47,7 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "field"
 config_dict["date"] = date
 config_dict["field_counter"] += 1
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
-)
+filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -70,7 +63,7 @@ powers = r_[config_dict["max_power"]]
 min_dBm_step = 0.5
 for x in range(len(powers)):
     dB_settings = (
-        round(10 * (log10(powers[x]) + 3.0) / min_dBm_step) * min_dBm_step
+        round(10 * (np.log10(powers[x]) + 3.0) / min_dBm_step) * min_dBm_step
     )  # round to nearest min_dBm_step
 print("dB_settings", dB_settings)
 print("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
@@ -191,7 +184,7 @@ else:
         .set_units("indirect", "scan #")
     )
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
-sweep_data.set_prop("postproc_type", "field_sweep_v2")
+sweep_data.set_prop("postproc_type", "field_sweep_v3")
 sweep_data.set_prop("acq_params", config_dict.asdict())
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/field_dependent")
 filename_out = filename + ".h5"
@@ -202,16 +195,14 @@ if os.path.exists(f"{filename_out}"):
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
     ) as fp:
         if nodename in fp.keys():
-            print(
-                "this nodename already exists, so I will call it temp_field_sweep"
-            )
+            print("this nodename already exists, so I will call it temp_field_sweep")
             sweep_data.name("temp_field_sweep")
             nodename = "temp_field_sweep"
     sweep_data.hdf5_write(f"{filename_out}", directory=target_directory)
 else:
     try:
         sweep_data.hdf5_write(f"{filename_out}", directory=target_directory)
-    except:
+    except Exception:
         print(
             f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_field_sweep.h5 in the current directory"
         )

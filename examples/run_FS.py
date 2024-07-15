@@ -6,9 +6,9 @@ A ppg that performs a series of echoes at a range of designated field
 values that are determined from the guessed_MHz_to_GHz value in your 
 active.ini and the field width parameter. 
 """
-from pylab import *
-from pyspecdata import *
+from pyspecdata import init_logging, figlist_var, r_, logging, getDATADIR
 import os
+import time
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
@@ -43,9 +43,7 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "field"
 config_dict["date"] = date
 config_dict["field_counter"] += 1
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
-)
+filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -154,7 +152,7 @@ else:
         .set_units("indirect", "scan #")
     )
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
-sweep_data.set_prop("postproc_type", "field_sweep_v1")
+sweep_data.set_prop("postproc_type", "field_sweep_v2")
 sweep_data.set_prop("acq_params", config_dict.asdict())
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/field_dependent")
 filename_out = filename + ".h5"
@@ -165,16 +163,14 @@ if os.path.exists(f"{filename_out}"):
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
     ) as fp:
         if nodename in fp.keys():
-            print(
-                "this nodename already exists, so I will call it temp_field_sweep"
-            )
+            print("this nodename already exists, so I will call it temp_field_sweep")
             sweep_data.name("temp_field_sweep")
             nodename = "temp_field_sweep"
     sweep_data.hdf5_write(f"{filename_out}", directory=target_directory)
 else:
     try:
         sweep_data.hdf5_write(f"{filename_out}", directory=target_directory)
-    except:
+    except Exception:
         print(
             f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_field_sweep.h5 in the current directory"
         )

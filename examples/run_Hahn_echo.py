@@ -9,8 +9,7 @@ tell you 'I am listening' - then, you should be able to run this program from
 the NMR computer to set the field etc. 
 """
 
-from pylab import *
-from pyspecdata import *
+from pyspecdata import getDATADIR,r_
 import os
 import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals, save_data
@@ -92,7 +91,7 @@ data.chunk(
 )
 data.setaxis("ph1", ph1_cyc / 4)
 data.reorder(["ph1", "nScans", "t2"])
-data.set_prop("postproc_type", "spincore_SE_v1")
+data.set_prop("postproc_type", "spincore_SE_v3")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")

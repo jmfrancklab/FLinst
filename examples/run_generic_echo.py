@@ -9,10 +9,10 @@ the field as is without adjustment follow the 'py run_generic_echo.py'
 command with 'stayput' (e.g. 'py run_generic_echo.py stayput')
 """
 
-from pylab import *
-from pyspecdata import *
-import os, sys
-from numpy import *
+from pyspecdata import getDATADIR, r_
+import os
+import sys
+from numpy import array, pi
 import SpinCore_pp
 from SpinCore_pp import prog_plen, get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import generic
@@ -97,9 +97,7 @@ data = generic(
         ("pulse_TTL", prog_p90_us, "ph_cyc", ph1_cyc),
         (
             "delay",
-            config_dict["tau_us"]
-            - 2 * prog_p90_us / pi
-            - config_dict["deblank_us"],
+            config_dict["tau_us"] - 2 * prog_p90_us / pi - config_dict["deblank_us"],
         ),
         # NOTE: here the tau_us is defined as
         # the evolution time from the start of
@@ -130,7 +128,7 @@ data.chunk(
     [len(ph2), len(ph_diff), -1],
 )
 data.setaxis("ph2", ph2 / 4).setaxis("ph_diff", ph_diff / 4)
-data.set_prop("postproc_type", "spincore_diffph_SE_v2")
+data.set_prop("postproc_type", "spincore_diffph_SE_v3")
 data.set_prop("coherence_pathway", {"ph_overall": -1, "ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")
