@@ -112,10 +112,10 @@ def run_spin_echo(
             [
                 ("phase_reset", 1),
                 ("delay_TTL", deblank_us),
-                ("pulse_TTL", prog_p90_us.item(), "ph1", ph1_cyc),
+                ("pulse_TTL", prog_p90_us, "ph1", ph1_cyc),
                 ("delay", tau_us),
                 ("delay_TTL", deblank_us),
-                ("pulse_TTL", prog_p180_us.item(), "ph2", ph2_cyc),
+                ("pulse_TTL", prog_p180_us, "ph2", ph2_cyc),
                 ("delay", deadtime_us),
                 ("acquire", acq_time_ms),
                 ("delay", repetition_us),

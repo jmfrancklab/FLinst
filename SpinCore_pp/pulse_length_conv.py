@@ -72,5 +72,8 @@ def prog_plen(desired_actual):
         else:
             c = calibration_data.polyfit("plen", order=1)
         return np.polyval(c[::-1], desired_actual)
-
-    return np.vectorize(zonefit)(desired_actual)
+    ret_val = np.vectorize(zonefit)(desired_actual)
+    if ret_val.size > 1:
+        return ret_val
+    else:
+        return ret_val.item()
