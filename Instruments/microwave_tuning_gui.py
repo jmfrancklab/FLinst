@@ -27,7 +27,6 @@ from matplotlib.figure import Figure
 
 import numpy as np
 
-
 class TuningWindow(QMainWindow):
     def __init__(self, B12, config, parent=None):
         self.B12 = B12
@@ -88,7 +87,7 @@ class TuningWindow(QMainWindow):
         # a plot with the dip centered
         #
         # dip shown on slack (https://jmfrancklab.slack.com/archives/CLMMYDD98/p1705090019740609)
-        for ini_val, w in [("9703000", self.textbox1), ("9710000", self.textbox2)]:
+        for ini_val, w in [((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.textbox1), ((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.textbox2)]:
             w.setText(ini_val)
             w.setMinimumWidth(8)
             w.editingFinished.connect(self.on_textchange)
@@ -312,7 +311,7 @@ class TuningWindow(QMainWindow):
         self.slider_min = QSlider(Qt.Horizontal)
         self.slider_max = QSlider(Qt.Horizontal)
         # original settings of MWtune
-        for ini_val, w in [(9703000, self.slider_min), (9710000, self.slider_max)]:
+        for ini_val, w in [((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.slider_min), ((myconfig["uw_dip_center_ghz"]-myconfig["uw_dip_width_ghz"]), self.slider_max)]:
             self.on_textchange()
             w.setValue(ini_val)
             w.setTracking(True)
