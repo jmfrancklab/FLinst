@@ -1,5 +1,13 @@
 """
-This is a simple script used with run_hahn_echo.py for getting on NMR resonance. After seeing your signal with a ppg scripts, run 'py find_gamma_eff.py ####' where the value indicated if the frequency offset of you're signal from the carrier frequency. This script then adjusts the gamma effective in your active.ini, for getting on resonance. Then rerun the ppg script to see that you are now on resonance and the location of your signal is adjusted.
+This is a simple script used with run_hahn_echo.py for getting on NMR
+resonance.
+After seeing your signal with a ppg scripts, run 'py find_gamma_eff.py
+####' where the value indicated if the frequency offset of you're signal
+from the carrier frequency.
+This script then adjusts the gamma effective in your active.ini, for
+getting on resonance.
+Then rerun the ppg script to see that you are now on resonance and the
+location of your signal is adjusted.
 """
 # PR this needs a docstring, which should make it clear why we are doing this
 import SpinCore_pp
