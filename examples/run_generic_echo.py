@@ -9,10 +9,10 @@ the field as is without adjustment follow the 'py run_generic_echo.py'
 command with 'stayput' (e.g. 'py run_generic_echo.py stayput')
 """
 
-from pyspecdata import getDATADIR, r_
+from pyspecdata import getDATADIR
 import os
 import sys
-from numpy import array, pi
+from numpy import array, pi, r_
 import SpinCore_pp
 from SpinCore_pp import prog_plen, get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import generic

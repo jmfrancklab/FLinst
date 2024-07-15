@@ -96,7 +96,7 @@ def run_spin_echo(
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
-    RX_scans = 1
+    RX_nScans = 1
     for nScans_idx in range(nScans):
         run_scans_time_list = [time.time()]
         run_scans_names = ["configure"]
