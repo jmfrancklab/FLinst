@@ -44,7 +44,9 @@ long_delay = 10  # this is the delay where it holds the same power
 
 # }}}
 # {{{ function that generates fake data with two indirect dimensions
-def run_scans(indirect_idx, indirect_len, nScans, indirect_fields=None, ret_data=None):
+def run_scans(
+    indirect_idx, indirect_len, nScans, indirect_fields=None, ret_data=None
+):
     "this is a dummy replacement to run_scans that generates random data"
     data_length = 2 * nPoints
     for nScans_idx in range(nScans):
@@ -123,6 +125,8 @@ with power_control() as p:
             os.remove("temp.h5")
             DNP_data.hdf5_write("temp.h5")
     this_log = p.stop_log()
-with h5py.File(os.path.normpath(os.path.join(target_directory, filename)), "a") as f:
+with h5py.File(
+    os.path.normpath(os.path.join(target_directory, filename)), "a"
+) as f:
     log_grp = f.create_group("log")
     hdf_save_dict_to_group(log_grp, this_log.__getstate__())
