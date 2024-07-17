@@ -26,11 +26,11 @@ from matplotlib.figure import Figure
 import numpy as np
 
 
-class TuningWindow(qt5c.QMainWindow):
+class TuningWindow(qt5w.QMainWindow):
     def __init__(self, B12, config, parent=None):
         self.B12 = B12
         self.myconfig = config
-        qt5c.QMainWindow.__init__(self, parent)
+        qt5w.QMainWindow.__init__(self, parent)
         self.setWindowTitle("B12 tuning!")
         self.setGeometry(20, 20, 1500, 800)
 
@@ -88,14 +88,14 @@ class TuningWindow(qt5c.QMainWindow):
         # about 0.003 GHz and a minimum of -1.2 dBm. These limits produce
         # a plot with the dip centered
         #
-        # dip shown on slack (https://jmfrancklab.slack.com/archives/CLMMYDD98/p1705090019740609)
+        # dip shown on slack (https://jmfrancklab.slack.com/archivec/CLMMYDD98/p1705090019740609)
         for ini_val, w in [
             (
-                (myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"]),
+                str(int(((myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"])*1e6))),
                 self.textbox1,
             ),
             (
-                (myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"]),
+                str(int(((myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"])*1e6))),
                 self.textbox2,
             ),
         ]:
@@ -284,74 +284,74 @@ class TuningWindow(qt5c.QMainWindow):
         # Other GUI controls
         #
         # {{{ text boxes control slider limits
-        self.textboxes_vbox = qt5g.QVBoxLayout()
-        self.textbox1 = qt5g.QLineEdit()
-        self.textbox2 = qt5g.QLineEdit()
+        self.textboxes_vbox = qt5w.QVBoxLayout()
+        self.textbox1 = qt5w.QLineEdit()
+        self.textbox2 = qt5w.QLineEdit()
 
         self.orig_zoom_limits()
         # }}}
 
         # {{{ buttons
-        self.button_vbox = qt5g.QVBoxLayout()
-        self.draw_button = qt5g.QPushButton("&Re-Capture")
+        self.button_vbox = qt5w.QVBoxLayout()
+        self.draw_button = qt5w.QPushButton("&Re-Capture")
         self.draw_button.clicked.connect(self.on_recapture)
         self.button_vbox.addWidget(self.draw_button)
-        self.zoom_button = qt5g.QPushButton("&Zoom Limits")
+        self.zoom_button = qt5w.QPushButton("&Zoom Limits")
         self.zoom_button.clicked.connect(self.on_zoomclicked)
         self.button_vbox.addWidget(self.zoom_button)
         # }}}
 
         # {{{ box to stack checkboxes
-        self.boxes_vbox = qt5g.QVBoxLayout()
-        self.grid_cb = qt5g.QCheckBox("Show &Grid")
+        self.boxes_vbox = qt5w.QVBoxLayout()
+        self.grid_cb = qt5w.QCheckBox("Show &Grid")
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
-        self.fmode_cb = qt5g.QCheckBox("Const &Frq &Mode")
+        self.fmode_cb = qt5w.QCheckBox("Const &Frq &Mode")
         self.fmode_cb.setChecked(False)
         self.fmode_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.fmode_cb)
         # }}}
 
-        slider_label = qt5g.QLabel("Bar width (%):")
+        slider_label = qt5w.QLabel("Bar width (%):")
 
         # {{{ box to stack sliders
-        self.slider_vbox = qt5g.QVBoxLayout()
+        self.slider_vbox = qt5w.QVBoxLayout()
         self.slider_vbox.setContentsMargins(0, 0, 0, 0)
         # self.slider_vbox.setSpacing(0)
-        self.slider_min = qt5g.QSlider(qt5g.Qt.Horizontal)
-        self.slider_max = qt5g.QSlider(qt5g.Qt.Horizontal)
+        self.slider_min = qt5w.QSlider(qt5c.Qt.Horizontal)
+        self.slider_max = qt5w.QSlider(qt5c.Qt.Horizontal)
         # original settings of MWtune
         for ini_val, w in [
             (
-                (myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"]),
+                ((myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"])*1e6),
                 self.slider_min,
             ),
             (
-                (myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"]),
+                ((myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"])*1e6),
                 self.slider_max,
             ),
         ]:
             self.on_textchange()
             w.setValue(ini_val)
             w.setTracking(True)
-            w.setTickPosition(qt5g.QSlider.TicksBothSides)
+            w.setTickPosition(qt5w.QSlider.TicksBothSides)
             w.valueChanged.connect(self.regen_plots)
             self.slider_vbox.addWidget(w)
         # }}}
 
         # {{{ Layout with box sizers
-        hbox = qt5g.QHBoxLayout()
+        hbox = qt5w.QHBoxLayout()
 
         hbox.addLayout(self.textboxes_vbox)  # requires a different command!
         hbox.addLayout(self.button_vbox)  # requires a different command!
         hbox.addLayout(self.boxes_vbox)  # requires a different command!
         for w in [slider_label]:
             hbox.addWidget(w)
-            hbox.setAlignment(w, qt5g.Qt.AlignVCenter)
+            hbox.setAlignment(w, qt5c.Qt.AlignVCenter)
         hbox.addLayout(self.slider_vbox)  # requires a different command!
 
-        vbox = qt5g.QVBoxLayout()
+        vbox = qt5w.QVBoxLayout()
         vbox.addWidget(self.canvas)
         vbox.addWidget(self.mpl_toolbar)
         vbox.addLayout(hbox)
@@ -361,7 +361,7 @@ class TuningWindow(qt5c.QMainWindow):
         self.setCentralWidget(self.main_frame)
 
     def create_status_bar(self):
-        self.status_text = qt5g.QLabel("This is a demo")
+        self.status_text = qt5w.QLabel("This is a demo")
         self.statusBar().addWidget(self.status_text, 1)
 
     def create_menu(self):
@@ -393,7 +393,7 @@ class TuningWindow(qt5c.QMainWindow):
     def create_action(
         self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False
     ):
-        action = qt5c.QAction(text, self)
+        action = qt5w.QAction(text, self)
         if icon is not None:
             action.setIcon(qt5w.QIcon(":/%s.png" % icon))
         if shortcut is not None:
@@ -410,7 +410,7 @@ class TuningWindow(qt5c.QMainWindow):
 
 def main():
     myconfig = SpinCore_pp.configuration("active.ini")
-    app = qt5c.QApplication(sys.argv)
+    app = qt5w.QApplication(sys.argv)
     with Bridge12() as b:
         b.set_wg(True)
         b.set_rf(True)
