@@ -15,7 +15,6 @@ import time
 import sys
 
 import PyQt5.QtCore as qt5c
-import PyQt5.QtGui as qt5g
 import PyQt5.QtWidgets as qt5w
 import SpinCore_pp  # just for config file, but whatever...
 
@@ -91,11 +90,31 @@ class TuningWindow(qt5w.QMainWindow):
         # dip shown on slack (https://jmfrancklab.slack.com/archivec/CLMMYDD98/p1705090019740609)
         for ini_val, w in [
             (
-                str(int(((myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"])*1e6))),
+                str(
+                    int(
+                        (
+                            (
+                                myconfig["uw_dip_center_ghz"]
+                                - myconfig["uw_dip_width_ghz"]
+                            )
+                            * 1e6
+                        )
+                    )
+                ),
                 self.textbox1,
             ),
             (
-                str(int(((myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"])*1e6))),
+                str(
+                    int(
+                        (
+                            (
+                                myconfig["uw_dip_center_ghz"]
+                                + myconfig["uw_dip_width_ghz"]
+                            )
+                            * 1e6
+                        )
+                    )
+                ),
                 self.textbox2,
             ),
         ]:
@@ -324,11 +343,11 @@ class TuningWindow(qt5w.QMainWindow):
         # original settings of MWtune
         for ini_val, w in [
             (
-                ((myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"])*1e6),
+                ((myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"]) * 1e6),
                 self.slider_min,
             ),
             (
-                ((myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"])*1e6),
+                ((myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"]) * 1e6),
                 self.slider_max,
             ),
         ]:
