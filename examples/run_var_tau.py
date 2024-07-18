@@ -5,7 +5,8 @@ Varied Tau Experiment
 A standard echo that is repeated varying the echo time between pulses. The tau value is adjusted 
 to ensure a symmetric echo.
 """
-from pyspecdata import figlist_var, r_, getDATADIR
+from pyspecdata import figlist_var, getDATADIR
+from numpy import r_
 import os
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
