@@ -38,9 +38,7 @@ right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
 field_axis = r_[left:right:1.0]
-myinput = input(
-    psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?")
-)
+myinput = input(psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?"))
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
