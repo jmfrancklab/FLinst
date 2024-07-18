@@ -16,13 +16,7 @@ import sys
 import PyQt5.QtCore as qt5c
 import PyQt5.QtWidgets as qt5w
 import SpinCore_pp  # just for config file, but whatever...
-
-from matplotlib.backends.backend_qt5agg import (
-    FigureCanvasQTAgg as FigureCanvas,
-)
-from matplotlib.backends.backend_qt5agg import (
-    NavigationToolbar2QT as NavigationToolbar,
-)
+import matplotlib.backends.backend_qt5agg as mqt5ag
 from matplotlib.figure import Figure
 
 import numpy as np
@@ -264,7 +258,7 @@ class TuningWindow(qt5w.QMainWindow):
         #
         self.dpi = 100
         self.fig = Figure((5.0, 4.0), dpi=self.dpi)
-        self.canvas = FigureCanvas(self.fig)
+        self.canvas = mqt5ag.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self.main_frame)
         # {{{ need both of these to get background of figure transparent,
         #     rather than white
@@ -285,7 +279,7 @@ class TuningWindow(qt5w.QMainWindow):
 
         # Create the navigation toolbar, tied to the canvas
         #
-        self.mpl_toolbar = NavigationToolbar(self.canvas, self.main_frame)
+        self.mpl_toolbar = mqt5ag.NavigationToolbar2QT(self.canvas, self.main_frame)
 
         # Other GUI controls
         #
