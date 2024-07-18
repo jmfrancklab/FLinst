@@ -98,7 +98,8 @@ class TuningWindow(qt5w.QMainWindow):
                     -myconfig["uw_dip_width_ghz"],
                     myconfig["uw_dip_width_ghz"],
                 ]
-            ][self.textbox1, self.textbox2]
+            ],
+            [self.textbox1, self.textbox2],
         ):
             w.setText(ini_val)
             w.setMinimumWidth(8)
@@ -335,10 +336,7 @@ class TuningWindow(qt5w.QMainWindow):
                     myconfig["uw_dip_width_ghz"],
                 ]
             ],
-            [
-                self.slider_min,
-                self.slider_max,
-            ],
+            [self.slider_min, self.slider_max],
         ):
             self.on_textchange()
             w.setValue(ini_val)
