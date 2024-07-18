@@ -179,6 +179,7 @@ data.chunk(
     ["ph1", "ph2", "ph_overall", "nEcho", "t2"],
     [len(ph1), len(ph2), len(ph_overall), config_dict["nEchoes"], -1],
 )
+data.set_units("t2","s")
 data.setaxis("nEcho", r_[0 : config_dict["nEchoes"]]).setaxis("ph1", ph1 / 4).setaxis(
     "ph2", ph2 / 4
 ).setaxis("ph_overall", ph_overall / 4)
