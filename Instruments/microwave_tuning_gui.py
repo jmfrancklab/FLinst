@@ -19,8 +19,12 @@ import PyQt5.QtGui as qt5g
 import PyQt5.QtWidgets as qt5w
 import SpinCore_pp  # just for config file, but whatever...
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import (
+    FigureCanvasQTAgg as FigureCanvas,
+)
+from matplotlib.backends.backend_qt5agg import (
+    NavigationToolbar2QT as NavigationToolbar,
+)
 from matplotlib.figure import Figure
 
 import numpy as np
@@ -151,9 +155,14 @@ class TuningWindow(qt5c.QMainWindow):
 
     def generate_data(self):
         print(
-            "slider min", self.slider_min.value(), "slider max", self.slider_max.value()
+            "slider min",
+            self.slider_min.value(),
+            "slider max",
+            self.slider_max.value(),
         )
-        self.x.append(np.r_[self.slider_min.value() : self.slider_max.value() : 15j])
+        self.x.append(
+            np.r_[self.slider_min.value() : self.slider_max.value() : 15j]
+        )
         temp, tx = self.B12.freq_sweep(self.x[-1] * 1e3)
         self.line_data.append(temp)
         if hasattr(self, "interpdata"):
@@ -368,10 +377,16 @@ class TuningWindow(qt5c.QMainWindow):
         self.file_menu = self.menuBar().addMenu("&File")
 
         load_file_action = self.create_action(
-            "&Save plot", shortcut="Ctrl+S", slot=self.save_plot, tip="Save the plot"
+            "&Save plot",
+            shortcut="Ctrl+S",
+            slot=self.save_plot,
+            tip="Save the plot",
         )
         quit_action = self.create_action(
-            "&Quit", slot=self.close, shortcut="Ctrl+Q", tip="Close the application"
+            "&Quit",
+            slot=self.close,
+            shortcut="Ctrl+Q",
+            tip="Close the application",
         )
 
         self.add_actions(self.file_menu, (load_file_action, None, quit_action))
@@ -391,7 +406,13 @@ class TuningWindow(qt5c.QMainWindow):
                 target.addAction(action)
 
     def create_action(
-        self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False
+        self,
+        text,
+        slot=None,
+        shortcut=None,
+        icon=None,
+        tip=None,
+        checkable=False,
     ):
         action = qt5c.QAction(text, self)
         if icon is not None:
