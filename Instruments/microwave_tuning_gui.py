@@ -13,13 +13,16 @@ from Instruments import Bridge12
 from scipy.interpolate import interp1d
 import time
 import sys
-
 import PyQt5.QtCore as qt5c
 import PyQt5.QtWidgets as qt5w
 import SpinCore_pp  # just for config file, but whatever...
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import (
+    FigureCanvasQTAgg as FigureCanvas,
+)
+from matplotlib.backends.backend_qt5agg import (
+    NavigationToolbar2QT as NavigationToolbar,
+)
 from matplotlib.figure import Figure
 
 import numpy as np
@@ -88,36 +91,15 @@ class TuningWindow(qt5w.QMainWindow):
         # a plot with the dip centered
         #
         # dip shown on slack (https://jmfrancklab.slack.com/archivec/CLMMYDD98/p1705090019740609)
-        for ini_val, w in [
-            (
-                str(
-                    int(
-                        (
-                            (
-                                myconfig["uw_dip_center_ghz"]
-                                - myconfig["uw_dip_width_ghz"]
-                            )
-                            * 1e6
-                        )
-                    )
-                ),
-                self.textbox1,
-            ),
-            (
-                str(
-                    int(
-                        (
-                            (
-                                myconfig["uw_dip_center_ghz"]
-                                + myconfig["uw_dip_width_ghz"]
-                            )
-                            * 1e6
-                        )
-                    )
-                ),
-                self.textbox2,
-            ),
-        ]:
+        for ini_val, w in zip(
+            [
+                str(int((myconfig["uw_dip_center_ghz"] + j) * 1e6))
+                for j in [
+                    -myconfig["uw_dip_width_ghz"],
+                    myconfig["uw_dip_width_ghz"],
+                ]
+            ][self.textbox1, self.textbox2]
+        ):
             w.setText(ini_val)
             w.setMinimumWidth(8)
             w.editingFinished.connect(self.on_textchange)
@@ -170,9 +152,14 @@ class TuningWindow(qt5w.QMainWindow):
 
     def generate_data(self):
         print(
-            "slider min", self.slider_min.value(), "slider max", self.slider_max.value()
+            "slider min",
+            self.slider_min.value(),
+            "slider max",
+            self.slider_max.value(),
         )
-        self.x.append(np.r_[self.slider_min.value() : self.slider_max.value() : 15j])
+        self.x.append(
+            np.r_[self.slider_min.value() : self.slider_max.value() : 15j]
+        )
         temp, tx = self.B12.freq_sweep(self.x[-1] * 1e3)
         self.line_data.append(temp)
         if hasattr(self, "interpdata"):
@@ -271,7 +258,6 @@ class TuningWindow(qt5w.QMainWindow):
     def create_main_frame(self):
         myconfig = SpinCore_pp.configuration("active.ini")
         self.main_frame = qt5w.QWidget()
-
         # Create the mpl Figure and FigCanvas objects.
         # 5x4 inches, 100 dots-per-inch
         #
@@ -341,16 +327,19 @@ class TuningWindow(qt5w.QMainWindow):
         self.slider_min = qt5w.QSlider(qt5c.Qt.Horizontal)
         self.slider_max = qt5w.QSlider(qt5c.Qt.Horizontal)
         # original settings of MWtune
-        for ini_val, w in [
-            (
-                ((myconfig["uw_dip_center_ghz"] - myconfig["uw_dip_width_ghz"]) * 1e6),
+        for ini_val, w in zip(
+            [
+                1e6 * (myconfig["uw_dip_center_ghz"] + j)
+                for j in [
+                    -myconfig["uw_dip_width_ghz"],
+                    myconfig["uw_dip_width_ghz"],
+                ]
+            ],
+            [
                 self.slider_min,
-            ),
-            (
-                ((myconfig["uw_dip_center_ghz"] + myconfig["uw_dip_width_ghz"]) * 1e6),
                 self.slider_max,
-            ),
-        ]:
+            ],
+        ):
             self.on_textchange()
             w.setValue(ini_val)
             w.setTracking(True)
@@ -387,10 +376,16 @@ class TuningWindow(qt5w.QMainWindow):
         self.file_menu = self.menuBar().addMenu("&File")
 
         load_file_action = self.create_action(
-            "&Save plot", shortcut="Ctrl+S", slot=self.save_plot, tip="Save the plot"
+            "&Save plot",
+            shortcut="Ctrl+S",
+            slot=self.save_plot,
+            tip="Save the plot",
         )
         quit_action = self.create_action(
-            "&Quit", slot=self.close, shortcut="Ctrl+Q", tip="Close the application"
+            "&Quit",
+            slot=self.close,
+            shortcut="Ctrl+Q",
+            tip="Close the application",
         )
 
         self.add_actions(self.file_menu, (load_file_action, None, quit_action))
@@ -410,7 +405,13 @@ class TuningWindow(qt5w.QMainWindow):
                 target.addAction(action)
 
     def create_action(
-        self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False
+        self,
+        text,
+        slot=None,
+        shortcut=None,
+        icon=None,
+        tip=None,
+        checkable=False,
     ):
         action = qt5w.QAction(text, self)
         if icon is not None:
