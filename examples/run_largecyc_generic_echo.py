@@ -134,6 +134,7 @@ data.chunk(
     [len(ph1), len(ph_overall), -1],
 )
 data.setaxis("ph1", ph1 / 4).setaxis("ph_overall", ph_overall / 4)
+data.set_units("t2","s")
 data.set_prop("postproc_type", "spincore_largecyc_generic_echo_v1")
 data.set_prop("coherence_pathway", {"ph_overall": -1, "ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
