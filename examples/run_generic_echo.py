@@ -129,6 +129,7 @@ data.chunk(
     ["ph2", "ph_diff", "t2"],
     [len(ph2), len(ph_diff), -1],
 )
+data.set_units("t2", "s")
 data.setaxis("ph2", ph2 / 4).setaxis("ph_diff", ph_diff / 4)
 data.set_prop("postproc_type", "spincore_diffph_SE_v4")
 data.set_prop("coherence_pathway", {"ph_overall": -1, "ph1": +1})
