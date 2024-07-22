@@ -13,12 +13,8 @@ import h5py
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 from Instruments import (
-    Bridge12,
-    prologix_connection,
-    gigatronics,
     power_control,
 )
-from serial import Serial
 import time
 from datetime import datetime
 from SpinCore_pp.power_helper import gen_powerlist
