@@ -47,7 +47,10 @@ from Instruments import Bridge12, prologix_connection, gigatronics
 from datetime import datetime
 import time
 import h5py
-raise RuntimeError("This pulse proram has not been updated.  Before running again, it should be possible to replace a lot of the code below with a call to the function provided by the 'generic' pulse program inside the ppg directory!")
+
+raise RuntimeError(
+    "This pulse proram has not been updated.  Before running again, it should be possible to replace a lot of the code below with a call to the function provided by the 'generic' pulse program inside the ppg directory!"
+)
 
 fl = figlist_var()
 # {{{importing acquisition parameters
@@ -59,7 +62,9 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "cpmg_mw"
 config_dict["date"] = date
 config_dict["cpmg_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -71,10 +76,14 @@ if not phase_cycling:
     nPhaseSteps = 1
 # }}}
 # {{{power settings
-dB_settings = gen_powerlist(config_dict["max_power"], config_dict["power_steps"])
+dB_settings = gen_powerlist(
+    config_dict["max_power"], config_dict["power_steps"]
+)
 append_dB = [
     dB_settings[
-        abs(10 ** (dB_settings / 10.0 - 3) - config_dict["max_power"] * frac).argmin()
+        abs(
+            10 ** (dB_settings / 10.0 - 3) - config_dict["max_power"] * frac
+        ).argmin()
     ]
     for frac in [0.75, 0.5, 0.25]
 ]
@@ -124,9 +133,13 @@ with Bridge12() as b:
     b.set_wg(True)
     b.set_rf(True)
     b.set_amp(True)
-    this_return = b.lock_on_dip(ini_range=
-            (config_dict['uw_dip_center_GHz']-config_dict['uw_dip_width_GHz']/2,
-                config_dict['uw_dip_center_GHz']+config_dict['uw_dip_width']/2))
+    this_return = b.lock_on_dip(
+        ini_range=(
+            config_dict["uw_dip_center_GHz"]
+            - config_dict["uw_dip_width_GHz"] / 2,
+            config_dict["uw_dip_center_GHz"] + config_dict["uw_dip_width"] / 2,
+        )
+    )
     dip_f = this_return[2]
     print("Frequency", dip_f)
     b.set_freq(dip_f)
@@ -134,7 +147,12 @@ with Bridge12() as b:
     for j, this_power in enumerate(dB_settings):
         print("\n*** *** *** *** ***\n")
         print(
-            "SETTING THIS POWER", this_power, "(", dB_settings[j - 1], powers[j], "W)"
+            "SETTING THIS POWER",
+            this_power,
+            "(",
+            dB_settings[j - 1],
+            powers[j],
+            "W)",
         )
         if j > 0 and this_power > last_power + 3:
             last_power += 3
@@ -195,29 +213,26 @@ if phase_cycling:
     cpmg_data.squeeze()
     cpmg_data.set_units("t2", "s")
     fl.next("Raw - time")
-    fl.image(
-        cpmg_data.C.mean("nScans"))
+    fl.image(cpmg_data.C.mean("nScans"))
     cpmg_data.reorder("t2", first=False)
     for_plot = cpmg_data.C
-    for_plot.ft('t2',shift=True)
-    for_plot.ft(['ph1'], unitary = True)
-    fl.next('FTed data')
-    fl.image(for_plot.C.mean("nScans")
-    )
+    for_plot.ft("t2", shift=True)
+    for_plot.ft(["ph1"], unitary=True)
+    fl.next("FTed data")
+    fl.image(for_plot.C.mean("nScans"))
 else:
     if config_dict["nScans"] > 1:
         cpmg_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    cpmg_data.rename('t','t2')
+    cpmg_data.rename("t", "t2")
     fl.next("Raw - time")
-    fl.image(
-        cpmg_data.C.mean("nScans"))
+    fl.image(cpmg_data.C.mean("nScans"))
     cpmg_data.reorder("t2", first=False)
     for_plot = cpmg_data.C
-    for_plot.ft('t2',shift=True)
-    fl.next('FTed data')
+    for_plot.ft("t2", shift=True)
+    fl.next("FTed data")
     fl.image(for_plot)
 cpmg_data.name(config_dict["type"] + "_" + config_dict["cpmg_counter"])
-cpmg_data.set_prop("acq_params", config_dict.asdict()
+cpmg_data.set_prop("acq_params", config_dict.asdict())
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/CPMG")
 filename_out = filename + ".h5"
 nodename = cpmg_data.name()
@@ -227,7 +242,9 @@ if os.path.exists(f"{filename_out}"):
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
     ) as fp:
         if nodename in fp.keys():
-            print("this nodename already exists, so I will call it temp_cpmg_mw")
+            print(
+                "this nodename already exists, so I will call it temp_cpmg_mw"
+            )
             cpmg_data.name("temp_cpmg_mw")
             nodename = "temp_cpmg_mw"
     cpmg_data.hdf5_write(f"{filename_out}", directory=target_directory)
