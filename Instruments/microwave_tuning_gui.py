@@ -9,30 +9,24 @@ which is a good layout reference
 
 JF updated to plot a sine wave
 """
-import Instruments
-import Instruments.power_control_server
 from Instruments import Bridge12
 from scipy.interpolate import interp1d
 import time
-import sys, os, random
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+import sys
+import PyQt5.QtCore as qt5c
+import PyQt5.QtWidgets as qt5w
 import SpinCore_pp  # just for config file, but whatever...
-
-import matplotlib
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+import matplotlib.backends.backend_qt5agg as mqt5ag
 from matplotlib.figure import Figure
 
 import numpy as np
 
 
-class TuningWindow(QMainWindow):
+class TuningWindow(qt5w.QMainWindow):
     def __init__(self, B12, config, parent=None):
         self.B12 = B12
         self.myconfig = config
-        QMainWindow.__init__(self, parent)
+        qt5w.QMainWindow.__init__(self, parent)
         self.setWindowTitle("B12 tuning!")
         self.setGeometry(20, 20, 1500, 800)
 
@@ -43,7 +37,7 @@ class TuningWindow(QMainWindow):
         self._already_fmode = False
         self.line_data = []
         self.x = []
-        self.timer = QTimer()
+        self.timer = qt5c.QTimer()
         self.fmode = False
         self.timer.setInterval(100)  # .1 seconds
         self.timer.timeout.connect(self.opt_update_frq)
@@ -61,7 +55,9 @@ class TuningWindow(QMainWindow):
     def save_plot(self):
         file_choices = "PNG (*.png)|*.png"
 
-        path, ext = QFileDialog.getSaveFileName(self, "Save file", "", file_choices)
+        path, ext = qt5c.QFileDialog.getSaveFileName(
+            self, "Save file", "", file_choices
+        )
         path = path.encode("utf-8")
         if not path[-4:] == file_choices[-4:].encode("utf-8"):
             path += file_choices[-4:].encode("utf-8")
@@ -80,15 +76,25 @@ class TuningWindow(QMainWindow):
          * Save the plot to a file using the File menu
          * Click on a bar to receive an informative message
         """
-        QMessageBox.about(self, "About the demo", msg.strip())
+        qt5c.QMessageBox.about(self, "About the demo", msg.strip())
 
     def orig_zoom_limits(self):
+        myconfig = SpinCore_pp.configuration("active.ini")
         # Typical tuning curve is centered on 9.8193 GHz with a width of
         # about 0.003 GHz and a minimum of -1.2 dBm. These limits produce
         # a plot with the dip centered
         #
-        # dip shown on slack (https://jmfrancklab.slack.com/archives/CLMMYDD98/p1705090019740609)
-        for ini_val, w in [("9816000", self.textbox1), ("9823000", self.textbox2)]:
+        # dip shown on slack (https://jmfrancklab.slack.com/archivec/CLMMYDD98/p1705090019740609)
+        for ini_val, w in zip(
+            [
+                str(int((myconfig["uw_dip_center_ghz"] + j) * 1e6))
+                for j in [
+                    -myconfig["uw_dip_width_ghz"],
+                    myconfig["uw_dip_width_ghz"],
+                ]
+            ],
+            [self.textbox1, self.textbox2],
+        ):
             w.setText(ini_val)
             w.setMinimumWidth(8)
             w.editingFinished.connect(self.on_textchange)
@@ -137,13 +143,18 @@ class TuningWindow(QMainWindow):
         box_points = event.artist.get_bbox().get_points()
         msg = "You've clicked on a bar with coords:\n %s" % box_points
 
-        QMessageBox.information(self, "Click!", msg)
+        qt5c.QMessageBox.information(self, "Click!", msg)
 
     def generate_data(self):
         print(
-            "slider min", self.slider_min.value(), "slider max", self.slider_max.value()
+            "slider min",
+            self.slider_min.value(),
+            "slider max",
+            self.slider_max.value(),
         )
-        self.x.append(np.r_[self.slider_min.value() : self.slider_max.value() : 15j])
+        self.x.append(
+            np.r_[self.slider_min.value() : self.slider_max.value() : 15j]
+        )
         temp, tx = self.B12.freq_sweep(self.x[-1] * 1e3)
         self.line_data.append(temp)
         if hasattr(self, "interpdata"):
@@ -200,7 +211,6 @@ class TuningWindow(QMainWindow):
             # {{{ for the last trace, interpolate, and find the min
             if hasattr(self, "interpdata"):
                 xx, yy = self.interpdata
-                dip_frq_GHz = self.dip_frq_GHz
             else:
                 x, y = self.x[-1], self.line_data[-1]
                 minidx = np.argmin(y)
@@ -241,14 +251,14 @@ class TuningWindow(QMainWindow):
         return
 
     def create_main_frame(self):
-        self.main_frame = QWidget()
-
+        myconfig = SpinCore_pp.configuration("active.ini")
+        self.main_frame = qt5w.QWidget()
         # Create the mpl Figure and FigCanvas objects.
         # 5x4 inches, 100 dots-per-inch
         #
         self.dpi = 100
         self.fig = Figure((5.0, 4.0), dpi=self.dpi)
-        self.canvas = FigureCanvas(self.fig)
+        self.canvas = mqt5ag.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self.main_frame)
         # {{{ need both of these to get background of figure transparent,
         #     rather than white
@@ -269,70 +279,79 @@ class TuningWindow(QMainWindow):
 
         # Create the navigation toolbar, tied to the canvas
         #
-        self.mpl_toolbar = NavigationToolbar(self.canvas, self.main_frame)
+        self.mpl_toolbar = mqt5ag.NavigationToolbar2QT(self.canvas, self.main_frame)
 
         # Other GUI controls
         #
         # {{{ text boxes control slider limits
-        self.textboxes_vbox = QVBoxLayout()
-        self.textbox1 = QLineEdit()
-        self.textbox2 = QLineEdit()
+        self.textboxes_vbox = qt5w.QVBoxLayout()
+        self.textbox1 = qt5w.QLineEdit()
+        self.textbox2 = qt5w.QLineEdit()
 
         self.orig_zoom_limits()
         # }}}
 
         # {{{ buttons
-        self.button_vbox = QVBoxLayout()
-        self.draw_button = QPushButton("&Re-Capture")
+        self.button_vbox = qt5w.QVBoxLayout()
+        self.draw_button = qt5w.QPushButton("&Re-Capture")
         self.draw_button.clicked.connect(self.on_recapture)
         self.button_vbox.addWidget(self.draw_button)
-        self.zoom_button = QPushButton("&Zoom Limits")
+        self.zoom_button = qt5w.QPushButton("&Zoom Limits")
         self.zoom_button.clicked.connect(self.on_zoomclicked)
         self.button_vbox.addWidget(self.zoom_button)
         # }}}
 
         # {{{ box to stack checkboxes
-        self.boxes_vbox = QVBoxLayout()
-        self.grid_cb = QCheckBox("Show &Grid")
+        self.boxes_vbox = qt5w.QVBoxLayout()
+        self.grid_cb = qt5w.QCheckBox("Show &Grid")
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
-        self.fmode_cb = QCheckBox("Const &Frq &Mode")
+        self.fmode_cb = qt5w.QCheckBox("Const &Frq &Mode")
         self.fmode_cb.setChecked(False)
         self.fmode_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.fmode_cb)
         # }}}
 
-        slider_label = QLabel("Bar width (%):")
+        slider_label = qt5w.QLabel("Bar width (%):")
 
         # {{{ box to stack sliders
-        self.slider_vbox = QVBoxLayout()
+        self.slider_vbox = qt5w.QVBoxLayout()
         self.slider_vbox.setContentsMargins(0, 0, 0, 0)
         # self.slider_vbox.setSpacing(0)
-        self.slider_min = QSlider(Qt.Horizontal)
-        self.slider_max = QSlider(Qt.Horizontal)
+        self.slider_min = qt5w.QSlider(qt5c.Qt.Horizontal)
+        self.slider_max = qt5w.QSlider(qt5c.Qt.Horizontal)
         # original settings of MWtune
-        for ini_val, w in [(9816000, self.slider_min), (9823000, self.slider_max)]:
+        for ini_val, w in zip(
+            [
+                1e6 * (myconfig["uw_dip_center_ghz"] + j)
+                for j in [
+                    -myconfig["uw_dip_width_ghz"],
+                    myconfig["uw_dip_width_ghz"],
+                ]
+            ],
+            [self.slider_min, self.slider_max],
+        ):
             self.on_textchange()
             w.setValue(ini_val)
             w.setTracking(True)
-            w.setTickPosition(QSlider.TicksBothSides)
+            w.setTickPosition(qt5w.QSlider.TicksBothSides)
             w.valueChanged.connect(self.regen_plots)
             self.slider_vbox.addWidget(w)
         # }}}
 
         # {{{ Layout with box sizers
-        hbox = QHBoxLayout()
+        hbox = qt5w.QHBoxLayout()
 
         hbox.addLayout(self.textboxes_vbox)  # requires a different command!
         hbox.addLayout(self.button_vbox)  # requires a different command!
         hbox.addLayout(self.boxes_vbox)  # requires a different command!
         for w in [slider_label]:
             hbox.addWidget(w)
-            hbox.setAlignment(w, Qt.AlignVCenter)
+            hbox.setAlignment(w, qt5c.Qt.AlignVCenter)
         hbox.addLayout(self.slider_vbox)  # requires a different command!
 
-        vbox = QVBoxLayout()
+        vbox = qt5w.QVBoxLayout()
         vbox.addWidget(self.canvas)
         vbox.addWidget(self.mpl_toolbar)
         vbox.addLayout(hbox)
@@ -342,17 +361,23 @@ class TuningWindow(QMainWindow):
         self.setCentralWidget(self.main_frame)
 
     def create_status_bar(self):
-        self.status_text = QLabel("This is a demo")
+        self.status_text = qt5w.QLabel("This is a demo")
         self.statusBar().addWidget(self.status_text, 1)
 
     def create_menu(self):
         self.file_menu = self.menuBar().addMenu("&File")
 
         load_file_action = self.create_action(
-            "&Save plot", shortcut="Ctrl+S", slot=self.save_plot, tip="Save the plot"
+            "&Save plot",
+            shortcut="Ctrl+S",
+            slot=self.save_plot,
+            tip="Save the plot",
         )
         quit_action = self.create_action(
-            "&Quit", slot=self.close, shortcut="Ctrl+Q", tip="Close the application"
+            "&Quit",
+            slot=self.close,
+            shortcut="Ctrl+Q",
+            tip="Close the application",
         )
 
         self.add_actions(self.file_menu, (load_file_action, None, quit_action))
@@ -372,11 +397,17 @@ class TuningWindow(QMainWindow):
                 target.addAction(action)
 
     def create_action(
-        self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False
+        self,
+        text,
+        slot=None,
+        shortcut=None,
+        icon=None,
+        tip=None,
+        checkable=False,
     ):
-        action = QAction(text, self)
+        action = qt5w.QAction(text, self)
         if icon is not None:
-            action.setIcon(QIcon(":/%s.png" % icon))
+            action.setIcon(qt5w.QIcon(":/%s.png" % icon))
         if shortcut is not None:
             action.setShortcut(shortcut)
         if tip is not None:
@@ -391,7 +422,7 @@ class TuningWindow(QMainWindow):
 
 def main():
     myconfig = SpinCore_pp.configuration("active.ini")
-    app = QApplication(sys.argv)
+    app = qt5w.QApplication(sys.argv)
     with Bridge12() as b:
         b.set_wg(True)
         b.set_rf(True)

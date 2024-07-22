@@ -12,7 +12,13 @@ import os
 import h5py
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
-from Instruments import power_control
+from Instruments import (
+    Bridge12,
+    prologix_connection,
+    gigatronics,
+    power_control,
+)
+from serial import Serial
 import time
 from datetime import datetime
 from SpinCore_pp.power_helper import gen_powerlist
@@ -89,12 +95,19 @@ with power_control() as p:
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
-            "SETTING THIS POWER", this_dB, "(", dB_settings[j - 1], powers[j], "W)"
+            "SETTING THIS POWER",
+            this_dB,
+            "(",
+            dB_settings[j - 1],
+            powers[j],
+            "W)",
         )
         if j == 0:
             retval = p.dip_lock(
-                config_dict["uw_dip_center_GHz"] - config_dict["uw_dip_width_GHz"] / 2,
-                config_dict["uw_dip_center_GHz"] + config_dict["uw_dip_width_GHz"] / 2,
+                config_dict["uw_dip_center_GHz"]
+                - config_dict["uw_dip_width_GHz"] / 2,
+                config_dict["uw_dip_center_GHz"]
+                + config_dict["uw_dip_width_GHz"] / 2,
             )
         p.set_power(this_dB)
         for k in range(10):
@@ -149,7 +162,7 @@ else:
     fl.next("FTed data")
     fl.image(for_plot)
 echo_data.name(config_dict["type"] + "_" + str(config_dict["echo_counter"]))
-echo_data.set_prop("postproc_type", "spincore_SE_v3")
+echo_data.set_prop("postproc_type", "proc_Hahn_echoph_v2")
 echo_data.set_prop("acq_params", config_dict.asdict())
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/Echoes")
 filename_out = filename + ".h5"
