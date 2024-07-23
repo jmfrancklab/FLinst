@@ -46,7 +46,7 @@ input(
 # {{{ let computer set field
 if adjust_field:
     field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
-    spc.set_field(Field=config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"])
+    spc.set_field(Field_G=config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"])
 # }}}
 # {{{set phase cycling
 ph1_cyc = r_[0, 1, 2, 3]
@@ -95,7 +95,7 @@ if config_dict["nScans"] > 1:
 data.reorder(["nScans", "ph1", "p_90", "t2"])
 data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_FID_nutation_v1")
-data.set_prop("coherence_pathway", {"ph1": +1})
+data.set_prop("coherence_pathway", {"ph1": -1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "FID_nutation")
 config_dict.write()
