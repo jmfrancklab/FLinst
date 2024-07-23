@@ -1,3 +1,6 @@
+from Instruments.XEPR_eth import xepr
+
+
 def get_integer_sampling_intervals(SW_kHz, time_per_segment_ms):
     """Calculate the actual SW the SpinCore uses based on the digitization rate
     and use that value to calculate the number of points
@@ -26,3 +29,23 @@ def get_integer_sampling_intervals(SW_kHz, time_per_segment_ms):
     nPoints = int(time_per_segment_ms * actual_SW_kHz + 0.5)
     new_time_per_segment_ms = nPoints / actual_SW_kHz
     return nPoints, actual_SW_kHz, new_time_per_segment_ms
+
+
+def set_field(Field_G):
+    """Ensures the field is appropriate before setting the desired field.
+
+    Parameters
+    ==========
+    Field_G: float
+             desired field in G
+    """
+    with xepr() as x:
+        assert Field_G < 3700, (
+            "Are you mad?? The field you want, %g, is too high!" % Field_G
+        )
+        assert Field_G > 3300, (
+            "Are you mad?? The field you want, %g, is too low!" % Field_G
+        )
+        Field_G = x.set_field(Field_G)
+        print("Field set to ", Field_G)
+    return
