@@ -98,9 +98,7 @@ data = generic(
         ("pulse_TTL", prog_p90_us, "ph_cyc", ph1_cyc),
         (
             "delay",
-            config_dict["tau_us"]
-            - 2 * prog_p90_us / pi
-            - config_dict["deblank_us"],
+            config_dict["tau_us"] - 2 * prog_p90_us / pi - config_dict["deblank_us"],
         ),
         # NOTE: here the tau_us is defined as
         # the evolution time from the start of
@@ -131,8 +129,9 @@ data.chunk(
     ["ph2", "ph_diff", "t2"],
     [len(ph2), len(ph_diff), -1],
 )
+data.set_units("t2", "s")
 data.setaxis("ph2", ph2 / 4).setaxis("ph_diff", ph_diff / 4)
-data.set_prop("postproc_type", "spincore_diffph_SE_v2")
+data.set_prop("postproc_type", "spincore_diffph_SE_v4")
 data.set_prop("coherence_pathway", {"ph_overall": -1, "ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")
