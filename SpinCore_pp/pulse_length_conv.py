@@ -86,16 +86,16 @@ def prog_plen(desired_actual):
 
     # }}}
     def zonefit(desired_actual):
-        if desired_actual < 25:
+        if desired_actual < 100:
             mask = np.ones_like(plen_prog, dtype=bool)
         else:
-            mask = plen_prog > 10
+            mask = plen_prog > 40
         calibration_data = nddata(plen_prog[mask], [-1], ["plen"]).setaxis(
             "plen", plen_actual[mask]
         )
         calibration_data.sort("plen")
         # fit the programmed vs actual lengths to a polynomial
-        if desired_actual < 25:
+        if desired_actual < 100:
             c = calibration_data.polyfit("plen", order=10)
         else:
             c = calibration_data.polyfit("plen", order=1)
