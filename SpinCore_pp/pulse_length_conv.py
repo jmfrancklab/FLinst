@@ -75,14 +75,14 @@ def prog_plen(desired_actual):
         (98.2004, 75.7488, 188.7464),
     ]
     # neat JF trick for organizing these data points
-    prog90, beta90, beta180 = map(array, zip(*datapoints))
+    prog_beta90, beta90, beta180 = map(array, zip(*datapoints))
     # }}}
     # {{{ prepare data into arrays for interpolation
     # gather programmed pulse lengths in array
-    plen_prog = r_[0, prog90, 2 * prog90]
+    plen_prog = r_[0, prog_beta90, 2 * prog_beta90]
     # assume the longest pulse is about the correct length
     # and again gather into an array
-    plen_actual = r_[0, beta90, beta180] * 2 * prog90[-1] / beta180[-1]
+    plen_actual = r_[0, beta90, beta180] * 2 * prog_beta90[-1] / beta180[-1]
 
     # }}}
     def zonefit(desired_actual):
