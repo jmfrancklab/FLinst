@@ -12,7 +12,7 @@ import pyspecdata as psd
 from SpinCore_pp.pulse_length_conv import prog_plen
 
 # the following choice fails dramatically with the old code
-desired_plen = r_[0:50:50j]
+desired_plen = r_[10:150:50j]
 prog_plen = prog_plen(desired_plen)
 with psd.figlist_var() as fl:
     fl.next("Actual vs programmed plen")

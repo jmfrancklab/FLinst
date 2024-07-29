@@ -5,23 +5,23 @@ from pyspecdata import r_, nddata
 
 def prog_plen(desired_actual):
     """
-    Takes the desired pulse length and tells the
-    user what pulse length should be programmed in order to get the actual desired
-    pulse length
+    Takes the desired beta (us sqrt(W)) and tells the
+    user what beta should be programmed in order to get the actual desired
+    beta
     Parameters
     ==========
     desired_actual: float
-                    the actual pulse length you wish the spincore to output,
-                    in us
+                    the actual beta you wish the spincore to output,
+                    in us*sqrt(W)
     Returns
     =======
     retval: float
-            The pulse length you tell spincore in order to get the desired actual.
+            The beta you tell spincore in order to get the desired actual.
     """
-    # {{{ list of programmed p90, actual p90 and actual 180 - used in
+    # {{{ list of programmed p90, actual p90*sqrt(W) and actual p180*sqrt(W) - used in
     # generating the calibrated fit
-    # list of the programmed pulse length, the actual p90 length
-    # and the actual p180 length based on the programmed p90
+    # list of the programmed pulse length, the actual p90*sqrt(P)
+    # and the actual p180*sqrt(P) based on the programmed p90
     datapoints = [
         (1.1547, 1.6816, 4.3987),
         (1.3625, 2.0908, 5.6696),
@@ -66,23 +66,23 @@ def prog_plen(desired_actual):
         (9.4685, 56.7011, 152.1547),
         (9.6764, 58.7643, 155.8218),
         (9.8842, 60.8571, 159.8310),
-        (10.0921,62.9501, 164.1420),
-        (10.2999,64.948, 168.1456),
-        (10.5078,67.2708, 172.1686),
-        (10.7156,69.4676,176.1556),
-        (10.9235,71.6768,180.6902),
-        (11.1313,73.8858,184.8543),
-        (11.3392,75.7488,188.7464),
+        (10.0921, 62.9501, 164.1420),
+        (10.2999, 64.9480, 168.1456),
+        (10.5078, 67.2708, 172.1686),
+        (10.7156, 69.4676, 176.1556),
+        (10.9235, 71.6768, 180.6902),
+        (11.1313, 73.8858, 184.8543),
+        (11.3392, 75.7488, 188.7464),
     ]
     # neat JF trick for organizing these data points
-    prog90, act90, act180 = map(array, zip(*datapoints))
+    prog90, beta90, beta180 = map(array, zip(*datapoints))
     # }}}
     # {{{ prepare data into arrays for interpolation
     # gather programmed pulse lengths in array
     plen_prog = r_[0, prog90, 2 * prog90]
     # assume the longest pulse is about the correct length
     # and again gather into an array
-    plen_actual = r_[0, act90, act180] * 2 * prog90[-1] / act180[-1]
+    plen_actual = r_[0, beta90, beta180] * 2 * prog90[-1] / beta180[-1]
 
     # }}}
     def zonefit(desired_actual):
