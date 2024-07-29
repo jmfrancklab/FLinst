@@ -1,4 +1,3 @@
-from pyspecdata import *
 import configparser
 
 
@@ -266,7 +265,7 @@ class configuration(object):
         ) in self.registered_params.items():
             try:
                 temp = self.configobj.get(section, paramname.lower())
-            except:
+            except Exception:
                 continue
             self._params[paramname] = converter(temp)
         self._case_insensitive_keys = {
