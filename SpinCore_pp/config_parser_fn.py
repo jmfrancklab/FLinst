@@ -231,6 +231,12 @@ class configuration(object):
             0,
             "number of field sweeps performed for a particular sample that day",
         ),
+        "misc_counter": (
+            int,
+            "file_names",
+            0,
+            "number of miscellaneous expts performed for a particular sample that day",
+        ),
         "date": (int, "file_names", None, "today's date"),
         "chemical": (
             str,
