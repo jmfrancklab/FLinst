@@ -140,7 +140,7 @@ def prog_plen(desired_actual, amplitude = 1.0):
         if desired_actual < 100:
             mask = np.ones_like(plen_prog, dtype=bool)
         else:
-            mask = plen_prog > 40
+            mask = plen_prog > 60 #where line is curved
         calibration_data = nddata(plen_prog[mask], [-1], ["plen"]).setaxis(
             "plen", plen_actual[mask]
         )

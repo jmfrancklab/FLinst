@@ -39,12 +39,9 @@ tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 Rx_scans = 1
 datalist = []
 prog_p90s = []
-prog_betas = []
 with GDS_scope() as gds:
     for index, val in enumerate(desired_beta):
-        prog_beta = spc.prog_plen_lo(val)
-        prog_betas.append(prog_beta)
-        p90 = prog_beta/sqrt_P
+        p90 = prog_plen(val)
         prog_p90s.append(p90)
         spc.configureTX(
             config_dict["adc_offset"],
@@ -74,7 +71,6 @@ with GDS_scope() as gds:
 data = psd.concat(datalist, "p_90").reorder("t")
 data.set_units("t", "s")
 data.set_prop("set_p90s", prog_p90s)
-data.set_prop("set_betas", prog_betas)
 data.set_prop("desired_betas", desired_beta) 
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
