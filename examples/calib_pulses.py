@@ -34,15 +34,18 @@ config_dict["misc_counter"] += 1
 # }}}
 # {{{ ppg
 sqrt_P = config_dict["amplitude"] * np.sqrt(75)  # we have a 75 W amplifier
-prog_beta = np.linspace(10, 100, 50, endpoint=False)
-p90s_range = prog_beta / sqrt_P
+desired_beta = np.linspace(10, 100, 50, endpoint=False)
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 Rx_scans = 1
 datalist = []
+prog_p90s = []
+prog_betas = []
 with GDS_scope() as gds:
-    for index, val in enumerate(p90s_range):
-        p90 = val
-        p180 = 2 * val
+    for index, val in enumerate(desired_beta):
+        prog_beta = spc.prog_plen_lo(val)
+        prog_betas.append(prog_beta)
+        p90 = prog_beta/sqrt_P
+        prog_p90s.append(p90)
         spc.configureTX(
             config_dict["adc_offset"],
             config_dict["carrierFreq_MHz"],
@@ -60,9 +63,6 @@ with GDS_scope() as gds:
                 ("phase_reset", 1),
                 ("delay_TTL", 1.0),
                 ("pulse_TTL", p90, 0),
-                ("delay", config_dict["tau_us"]),
-                ("delay_TTL", 1.0),
-                ("pulse_TTL", p180, 0),
                 ("delay", config_dict["deadtime_us"]),
                 ("acquire", config_dict["acq_time_ms"]),
             ]
@@ -73,9 +73,9 @@ with GDS_scope() as gds:
         spc.stopBoard()
 data = psd.concat(datalist, "p_90").reorder("t")
 data.set_units("t", "s")
-data.set_prop("set_p90s", p90s_range)
-data.set_prop("set_p180s", 2 * p90s_range)
-data.set_prop("set_beta", prog_beta)
+data.set_prop("set_p90s", prog_p90s)
+data.set_prop("set_betas", prog_betas)
+data.set_prop("desired_betas", desired_beta) 
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
 config_dict.write()
