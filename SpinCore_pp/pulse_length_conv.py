@@ -6,7 +6,7 @@ from pyspecdata import r_, nddata
 def prog_plen(desired_actual, amplitude = 1.0):
     """
     Takes the desired beta (us sqrt(W)) and tells the
-    user what beta should be programmed in order to get the actual desired
+    user what pulse length should be programmed in order to get the actual desired
     beta
     Parameters
     ==========
@@ -125,7 +125,6 @@ def prog_plen(desired_actual, amplitude = 1.0):
     # neat JF trick for organizing these data points
     t_p, beta = map(array, zip(*datapoints))
     # }}}
-    sqrt_P = amplitude * np.sqrt(75)
     # {{{ prepare data into arrays for interpolation
     # gather programmed pulse lengths in array
     plen_prog = r_[0, t_p]
