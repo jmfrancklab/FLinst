@@ -12,8 +12,8 @@ import pyspecdata as psd
 from SpinCore_pp.pulse_length_conv import prog_plen
 
 # the following choice fails dramatically with the old code
-desired_plen = r_[10:150:50j]
-prog_plen = prog_plen(desired_plen)
+desired_beta = r_[10:150:50j]
+prog_plen = prog_plen(desired_beta)
 with psd.figlist_var() as fl:
     fl.next(r"Actual vs programmed $\beta$")
     plt.plot(prog_plen, desired_plen, "o")
