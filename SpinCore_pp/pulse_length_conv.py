@@ -3,7 +3,7 @@ import numpy as np
 from pyspecdata import r_, nddata
 
 
-def prog_plen(desired_actual, amplitude = 1.0):
+def prog_plen(desired_actual, amplitude=1.0):
     """
     Takes the desired beta (us sqrt(W)) and tells the
     user what pulse length should be programmed in order to get the actual desired
@@ -128,16 +128,17 @@ def prog_plen(desired_actual, amplitude = 1.0):
     # {{{ prepare data into arrays for interpolation
     # gather programmed pulse lengths in array
     plen_prog = r_[0, t_p]
+    sqrt_P = amplitude * np.sqrt(75)
     # assume the longest pulse is about the correct length
     # and again gather into an array
-    plen_actual = r_[0, beta] * ((2 * t_p[-1]*sqrt_P) / (2*beta[-1]))
+    plen_actual = r_[0, beta] * ((2 * t_p[-1] * sqrt_P) / (2 * beta[-1]))
 
     # }}}
     def zonefit(desired_actual):
         if desired_actual < 100:
             mask = np.ones_like(plen_prog, dtype=bool)
         else:
-            mask = plen_prog > 60 #where line is curved
+            mask = plen_prog > 60  # where line is curved
         calibration_data = nddata(plen_prog[mask], [-1], ["plen"]).setaxis(
             "plen", plen_actual[mask]
         )
@@ -148,6 +149,7 @@ def prog_plen(desired_actual, amplitude = 1.0):
         else:
             c = calibration_data.polyfit("plen", order=1)
         return np.polyval(c[::-1], desired_actual)
+
     ret_val = np.vectorize(zonefit)(desired_actual)
     if ret_val.size > 1:
         return ret_val
