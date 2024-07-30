@@ -16,7 +16,7 @@ def prog_plen(desired_actual, amplitude = 1.0):
     Returns
     =======
     retval: float
-            The beta you tell spincore in order to get the desired actual.
+            The pulse length you tell spincore in order to get the desired actual.
     """
     if amplitude > 0.5:
         # {{{ list of programmed p90, actual p90*sqrt(W) and actual p180*sqrt(W) - used in
