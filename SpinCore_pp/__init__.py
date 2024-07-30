@@ -12,7 +12,7 @@ from .SpinCore_pp import (
     tune,
     adc_offset,
 )
-from .pulse_length_conv import prog_plen
+from .pulse_length_conv import prog_plen,prog_plen_lo
 from .config_parser_fn import configuration
 from .calc_vdlist import vdlist_from_relaxivities, return_vdlist
 from .process_first_arg import process_args
@@ -33,6 +33,7 @@ __all__ = [
     "ppg_element",
     "process_args",
     "prog_plen",
+    "prog_plen_lo",
     "return_vdlist",
     "runBoard",
     "save_data",
