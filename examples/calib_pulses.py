@@ -34,15 +34,30 @@ config_dict["misc_counter"] += 1
 # }}}
 # {{{ ppg
 sqrt_P = config_dict["amplitude"] * np.sqrt(75)  # we have a 75 W amplifier
-desired_beta = np.linspace(10, 100, 50, endpoint=False)
+desired_beta = np.linspace(0.5*sqrt_P, 100, 50)
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 Rx_scans = 1
 datalist = []
-prog_p90s = []
+prog_t = []
+# {{{ set up settings for GDS
 with GDS_scope() as gds:
+    gds.reset()
+    gds.CH2.disp = True
+    gds.write(":CHAN1:DISP OFF")
+    gds.write(":CHAN2:DISP ON")
+    gds.write(":CHAN3:DISP OFF")
+    gds.write(":CHAN4:DISP OFF")
+    gds.CH2.voltscal = 100e-3  # set voltscale to 100 mV
+    gds.timescal(50e-6, pos=0)  # set timescale to 50 us
+    gds.write(":TIM:MOD WIND")
+    gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
+    gds.write(":TRIG:SOUR CH2")
+    gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
+    gds.write(":TRIG:HLEV 7.5E-2")  # used in gds_for_tune which seems reasonable
+    # }}}
     for index, val in enumerate(desired_beta):
-        p90 = prog_plen(val)
-        prog_p90s.append(p90)
+        t_p = prog_plen(val)
+        prog_t.append(t_p)
         spc.configureTX(
             config_dict["adc_offset"],
             config_dict["carrierFreq_MHz"],
@@ -59,18 +74,17 @@ with GDS_scope() as gds:
             [
                 ("phase_reset", 1),
                 ("delay_TTL", 1.0),
-                ("pulse_TTL", p90, 0),
+                ("pulse_TTL", t_p, 0),
                 ("delay", config_dict["deadtime_us"]),
-                ("acquire", config_dict["acq_time_ms"]),
             ]
         )
         spc.stop_ppg()
         spc.runBoard()
         datalist.append(gds.waveform(ch=2))
         spc.stopBoard()
-data = psd.concat(datalist, "p_90").reorder("t")
+data = psd.concat(datalist, "t_p").reorder("t")
 data.set_units("t", "s")
-data.set_prop("set_p90s", prog_p90s)
+data.set_prop("set_t", prog_t)
 data.set_prop("desired_betas", desired_beta) 
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
