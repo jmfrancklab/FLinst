@@ -127,6 +127,7 @@ def prog_plen(desired_actual, amplitude = 1.0):
     # neat JF trick for organizing these data points
     prog_beta90, beta90, beta180 = map(array, zip(*datapoints))
     # }}}
+    sqrt_P = amplitude * np.sqrt(75)
     # {{{ prepare data into arrays for interpolation
     # gather programmed pulse lengths in array
     plen_prog = r_[0, prog_beta90, 2 * prog_beta90]
@@ -151,6 +152,7 @@ def prog_plen(desired_actual, amplitude = 1.0):
             c = calibration_data.polyfit("plen", order=1)
         return np.polyval(c[::-1], desired_actual)
     ret_val = np.vectorize(zonefit)(desired_actual)
+    ret_val /= sqrt_P #convert from beta to pulse length
     if ret_val.size > 1:
         return ret_val
     else:
