@@ -31,40 +31,45 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
+if config_dict["amplitude"] > 0.5:
+    long_t_pulse = 28
+else:
+    long_t_pulse = 280
+if calibrating:
+    t_pulse_range = np.linspace(0.5, long_t_pulse, 30)
+else:
+    desired_beta = np.linspace(0.5, 100, 50)
+    t_pulse_range = spc.prog_plen(desired_beta, config_dict["amplitude"])
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["misc_counter"] += 1
 # }}}
 # {{{ ppg
-sqrt_P = config_dict["amplitude"] * np.sqrt(75)  # we have a 75 W amplifier
-desired_beta = np.linspace(0.5 * sqrt_P, 100, 50)
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 Rx_scans = 1
 datalist = []
-prog_t = []
 # {{{ set up settings for GDS
 with GDS_scope() as gds:
     gds.reset()
+    gds.autoset
+    gds.CH1.disp = True
     gds.CH2.disp = True
     gds.write(":CHAN1:DISP OFF")
     gds.write(":CHAN2:DISP ON")
     gds.write(":CHAN3:DISP OFF")
     gds.write(":CHAN4:DISP OFF")
-    gds.CH2.voltscal = 100e-3  # set voltscale to 100 mV
-    gds.timescal(50e-6, pos=0)  # set timescale to 50 us
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
-    gds.write(":TRIG:HLEV 7.5E-2")  # used in gds_for_tune which seems reasonable
-    # }}}
-    if calibrating:
-        t_p_range = np.linspace(0.5, 25, 25)
+    if config_dict["amplitude"] > 0.5:
+        gds.CH2.voltscal = 500e-3  # set voltscale to 100 mV
+        gds.timscal(50e-6, pos = 20e-6)  # set timescale to 50 us
     else:
-        t_p_range = spc.prog_plen(desired_beta, config_dict["amplitude"])
-    for index, val in enumerate(t_p_range):
-        t_p = val
-        prog_t.append(t_p)
+        gds.CH2.voltscal = 50e-3
+        gds.timscal(100e-6,pos=250E-6)
+    # }}}
+    for index, t_pulse in enumerate(t_pulse_range):
         spc.configureTX(
             config_dict["adc_offset"],
             config_dict["carrierFreq_MHz"],
@@ -81,7 +86,7 @@ with GDS_scope() as gds:
             [
                 ("phase_reset", 1),
                 ("delay_TTL", 1.0),
-                ("pulse_TTL", t_p, 0),
+                ("pulse_TTL", t_pulse, 0),
                 ("delay", config_dict["deadtime_us"]),
             ]
         )
@@ -89,10 +94,13 @@ with GDS_scope() as gds:
         spc.runBoard()
         datalist.append(gds.waveform(ch=2))
         spc.stopBoard()
-data = psd.concat(datalist, "t_p").reorder("t")
+if calibrating:
+    data = psd.concat(datalist, "t_pulse").reorder("t")
+    data.setaxis("t_pulse",t_pulse_range)
+else:
+    data = psd.concat(datalist, "beta").reorder("t")
+    data.setaxis("beta", desired_beta)
 data.set_units("t", "s")
-data.set_prop("set_t", t_p_range)
-data.set_prop("desired_betas", desired_beta)
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
 config_dict.write()
