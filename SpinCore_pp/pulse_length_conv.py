@@ -4,11 +4,11 @@ import numpy as np
 def prog_plen(desired_beta, amplitude):
     """
     Takes the desired beta (μs sqrt(W)) and tells the
-    user what pulse length should be programmed in order to get the actual desired
+    user what pulse length should be programmed in order to get the desired
     beta
     Parameters
     ==========
-    desired_actual: float
+    desired_beta: float
                     the desired beta you wish the spincore to output,
                     in μs*sqrt(W)
     amplitude:  float
