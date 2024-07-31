@@ -3,7 +3,7 @@ import numpy as np
 from pyspecdata import r_, nddata
 
 
-def prog_plen(desired_actual, amplitude=1.0):
+def prog_plen(desired_actual, amplitude):
     """
     Takes the desired beta (us sqrt(W)) and tells the
     user what pulse length should be programmed in order to get the actual desired

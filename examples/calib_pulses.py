@@ -56,7 +56,7 @@ with GDS_scope() as gds:
     gds.write(":TRIG:HLEV 7.5E-2")  # used in gds_for_tune which seems reasonable
     # }}}
     for index, val in enumerate(desired_beta):
-        t_p = spc.prog_plen(val)
+        t_p = spc.prog_plen(val, config_dict["amplitude"])
         prog_t.append(t_p)
         spc.configureTX(
             config_dict["adc_offset"],
