@@ -15,7 +15,7 @@ desired_beta = r_[10:150:50j]
 prog_plen = prog_plen(desired_beta)
 with psd.figlist_var() as fl:
     fl.next(r"desired $\beta$ vs pulse length")
-    plt.plot(prog_plen, desired_beta, "o")
-    plt.ylabel(r"desired $\beta$ / $\mathrm{\mu s \sqrt{W}}$")
-    plt.xlabel(r"required pulse lengths / $\mathrm{\mu s}$")
-    plt.title(r"Desired $\beta$ vs. Pulse Length")
+    plt.plot(desired_beta, prog_plen, "o")
+    plt.xlabel(r"desired $\beta$ / $\mathrm{\mu s \sqrt{W}}$")
+    plt.ylabel(r"required pulse lengths / $\mathrm{\mu s}$")
+    plt.title(r"Pulse Length vs. Desired $\beta$")
