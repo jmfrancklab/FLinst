@@ -31,10 +31,12 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
+# {{{ if the amplitude is small we want to go out to much longer pulse lengths
 if config_dict["amplitude"] > 0.5:
     long_t_pulse = 28
 else:
     long_t_pulse = 280
+# }}}
 if calibrating:
     t_pulse_range = np.linspace(0.5, long_t_pulse, 30)
 else:
