@@ -66,10 +66,10 @@ with GDS_scope() as gds:
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     if config_dict["amplitude"] > 0.5:
         gds.CH2.voltscal = 500e-3  # set voltscale to 100 mV
-        gds.timscal(50e-6, pos = 20e-6)  # set timescale to 50 us
+        gds.timscal(50e-6, pos=20e-6)  # set timescale to 50 us
     else:
         gds.CH2.voltscal = 50e-3
-        gds.timscal(100e-6,pos=250E-6)
+        gds.timscal(100e-6, pos=250e-6)
     # }}}
     for index, t_pulse in enumerate(t_pulse_range):
         spc.configureTX(
@@ -98,7 +98,7 @@ with GDS_scope() as gds:
         spc.stopBoard()
 if calibrating:
     data = psd.concat(datalist, "t_pulse").reorder("t")
-    data.setaxis("t_pulse",t_pulse_range)
+    data.setaxis("t_pulse", t_pulse_range)
 else:
     data = psd.concat(datalist, "beta").reorder("t")
     data.setaxis("beta", desired_beta)

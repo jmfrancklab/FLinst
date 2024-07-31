@@ -20,6 +20,7 @@ def prog_plen(desired_beta, amplitude):
     """
     # NOTE: THESE VALUES NEED TO BE RECALCULATED ONCE THE RERUN ACQUISITIONS ARE PROCESSED!
     if amplitude > 0.5:
+        linear_threshold = 60
         c_curve = [
             1.60730341e02 + 0.0j,
             -3.00153883e02 + 0.0j,
@@ -33,12 +34,9 @@ def prog_plen(desired_beta, amplitude):
             -1.23280806e-04 + 0.0j,
             1.76812546e-06 + 0.0j,
         ]
-        c_linear = [
-                1.294623894 + 0.0j,
-                -12349235 + 0.0j,
-                923569239 + 0.0j
-        ]
+        c_linear = [1.294623894 + 0.0j, -12349235 + 0.0j, 923569239 + 0.0j]
     else:
+        linear_threshold = 25
         c_curve = [
             2.27868899e03 + 0.0j,
             -3.17948111e03 + 0.0j,
@@ -52,11 +50,7 @@ def prog_plen(desired_beta, amplitude):
             -2.14653411e-04 + 0.0j,
             2.52318231e-06 + 0.0j,
         ]
-        c_linear = [
-                1.294623894 + 0.0j,
-                -12349235 + 0.0j,
-                923569239 + 0.0j
-        ]
+        c_linear = [1.294623894 + 0.0j, -12349235 + 0.0j, 923569239 + 0.0j]
 
     # }}}
     def zonefit(desired_beta):
