@@ -37,7 +37,7 @@ if calibrating:
     t_pulse = np.linspace(
         0.5,
         150
-        / sqrt(nominal_power)
+        / np.sqrt(nominal_power)
         / config_dict[
             "amplitude"
         ],  # if the amplitude is small we want to go out to much longer pulse lengths
@@ -68,7 +68,7 @@ with GDS_scope() as gds:
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
-    gds.CH2.voltscal = config_dict["amplitude"] * sqrt(
+    gds.CH2.voltscal = config_dict["amplitude"] * np.sqrt(
         2 * nominal_power / nominal_atten * 50
     )  # 2 inside is for rms-amp
     gds.timscal(np.max(t_pulse), pos=20e-6)
