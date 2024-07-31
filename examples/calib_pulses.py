@@ -1,9 +1,12 @@
 r"""
 Calibrate pulses output from RF amplifier
 =========================================
-A series of betas ($\mu$s $\sqrt{W}$) are supplied to the spincore to output to
-the RF amplifier. The output of the amplifier is then captured on the GDS
-oscilloscope. It is very important to note that there MUST BE at least a 40 dBm
+If calibrating the pulse lengths, a series of pulse lengths are sent to the 
+spincore directly and the output pulse is captured on the GDS oscilloscope.
+If testing the calibration or capturing using a series of desired betas,
+the calibrating conditional should be set to false and the script will calibrate
+the pulse lengths so that the output of the amplifier produces the desired beta.
+It is very important to note that there MUST BE at least a 40 dBm
 attenuator between the RF amplifier output and the GDS oscilloscope input to
 avoid damaging the instrumentation! It is advised that the attenuator be
 calibrated using the GDS and AFG beforehand
@@ -15,6 +18,7 @@ from datetime import datetime
 from Instruments import GDS_scope
 import numpy as np
 
+calibrating = True
 my_exp_type = "test_equipment"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
