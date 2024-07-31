@@ -34,7 +34,7 @@ config_dict = spc.configuration("active.ini")
 )
 # }}}
 if calibrating:
-    t_pulse_range = np.linspace(
+    t_pulse = np.linspace(
         0.5,
         150
         / sqrt(nominal_power)
@@ -45,7 +45,7 @@ if calibrating:
     )
 else:
     desired_beta = np.linspace(0.5, 150, 50)
-    t_pulse_range = spc.prog_plen(desired_beta, config_dict["amplitude"])
+    t_pulse = spc.prog_plen(desired_beta, config_dict["amplitude"])
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
@@ -69,9 +69,9 @@ with GDS_scope() as gds:
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
     gds.CH2.voltscal = sqrt(nominal_power / nominal_atten * 50)
-    gds.timscal(np.max(t_pulse_range), pos=20e-6)
+    gds.timscal(np.max(t_pulse), pos=20e-6)
     # }}}
-    for index, t_pulse in enumerate(t_pulse_range):
+    for index, this_t_pulse in enumerate(t_pulse):
         spc.configureTX(
             config_dict["adc_offset"],
             config_dict["carrierFreq_MHz"],
@@ -93,7 +93,7 @@ with GDS_scope() as gds:
             [
                 ("phase_reset", 1),
                 ("delay_TTL", 1.0),
-                ("pulse_TTL", t_pulse, 0),
+                ("pulse_TTL", this_t_pulse, 0),
                 ("delay", config_dict["deadtime_us"]),
             ]
         )
@@ -103,11 +103,11 @@ with GDS_scope() as gds:
         spc.stopBoard()
 if calibrating:
     data = psd.concat(datalist, "t_pulse").reorder("t", first=False)
-    data.setaxis("t_pulse", t_pulse_range)
+    data.setaxis("t_pulse", t_pulse)
 else:
     data = psd.concat(datalist, "beta").reorder("t", first=False)
     data.setaxis("beta", desired_beta)
-    data.set_prop("programmed_t_pulse", t_pulse_range)
+    data.set_prop("programmed_t_pulse", t_pulse)
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
