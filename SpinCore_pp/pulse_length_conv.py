@@ -3,7 +3,7 @@ import numpy as np
 from pyspecdata import r_, nddata
 
 
-def prog_plen(desired_actual, amplitude):
+def prog_plen(desired_beta, amplitude):
     """
     Takes the desired beta (us sqrt(W)) and tells the
     user what pulse length should be programmed in order to get the actual desired
@@ -11,15 +11,15 @@ def prog_plen(desired_actual, amplitude):
     Parameters
     ==========
     desired_actual: float
-                    the actual beta you wish the spincore to output,
+                    the desired beta you wish the spincore to output,
                     in us*sqrt(W)
     Returns
     =======
     retval: float
-            The pulse length you tell spincore in order to get the desired actual.
+            The pulse length you tell spincore in order to get the desired beta.
     """
     if amplitude > 0.5:
-        # {{{ list of programmed p90, actual p90*sqrt(W) - used in
+        # {{{ list of programmed pulse lengths, measured beta - used in
         # generating the calibrated fit
         datapoints = [
             (1.1547, 1.6816),
@@ -134,8 +134,8 @@ def prog_plen(desired_actual, amplitude):
     plen_actual = r_[0, beta] * ((2 * t_p[-1] * sqrt_P) / (2 * beta[-1]))
 
     # }}}
-    def zonefit(desired_actual):
-        if desired_actual < 100:
+    def zonefit(desired_beta):
+        if desired_beta < 100:
             mask = np.ones_like(plen_prog, dtype=bool)
         else:
             mask = plen_prog > 60  # where line is curved
@@ -144,13 +144,13 @@ def prog_plen(desired_actual, amplitude):
         )
         calibration_data.sort("plen")
         # fit the programmed vs actual lengths to a polynomial
-        if desired_actual < 100:
+        if desired_beta < 100:
             c = calibration_data.polyfit("plen", order=10)
         else:
             c = calibration_data.polyfit("plen", order=1)
-        return np.polyval(c[::-1], desired_actual)
+        return np.polyval(c[::-1], desired_beta)
 
-    ret_val = np.vectorize(zonefit)(desired_actual)
+    ret_val = np.vectorize(zonefit)(desired_beta)
     if ret_val.size > 1:
         return ret_val
     else:
