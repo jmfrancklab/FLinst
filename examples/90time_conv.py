@@ -14,8 +14,8 @@ from SpinCore_pp.pulse_length_conv import prog_plen
 desired_beta = r_[10:150:50j]
 prog_plen = prog_plen(desired_beta)
 with psd.figlist_var() as fl:
-    fl.next(r"Actual vs programmed $\beta$")
+    fl.next(r"desired $\beta$ vs pulse length")
     plt.plot(prog_plen, desired_beta, "o")
-    plt.ylabel(r"actual $\beta$ / $\mathrm{\mu s \sqrt{W}}$")
-    plt.xlabel(r"programmed $\beta$ / $\mathrm{\mu s \sqrt{W}}$")
-    plt.title(r"Actual vs programmed $\beta$")
+    plt.ylabel(r"desired $\beta$ / $\mathrm{\mu s \sqrt{W}}$")
+    plt.xlabel(r"required pulse lengths / $\mathrm{\mu s}$")
+    plt.title(r"Desired $\beta$ vs. Pulse Length")
