@@ -1,4 +1,3 @@
-from pyspecdata import *
 import configparser
 
 
@@ -231,6 +230,12 @@ class configuration(object):
             0,
             "number of field sweeps performed for a particular sample that day",
         ),
+        "misc_counter": (
+            int,
+            "file_names",
+            0,
+            "number of miscellaneous expts performed for a particular sample that day",
+        ),
         "date": (int, "file_names", None, "today's date"),
         "chemical": (
             str,
@@ -260,7 +265,7 @@ class configuration(object):
         ) in self.registered_params.items():
             try:
                 temp = self.configobj.get(section, paramname.lower())
-            except:
+            except Exception:
                 continue
             self._params[paramname] = converter(temp)
         self._case_insensitive_keys = {

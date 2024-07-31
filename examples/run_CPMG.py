@@ -42,9 +42,8 @@ if len(sys.argv) == 2 and sys.argv[1] == "stayput":
     adjust_field = False
 # }}}
 input(
-    "I'm assuming that you've tuned your probe to %f since that's what's
-    in your .ini file. Hit enter if this is true" %
-    config_dict["carrierFreq_MHz"]
+    "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
+    % config_dict["carrierFreq_MHz"]
 )
 # {{{ let computer set field
 if adjust_field:

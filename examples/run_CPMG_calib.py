@@ -41,7 +41,10 @@ from numpy import *
 from datetime import datetime
 import SpinCore_pp
 import h5py
-raise RuntimeError("This pulse proram has not been updated.  Before running again, it should be possible to replace a lot of the code below with a call to the function provided by the 'generic' pulse program inside the ppg directory!")
+
+raise RuntimeError(
+    "This pulse proram has not been updated.  Before running again, it should be possible to replace a lot of the code below with a call to the function provided by the 'generic' pulse program inside the ppg directory!"
+)
 
 fl = figlist_var()
 p90_range = linspace(3.0, 4.0, 5)
@@ -54,7 +57,9 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "CPMG_calib"
 config_dict["date"] = date
 config_dict["cpmg_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -65,10 +70,10 @@ if not phase_cycling:
     ph1_cyc = 0.0
     nPhaseSteps = 1
 # }}}
-#{{{making tau
+# {{{making tau
 marker = 1.0
-pad_start = config_dict['tau_extra_us'] - config_dict["deadtime_us"]
-pad_end = config_dict['tau_extra_us'] - config_dict["deblank_us"] - marker
+pad_start = config_dict["tau_extra_us"] - config_dict["deadtime_us"]
+pad_end = config_dict["tau_extra_us"] - config_dict["deblank_us"] - marker
 assert (
     pad_start > 0
 ), "tau_extra_us must be set to more than deadtime and more than deblank!"
@@ -78,23 +83,22 @@ assert (
 twice_tau_echo_us = (  # the period between 180 pulses
     config_dict["tau_extra_us"] * 2 + config_dict["acq_time_ms"] * 1e3
 )
-#}}}
+# }}}
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
-assert total_pts < 2 ** 14, (
+assert total_pts < 2**14, (
     "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try reducing the acq_time_ms to %f"
     % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
 )
 # }}}
-#{{{run ppg
+# {{{run ppg
 for index, val in enumerate(p90_range):
     p90_us = val  # us
-    config_dict['tau_us'] = twice_tau_echo_us / 2.0 - (
-            2*p90
-            /pi #evolution during pulse -- see eq 6 of coherence paper
-            + config_dict['deadtime_us'] # following 90
-            +config_dict['deblank_us'] #before 180
-            )
+    config_dict["tau_us"] = twice_tau_echo_us / 2.0 - (
+        2 * p90 / pi  # evolution during pulse -- see eq 6 of coherence paper
+        + config_dict["deadtime_us"]  # following 90
+        + config_dict["deblank_us"]  # before 180
+    )
 
     print("***")
     print("INDEX %d - 90 TIME %f" % (index, val))
@@ -115,12 +119,12 @@ for index, val in enumerate(p90_range):
             tau_us=tau_us,
             SW_kHz=config_dict["SW_kHz"],
             ph1_cyc=ph1_cyc,
-            indirect_fields=('p90_idx','p90_us')
+            indirect_fields=("p90_idx", "p90_us"),
             ret_data=None,
         )
-     p90_axis = data.getaxis('indirect')
-     p90_axis[0]['p90_index'] = index
-     p90_axis[0]['p90_us'] = p90
+        p90_axis = data.getaxis("indirect")
+        p90_axis[0]["p90_index"] = index
+        p90_axis[0]["p90_us"] = p90
     else:
         run_cpmg(
             nScans=config_dict["nScans"],
@@ -139,35 +143,32 @@ for index, val in enumerate(p90_range):
             ph1_cyc=ph1_cyc,
             ret_data=data,
         )
-        p90_axis[index+1]['p90_us'] = p90
-#}}}
-#{{{Save data
+        p90_axis[index + 1]["p90_us"] = p90
+# }}}
+# {{{Save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
 if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-if phase_cycling:    
+if phase_cycling:
     fl.next("Raw - time")
-    fl.image(
-        data.C.mean("nScans"))
+    fl.image(data.C.mean("nScans"))
     data.reorder("t2", first=False)
     for_plot = data.C
-    for_plot.ft('t2',shift=True)
-    for_plot.ft(['ph1'], unitary = True)
-    fl.next('FTed data')
-    fl.image(for_plot.C.mean("nScans")
-    )
+    for_plot.ft("t2", shift=True)
+    for_plot.ft(["ph1"], unitary=True)
+    fl.next("FTed data")
+    fl.image(for_plot.C.mean("nScans"))
 else:
     if config_dict["nScans"] > 1:
         data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    data.rename('t','t2')
+    data.rename("t", "t2")
     fl.next("Raw - time")
-    fl.image(
-        data.C.mean("nScans"))
+    fl.image(data.C.mean("nScans"))
     data.reorder("t2", first=False)
     for_plot = data.C
-    for_plot.ft('t2',shift=True)
-    fl.next('FTed data')
+    for_plot.ft("t2", shift=True)
+    fl.next("FTed data")
     fl.image(for_plot)
 data.name(config_dict["type"] + "_" + config_dict["cpmg_counter"])
 data.set_prop("acq_params", config_dict.asdict())
@@ -180,7 +181,9 @@ if os.path.exists(f"{filename_out}"):
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
     ) as fp:
         if nodename in fp.keys():
-            print("this nodename already exists, so I will call it temp_cpmg_calib")
+            print(
+                "this nodename already exists, so I will call it temp_cpmg_calib"
+            )
             data.name("temp_cpmg_calib")
             nodename = "temp_cpmg_calib"
     data.hdf5_write(f"{filename_out}", directory=target_directory)
@@ -199,6 +202,6 @@ else:
                 "if I got this far, that probably worked -- be sure to move/rename temp.h5 to the correct name!!"
             )
 print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-print(("Name of saved data", data.name())
+print("Name of saved data", data.name())
 config_dict.write()
 fl.show()

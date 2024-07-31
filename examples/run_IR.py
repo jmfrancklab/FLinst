@@ -19,7 +19,9 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "IR"
 config_dict["date"] = date
 config_dict["IR_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -38,13 +40,15 @@ vd_kwargs = {
     if j in config_dict.keys()
 }
 vd_list_us = (
-    SpinCore_pp.vdlist_from_relaxivities(config_dict["concentration"], **vd_kwargs)
+    SpinCore_pp.vdlist_from_relaxivities(
+        config_dict["concentration"], **vd_kwargs
+    )
     * 1e6
 )  # put vd list into microseconds
 # }}}
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
-assert total_pts < 2 ** 14, (
+assert total_pts < 2**14, (
     "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try reducing the acq_time_ms to %f"
     % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
 )
@@ -71,33 +75,32 @@ for vd_idx, vd in enumerate(vd_list_us):
     )
 # }}}
 # {{{ chunk and save data
-if phase_cycling:    
+if phase_cycling:
     vd_data.chunk("t", ["ph2", "ph1", "t2"], [len(ph1), len(ph2), -1])
     vd_data.setaxis("ph1", ph1 / 4)
     vd_data.setaxis("ph2", ph2 / 4)
-    if config_dict['nScans'] > 1:
-        vd_data.setaxis('nScans',[0:config_dict['nScans']])
+    if config_dict["nScans"] > 1:
+        vd_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     vd_data.reorder(["ph1", "ph2", "vd", "t2"])
     vd_data.squeeze()
-    vd.data.set_uits("t2","s")
+    vd.data.set_uits("t2", "s")
     fl.next("Raw - time")
     fl.image(vd_data)
     for_plot = vd_data.C
-    for_plot.ft('t2')
-    for_plot.ft(['ph1','ph2'],unitary = True)
-    fl.next('FTed data')
+    for_plot.ft("t2")
+    for_plot.ft(["ph1", "ph2"], unitary=True)
+    fl.next("FTed data")
     fl.image(for_plot)
 else:
     if config_dict["nScans"] > 1:
         vd_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     vd_data.rename("t", "t2")
     fl.next("Raw - time")
-    fl.image(
-        vd_data.C.mean("nScans"))
+    fl.image(vd_data.C.mean("nScans"))
     vd_data.reorder("t2", first=False)
     for_plot = vd_data.C
-    for_plot.ft('t2',shift=True)
-    fl.next('FTed data')
+    for_plot.ft("t2", shift=True)
+    fl.next("FTed data")
     fl.image(for_plot)
 vd_data.name(config_dict["type"] + "_" + str(config_dict["ir_counter"]))
 vd_data.set_prop("postproc_type", "Spincore_IR_v1")
@@ -128,9 +131,8 @@ else:
             echo_data.hdf5_write("temp_IR.h5")
             print(
                 "if I got this far, that probably worked -- be sure to move/rename temp_IR.h5 to the correct name!!"
+                + f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_IR.h5 in the current directory"
             )
-            f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_IR.h5 in the current directory"
-        )
         if os.path.exists("temp_IR.h5"):
             print("there is a temp_IR.h5 -- I'm removing it")
             os.remove("temp_IR.h5")

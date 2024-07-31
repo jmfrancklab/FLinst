@@ -9,12 +9,13 @@ This needs to be run in sync with the power control server. To do so:
 """
 import numpy as np
 from numpy import r_
-from pyspecdata import *
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
+import pyspecdata as psd
 from pyspecdata import strm
-import os, sys, time
+import os
+import time
 import h5py
 import SpinCore_pp
 from SpinCore_pp.power_helper import gen_powerlist, Ep_spacing_from_phalf
@@ -24,9 +25,9 @@ from datetime import datetime
 
 final_log = []
 
-logger = init_logging(level="debug")
-target_directory = getDATADIR(exp_type="ODNP_NMR_comp/ODNP")
-fl = figlist_var()
+logger = psd.init_logging(level="debug")
+target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/ODNP")
+fl = psd.figlist_var()
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
@@ -140,6 +141,7 @@ control_thermal = run_spin_echo(
     nPoints=nPoints,
     nEchoes=config_dict["nEchoes"],
     p90_us=config_dict["p90_us"],
+    amplitude=config_dict["amplitude"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
     SW_kHz=config_dict["SW_kHz"],
@@ -159,7 +161,7 @@ nodename = control_thermal.name()
 # {{{ on first write, if we can't access the directory, write to a temp file
 try:
     control_thermal.hdf5_write(filename, directory=target_directory)
-except:
+except Exception:
     final_log.append(
         f"I had problems writing to the correct file {filename}, so I'm going to try to save your file to temp_ctrl.h5 in the current directory"
     )
@@ -168,7 +170,7 @@ except:
         os.remove("temp_ctrl.h5")
         target_directory = os.path.getcwd()
         filename = "temp_ctrl.h5"
-        DNP_data.hdf5_write(filename, directory=target_directory)
+        control_thermal.hdf5_write(filename, directory=target_directory)
         final_log.append(
             "change the name accordingly once this is done running!"
         )
@@ -197,6 +199,7 @@ for vd_idx, vd in enumerate(vd_list_us):
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         p90_us=config_dict["p90_us"],
+        amplitude=config_dict["amplitude"],
         tau_us=config_dict["tau_us"],
         repetition_us=FIR_rep,
         SW_kHz=config_dict["SW_kHz"],
@@ -267,6 +270,7 @@ with power_control() as p:
             ph1_cyc=Ep_ph1_cyc,
             amplitude=config_dict["amplitude"],
             p90_us=config_dict["p90_us"],
+            amplitude=config_dict["amplitude"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
@@ -319,6 +323,7 @@ with power_control() as p:
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
             p90_us=config_dict["p90_us"],
+            amplitude=config_dict["amplitude"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
@@ -338,7 +343,7 @@ with power_control() as p:
     nodename = DNP_data.name()
     try:
         DNP_data.hdf5_write(filename, directory=target_directory)
-    except:
+    except Exception:
         print(
             f"I had problems writing to the correct file {filename}, so I'm going to try to save your file to temp_ODNP.h5 in the current h5 file"
         )
@@ -399,6 +404,7 @@ with power_control() as p:
                 adcOffset=config_dict["adc_offset"],
                 carrierFreq_MHz=config_dict["carrierFreq_MHz"],
                 p90_us=config_dict["p90_us"],
+                amplitude=config_dict["amplitude"],
                 tau_us=config_dict["tau_us"],
                 repetition_us=FIR_rep,
                 SW_kHz=config_dict["SW_kHz"],

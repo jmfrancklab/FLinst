@@ -1,68 +1,79 @@
-from pylab import array
-from numpy import zeros, polyval
-from pyspecdata import r_, nddata
+import numpy as np
 
 
-def prog_plen(desired_actual):
+def prog_plen(desired_beta, amplitude):
     """
-    Takes the desired pulse length and tells the
-    user what pulse length should be programmed in order to get the actual desired
-    pulse length
+    Takes the desired β (μs√(W)) and tells the user
+    what pulse length should be programmed in order to
+    get the desired β
+
     Parameters
     ==========
-    desired_actual: float
-                    the actual pulse length you wish the spincore to output,
-                    in us
+    desired_beta: float
+        the desired β you wish the spincore to output,
+        in μs*sqrt(W)
+    amplitude:  float
+        amplitude setting of measurement
+
     Returns
     =======
     retval: float
-            The pulse length you tell spincore in order to get the desired actual.
+        The pulse length you tell spincore in order to
+        get the desired β.
     """
-    # {{{ list of programmed p90, actual p90 and actual 180 - used in
-    # generating the calibrated fit
-    # list of the programmed pulse length, the actual p90 length 
-    # and the actual p180 length based on the programmed p90
-    datapoints = [
-        (1, 2.25869, 5.75412),
-        (2, 5.78065, 16.6168),
-        (3, 10.4132, 36.0229),
-        (3.5, 13.2053, 49.4104),
-        (4, 16.9808, 63.7255),
-        (4.5, 20.4275, 77.5474),
-        (5, 24.8538, 91.5177),
-        (5.5, 30.0159, 106.302),
-        (6, 35.6903, 119.849),
-        (6.5, 42.2129, 134.328),
-        (7, 48.9577, 149.029),
-        (7.5, 55.977, 162.774),
-        (8, 63.0445, 176.917),
-        (8.5, 69.881, 190.167),
-        (9, 76.9727, 203.486),
-        (9.5, 84.5149, 217.965),
-        (10, 91.7002, 232.042),
-        (10.5, 98.6599, 245.213),
-        (11, 105.327, 258.004),
-        (11.5, 112.985, 272.776),
-        (12, 120.264, 286.884),
-        (12.5, 126.251, 299.009),
-    ]
-    # neat JF trick for organizing these data points
-    prog90, act90, act180 = map(array, zip(*datapoints))
+    # NOTE: THESE VALUES NEED TO BE RECALCULATED ONCE THE RERUN ACQUISITIONS ARE PROCESSED!
+    if amplitude == 1.0:
+        linear_threshold = 60
+        c_curve = [
+            1.60730341e02,
+            -3.00153883e02,
+            2.43406692e02,
+            -1.08779978e02,
+            3.10482870e01,
+            -5.93976000e00,
+            7.72557235e-01,
+            -6.74756111e-02,
+            3.78673112e-03,
+            -1.23280806e-04,
+            1.76812546e-06,
+        ]
+        c_linear = [
+            1.294623894,
+            -12349235,
+            923569239,
+        ]
+    elif amplitude == 0.1:
+        linear_threshold = 25
+        c_curve = [
+            2.27868899e03,
+            -3.17948111e03,
+            1.95216192e03,
+            -6.93869836e02,
+            1.58378940e02,
+            -2.42789260e01,
+            2.53532435e00,
+            -1.78351870e-01,
+            8.09953581e-03,
+            -2.14653411e-04,
+            2.52318231e-06,
+        ]
+        c_linear = [
+            1.294623894,
+            -12349235,
+            923569239,
+        ]
+    else:
+        raise ValueError("not currently calibrated for this amplitude!!!")
+
     # }}}
-    # {{{ prepare data into arrays for interpolation
-    # gather programmed pulse lengths in array
-    plen_prog = r_[0, prog90, 2 * prog90] 
-    # assume the longest pulse is about the correct length
-    # and again gather into an array
-    plen_actual = r_[0, act90, act180] * 2 * prog90[-1] / act180[-1] 
-    # }}}
-    calibration_data = nddata(plen_prog, [-1], ["plen"]).setaxis("plen", plen_actual)
-    calibration_data.sort("plen")
-    # fit the programmed vs actual lengths to a polynomial
-    c = calibration_data.polyfit("plen", order=10)
-    # {{{ Make an array out of the fitting coefficients from the polyfit
-    coeffs = zeros(len(c))
-    for j in range(len(c)):
-        coeffs[j] = c[j]
-    # }}}
-    return polyval(coeffs[::-1],desired_actual)
+    def zonefit(desired_beta):
+        if desired_beta < linear_threshold:
+            return np.polyval(c_curve[::-1], desired_beta)
+        else:
+            return np.polyval(c_linear[::-1], desired_beta)
+
+    ret_val = np.vectorize(zonefit)(desired_beta)
+    if ret_val.size > 1:
+        return ret_val
+    else:
+        return ret_val.item()
