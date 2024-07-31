@@ -21,6 +21,7 @@ import numpy as np
 calibrating = True
 my_exp_type = "test_equipment"
 nominal_power = 75
+nominal_atten = 1e4
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
