@@ -3,7 +3,7 @@ import numpy as np
 from pyspecdata import r_, nddata
 
 
-def prog_plen(desired_beta, amplitude):
+def prog_plen(desired_beta, amplitude, linear_threshold = 100, curve_portion = 60):
     """
     Takes the desired beta (us sqrt(W)) and tells the
     user what pulse length should be programmed in order to get the actual desired
@@ -135,16 +135,16 @@ def prog_plen(desired_beta, amplitude):
 
     # }}}
     def zonefit(desired_beta):
-        if desired_beta < 100:
+        if desired_beta < linear_threshold:
             mask = np.ones_like(plen_prog, dtype=bool)
         else:
-            mask = plen_prog > 60  # where line is curved
+            mask = plen_prog > curve_portion  # where line is curved
         calibration_data = nddata(plen_prog[mask], [-1], ["plen"]).setaxis(
             "plen", plen_actual[mask]
         )
         calibration_data.sort("plen")
         # fit the programmed vs actual lengths to a polynomial
-        if desired_beta < 100:
+        if desired_beta < linear_threshold:
             c = calibration_data.polyfit("plen", order=10)
         else:
             c = calibration_data.polyfit("plen", order=1)
