@@ -68,7 +68,9 @@ with GDS_scope() as gds:
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
-    gds.CH2.voltscal = sqrt(nominal_power / nominal_atten * 50)
+    gds.CH2.voltscal = config_dict["amplitude"] * sqrt(
+        2 * nominal_power / nominal_atten * 50
+    )  # 2 inside is for rms-amp
     gds.timscal(np.max(t_pulse), pos=20e-6)
     # }}}
     for index, this_t_pulse in enumerate(t_pulse):
