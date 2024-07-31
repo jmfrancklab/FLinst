@@ -49,14 +49,17 @@ with GDS_scope() as gds:
     gds.write(":CHAN4:DISP OFF")
     gds.CH2.voltscal = 100e-3  # set voltscale to 100 mV
     gds.timescal(50e-6, pos=0)  # set timescale to 50 us
-    gds.write(":TIM:MOD WIND")
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:HLEV 7.5E-2")  # used in gds_for_tune which seems reasonable
     # }}}
-    for index, val in enumerate(desired_beta):
-        t_p = spc.prog_plen(val, config_dict["amplitude"])
+    if calibrating:
+        t_p_range = linspace(0.5,25,25)
+    else:
+        t_p_range = spc.prog_plen(desired_beta,config_dict["amplitude"])
+    for index, val in enumerate(t_p_range):
+        t_p = val
         prog_t.append(t_p)
         spc.configureTX(
             config_dict["adc_offset"],
