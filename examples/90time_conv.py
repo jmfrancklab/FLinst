@@ -12,8 +12,14 @@ from SpinCore_pp.pulse_length_conv import prog_plen
 
 with psd.figlist_var() as fl:
     fl.next(r"Pulse Length vs. Desired $\beta$", legend=True)
+    desired_beta = r_[0:150:100j]
     for amplitude in [1.0, 0.1]:
-        plt.plot(r_[0:150:100j], prog_plen(r_[10:150:50j], amplitude), "o",
-                 label=f"amp={amplitude}")
+        plt.plot(
+            desired_beta,
+            prog_plen(desired_beta, amplitude),
+            "o",
+            label=f"amp={amplitude}",
+            alpha=0.5,
+        )
     plt.xlabel(r"desired $\beta$ / $\mathrm{\mu s \sqrt{W}}$")
     plt.ylabel(r"required pulse lengths / $\mathrm{\mu s}$")
