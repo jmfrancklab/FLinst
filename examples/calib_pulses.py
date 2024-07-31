@@ -38,7 +38,7 @@ config_dict["misc_counter"] += 1
 # }}}
 # {{{ ppg
 sqrt_P = config_dict["amplitude"] * np.sqrt(75)  # we have a 75 W amplifier
-desired_beta = np.linspace(0.5*sqrt_P, 100, 50)
+desired_beta = np.linspace(0.5 * sqrt_P, 100, 50)
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 Rx_scans = 1
 datalist = []
@@ -59,9 +59,9 @@ with GDS_scope() as gds:
     gds.write(":TRIG:HLEV 7.5E-2")  # used in gds_for_tune which seems reasonable
     # }}}
     if calibrating:
-        t_p_range = linspace(0.5,25,25)
+        t_p_range = np.linspace(0.5, 25, 25)
     else:
-        t_p_range = spc.prog_plen(desired_beta,config_dict["amplitude"])
+        t_p_range = spc.prog_plen(desired_beta, config_dict["amplitude"])
     for index, val in enumerate(t_p_range):
         t_p = val
         prog_t.append(t_p)
@@ -92,7 +92,7 @@ with GDS_scope() as gds:
 data = psd.concat(datalist, "t_p").reorder("t")
 data.set_units("t", "s")
 data.set_prop("set_t", t_p_range)
-data.set_prop("desired_betas", desired_beta) 
+data.set_prop("desired_betas", desired_beta)
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
 config_dict.write()
