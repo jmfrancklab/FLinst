@@ -91,7 +91,7 @@ with GDS_scope() as gds:
         spc.stopBoard()
 data = psd.concat(datalist, "t_p").reorder("t")
 data.set_units("t", "s")
-data.set_prop("set_t", prog_t)
+data.set_prop("set_t", t_p_range)
 data.set_prop("desired_betas", desired_beta) 
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
