@@ -20,6 +20,7 @@ import numpy as np
 
 calibrating = True
 my_exp_type = "test_equipment"
+nominal_power = 75
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -31,16 +32,18 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
-# {{{ if the amplitude is small we want to go out to much longer pulse lengths
-if config_dict["amplitude"] > 0.5:
-    long_t_pulse = 28
-else:
-    long_t_pulse = 280
-# }}}
 if calibrating:
-    t_pulse_range = np.linspace(0.5, long_t_pulse, 30)
+    t_pulse_range = np.linspace(
+        0.5,
+        150
+        / sqrt(nominal_power)
+        / config_dict[
+            "amplitude"
+        ],  # if the amplitude is small we want to go out to much longer pulse lengths
+        30,
+    )
 else:
-    desired_beta = np.linspace(0.5, 100, 50)
+    desired_beta = np.linspace(0.5, 150, 50)
     t_pulse_range = spc.prog_plen(desired_beta, config_dict["amplitude"])
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
@@ -49,10 +52,9 @@ config_dict["misc_counter"] += 1
 # }}}
 # {{{ ppg
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
-Rx_scans = 1
 datalist = []
-# {{{ set up settings for GDS
 with GDS_scope() as gds:
+    # {{{ set up settings for GDS
     gds.reset()
     gds.autoset
     gds.CH1.disp = True
@@ -64,12 +66,9 @@ with GDS_scope() as gds:
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
-    if config_dict["amplitude"] > 0.5:
-        gds.CH2.voltscal = 500e-3  # set voltscale to 100 mV
-        gds.timscal(50e-6, pos=20e-6)  # set timescale to 50 us
-    else:
-        gds.CH2.voltscal = 50e-3
-        gds.timscal(100e-6, pos=250e-6)
+    # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
+    gds.CH2.voltscal = sqrt(nominal_power / nominal_atten * 50)
+    gds.timscal(np.max(t_pulse_range), pos=20e-6)
     # }}}
     for index, t_pulse in enumerate(t_pulse_range):
         spc.configureTX(
@@ -80,8 +79,13 @@ with GDS_scope() as gds:
             nPoints,
         )
         acq_time = spc.configureRX(
-            config_dict["SW_kHz"], nPoints, Rx_scans, config_dict["nEchoes"], 1
-        )  # Not phase cycling so setting nPhaseSteps to 1
+            # Rx scans, echos, and nPhaseSteps set to 1
+            config_dict["SW_kHz"],
+            nPoints,
+            1,
+            1,
+            1,
+        )
         config_dict["acq_time_ms"] = acq_time
         spc.init_ppg()
         spc.load(
@@ -97,11 +101,12 @@ with GDS_scope() as gds:
         datalist.append(gds.waveform(ch=2))
         spc.stopBoard()
 if calibrating:
-    data = psd.concat(datalist, "t_pulse").reorder("t")
+    data = psd.concat(datalist, "t_pulse").reorder("t", first=False)
     data.setaxis("t_pulse", t_pulse_range)
 else:
-    data = psd.concat(datalist, "beta").reorder("t")
+    data = psd.concat(datalist, "beta").reorder("t", first=False)
     data.setaxis("beta", desired_beta)
+    data.set_prop("programmed_t_pulse", t_pulse_range)
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
