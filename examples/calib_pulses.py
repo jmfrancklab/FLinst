@@ -71,7 +71,7 @@ with GDS_scope() as gds:
     gds.CH2.voltscal = config_dict["amplitude"] * np.sqrt(
         2 * nominal_power / nominal_atten * 50
     )  # 2 inside is for rms-amp
-    gds.timscal(np.max(t_pulse), pos=20e-6)
+    gds.timscal(np.max(t_pulse * 1e-6), pos=20e-6)
     # }}}
     for index, this_t_pulse in enumerate(t_pulse):
         spc.configureTX(
