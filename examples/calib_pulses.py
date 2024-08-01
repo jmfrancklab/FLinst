@@ -19,6 +19,7 @@ from Instruments import GDS_scope
 import numpy as np
 
 calibrating = True
+indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
 nominal_power = 75
 nominal_atten = 1e4
@@ -53,7 +54,6 @@ config_dict["misc_counter"] += 1
 # }}}
 # {{{ ppg
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
-datalist = []
 with GDS_scope() as gds:
     # {{{ set up settings for GDS
     gds.reset()
@@ -73,7 +73,8 @@ with GDS_scope() as gds:
     )  # 2 inside is for rms-amp
     gds.timscal(np.max(t_pulse_us * 1e-6), pos=20e-6)
     # }}}
-    for index, this_t_pulse in enumerate(t_pulse_us):
+    data = None
+    for idx, this_t_pulse in enumerate(t_pulse_us):
         spc.configureTX(
             config_dict["adc_offset"],
             config_dict["carrierFreq_MHz"],
@@ -101,14 +102,34 @@ with GDS_scope() as gds:
         )
         spc.stop_ppg()
         spc.runBoard()
-        datalist.append(gds.waveform(ch=2))
         spc.stopBoard()
+        thiscapture = gds.waveform(ch=2)
+        assert (
+            np.diff(thiscapture["t"][r_[0:1]]).item() < 1 / 24e6
+        ), "what are you trying to do, you dwell time is too long!!!"
+        # {{{ just convert to analytic here, and also downsample
+        thiscapture.ft("t", shift=True)
+        # this is a rare case where we care more about not keeping
+        # ridiculous quantities of garbage on disk, so we are going to
+        # throw some stuff out beforehand
+        thiscapture = thiscapture["t":(0, None)]["t":(None, 24e6)]
+        thiscapture *= 2
+        thiscapture["t", 0] *= 0.5
+        thiscapture.ift("t")
+        # }}}
+        if data is None:
+            data = thiscapture.shape
+            data += [(indirect, len(t_pulse_us))]
+            data = data.alloc()
+            data.copy_axes(thiscapture)
+            data.copy_props(thiscapture)
+        data[indirect, idx] = thiscapture
 if calibrating:
-    data = psd.concat(datalist, "t_pulse").reorder("t", first=False)
-    data.setaxis("t_pulse", t_pulse_us)
+    data.setaxis(
+        "t_pulse", t_pulse_us * 1e-6
+    )  # always store in SI units unless we're wanting to change the variable name
 else:
-    data = psd.concat(datalist, "beta").reorder("t", first=False)
-    data.setaxis("beta", desired_beta)
+    data.setaxis("beta", desired_beta * 1e-6)
     data.set_prop("programmed_t_pulse_us", t_pulse_us)
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
