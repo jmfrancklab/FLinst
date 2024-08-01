@@ -19,7 +19,7 @@ from Instruments import GDS_scope
 from numpy import r_
 import numpy as np
 
-calibrating = True
+calibrating = False
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
 nominal_power = 75
@@ -48,7 +48,7 @@ if calibrating:
         n_lengths,
     )
 else:
-    desired_beta = np.linspace(0.5, 150, 50)
+    desired_beta = np.linspace(0.5e-6, 150e-6, 50) #s *sqrt(W)
     t_pulse_us = spc.prog_plen(desired_beta, config_dict["amplitude"])
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
