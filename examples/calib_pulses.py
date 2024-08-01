@@ -25,6 +25,7 @@ my_exp_type = "test_equipment"
 nominal_power = 75
 nominal_atten = 1e4
 num_div_per_screen = 8
+n_lengths = 100
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -44,7 +45,7 @@ if calibrating:
         / config_dict[
             "amplitude"
         ],  # if the amplitude is small we want to go out to much longer pulse lengths
-        30,
+        n_lengths,
     )
 else:
     desired_beta = np.linspace(0.5, 150, 50)
@@ -130,7 +131,7 @@ with GDS_scope() as gds:
         # }}}
         if data is None:
             data = thiscapture.shape
-            data += (indirect, len(t_pulse_us))
+            data += (indirect, n_lengths)
             data = data.alloc()
             data.copy_axes(thiscapture)
             data.copy_props(thiscapture)
