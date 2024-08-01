@@ -74,15 +74,26 @@ with GDS_scope() as gds:
 
     # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
     def round_for_scope(val, multiples=1):
-        val = val / num_div_per_screen
         val_oom = np.floor(np.log10(val))
         val = np.ceil(val / 10**val_oom / multiples) * 10**val_oom * multiples
         return val
 
     gds.CH2.voltscal = round_for_scope(
-        config_dict["amplitude"] * np.sqrt(2 * nominal_power / nominal_atten * 50) * 2
+        config_dict["amplitude"]
+        * np.sqrt(2 * nominal_power / nominal_atten * 50)
+        * 2
+        / num_div_per_screen
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
-    gds.timscal(round_for_scope(t_pulse_us.max() * 1e-6, multiples=5), pos=20e-6)
+    print("here is the max pulse length", t_pulse_us.max())
+    scope_timescale = round_for_scope(
+        t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=5
+    )
+    print(
+        "here is the timescale in μs", scope_timescale / 1e-6
+    )  # the 0.5 is because it can fit in half the screen
+    gds.timscal(
+        scope_timescale, pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 5e-6)
+    )
     # }}}
     data = None
     for idx, this_t_pulse in enumerate(t_pulse_us):
@@ -117,7 +128,7 @@ with GDS_scope() as gds:
         time.sleep(0.5)
         thiscapture = gds.waveform(ch=2)
         assert (
-            np.diff(thiscapture["t"][r_[0:2]]).item() < 1 / 24e6
+            np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
         ), "what are you trying to do, you dwell time is too long!!!"
         # {{{ just convert to analytic here, and also downsample
         thiscapture.ft("t", shift=True)
