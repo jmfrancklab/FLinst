@@ -21,9 +21,8 @@ def prog_plen(desired_beta, amplitude):
         The pulse length you tell spincore in order to
         get the desired β.
     """
-    # NOTE: THESE VALUES NEED TO BE RECALCULATED ONCE THE RERUN ACQUISITIONS ARE PROCESSED!
+    linear_threshold = 100e-6
     if amplitude == 1.0:
-        linear_threshold = 60
         c_curve = [
             1.43847887e-01,
             6.53636766e05,
@@ -39,7 +38,6 @@ def prog_plen(desired_beta, amplitude):
         ]
         c_linear = [3.56177606e00, 1.02937057e05]
     elif amplitude == 0.1:
-        linear_threshold = 25
         c_curve = [
             -1.53710953e-01,
             4.78586837e06,
