@@ -66,6 +66,12 @@ class configuration(object):
             None,
             "90 time of the probe in microseconds.\nUsed to determine 90° 180°, etc pulses",
         ),
+        "beta_90_s_sqrtW": (
+            float,
+            "acq_params",
+            None,
+            "Beta value of the probe in seconds * sqrt(W).\nUsed to determine 90° 180°, etc pulses",
+        ),
         "gamma_eff_MHz_G": (
             float,
             "acq_params",

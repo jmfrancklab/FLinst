@@ -25,7 +25,7 @@ my_exp_type = "test_equipment"
 nominal_power = 75
 nominal_atten = 1e4
 num_div_per_screen = 8
-n_lengths = 100
+n_lengths = 50
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -48,7 +48,7 @@ if calibrating:
         n_lengths,
     )
 else:
-    desired_beta = np.linspace(0.5e-6, 150e-6, 50) #s *sqrt(W)
+    desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths) #s *sqrt(W)
     t_pulse_us = spc.prog_plen(desired_beta, config_dict["amplitude"])
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
@@ -92,7 +92,7 @@ with GDS_scope() as gds:
         "here is the timescale in μs", scope_timescale / 1e-6
     )  # the 0.5 is because it can fit in half the screen
     gds.timscal(
-        scope_timescale, pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 5e-6)
+        scope_timescale, pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 3e-6)
     )
     # }}}
     data = None
@@ -125,7 +125,7 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
-        time.sleep(0.5)
+        time.sleep(1.0)
         thiscapture = gds.waveform(ch=2)
         assert (
             np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6

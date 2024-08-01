@@ -21,7 +21,7 @@ def prog_plen(desired_beta, amplitude):
         The pulse length you tell spincore in order to
         get the desired β.
     """
-    assert desired_beta > 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
+    assert desired_beta[-1] < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     linear_threshold = 100e-6
     if amplitude == 1.0:
         c_curve = [
