@@ -69,7 +69,7 @@ with GDS_scope() as gds:
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
-    gds.write(":TRIG:LEV 2.32E-2")  # set trigger level
+    gds.write(":TRIG:LEV 2.3E-2")  # set trigger level
 
     # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
     def round_for_scope(val, multiples=1):
