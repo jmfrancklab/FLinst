@@ -12,10 +12,11 @@ avoid damaging the instrumentation! It is advised that the attenuator be
 calibrated using the GDS and AFG beforehand
 """
 import pyspecdata as psd
-import os
+import os, time
 import SpinCore_pp as spc
 from datetime import datetime
 from Instruments import GDS_scope
+from numpy import r_
 import numpy as np
 
 calibrating = True
@@ -23,6 +24,7 @@ indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
 nominal_power = 75
 nominal_atten = 1e4
+num_div_per_screen = 8
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -37,7 +39,7 @@ config_dict = spc.configuration("active.ini")
 if calibrating:
     t_pulse_us = np.linspace(
         0.5,
-        150
+        350
         / np.sqrt(nominal_power)
         / config_dict[
             "amplitude"
@@ -67,11 +69,19 @@ with GDS_scope() as gds:
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
+    gds.write(":TRIG:LEV 2.32E-2")  # set trigger level
+
     # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
-    gds.CH2.voltscal = config_dict["amplitude"] * np.sqrt(
-        2 * nominal_power / nominal_atten * 50
-    )  # 2 inside is for rms-amp
-    gds.timscal(np.max(t_pulse_us * 1e-6), pos=20e-6)
+    def round_for_scope(val, multiples=1):
+        val = val / num_div_per_screen
+        val_oom = np.floor(np.log10(val))
+        val = np.ceil(val / 10**val_oom / multiples) * 10**val_oom * multiples
+        return val
+
+    gds.CH2.voltscal = round_for_scope(
+        config_dict["amplitude"] * np.sqrt(2 * nominal_power / nominal_atten * 50) * 2
+    )  # 2 inside is for rms-amp 2 outside is for positive and negative
+    gds.timscal(round_for_scope(t_pulse_us.max() * 1e-6, multiples=5), pos=20e-6)
     # }}}
     data = None
     for idx, this_t_pulse in enumerate(t_pulse_us):
@@ -103,9 +113,10 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
+        time.sleep(0.5)
         thiscapture = gds.waveform(ch=2)
         assert (
-            np.diff(thiscapture["t"][r_[0:1]]).item() < 1 / 24e6
+            np.diff(thiscapture["t"][r_[0:2]]).item() < 1 / 24e6
         ), "what are you trying to do, you dwell time is too long!!!"
         # {{{ just convert to analytic here, and also downsample
         thiscapture.ft("t", shift=True)
@@ -119,7 +130,7 @@ with GDS_scope() as gds:
         # }}}
         if data is None:
             data = thiscapture.shape
-            data += [(indirect, len(t_pulse_us))]
+            data += (indirect, len(t_pulse_us))
             data = data.alloc()
             data.copy_axes(thiscapture)
             data.copy_props(thiscapture)
@@ -133,5 +144,5 @@ else:
     data.set_prop("programmed_t_pulse_us", t_pulse_us)
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = spc.save_data(data, my_exp_type, config_dict, "misc")
+config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
 config_dict.write()
