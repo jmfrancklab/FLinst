@@ -21,7 +21,7 @@ def prog_plen(desired_beta, amplitude):
         The pulse length you tell spincore in order to
         get the desired β.
     """
-    if (type(desired_beta) ==float):
+    if np.isscalar(desired_beta):
         assert desired_beta < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     else:
         assert desired_beta[-1] < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
