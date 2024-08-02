@@ -1,4 +1,3 @@
-from pyspecdata import *
 import configparser
 
 
@@ -66,6 +65,12 @@ class configuration(object):
             "acq_params",
             None,
             "90 time of the probe in microseconds.\nUsed to determine 90° 180°, etc pulses",
+        ),
+        "beta_90_s_sqrtW": (
+            float,
+            "acq_params",
+            None,
+            "Beta value of the probe in seconds * sqrt(W).\nUsed to determine 90° 180°, etc pulses",
         ),
         "gamma_eff_MHz_G": (
             float,
@@ -231,6 +236,12 @@ class configuration(object):
             0,
             "number of field sweeps performed for a particular sample that day",
         ),
+        "misc_counter": (
+            int,
+            "file_names",
+            0,
+            "number of miscellaneous expts performed for a particular sample that day",
+        ),
         "date": (int, "file_names", None, "today's date"),
         "chemical": (
             str,
@@ -260,7 +271,7 @@ class configuration(object):
         ) in self.registered_params.items():
             try:
                 temp = self.configobj.get(section, paramname.lower())
-            except:
+            except Exception:
                 continue
             self._params[paramname] = converter(temp)
         self._case_insensitive_keys = {

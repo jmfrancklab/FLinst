@@ -5,7 +5,7 @@ import pyspecProcScripts
 import subprocess
 
 
-def save_data(dataset, my_exp_type, config_dict, counter_type):
+def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
     """save data to an h5 file with appropriately labeled nodename and performs
     rough processing
 
@@ -52,23 +52,24 @@ def save_data(dataset, my_exp_type, config_dict, counter_type):
         filename_out,
         my_exp_type,
     )
-    env = os.environ
-    subprocess.call(
-        (
-            " ".join(
-                [
-                    "python",
-                    os.path.join(
-                        os.path.split(os.path.split(pyspecProcScripts.__file__)[0])[0],
-                        "examples",
-                        "proc_raw.py",
-                    ),
-                    dataset.name(),
-                    filename_out,
-                    my_exp_type,
-                ]
-            )
-        ),
-        env=env,
-    )
+    if proc:
+        env = os.environ
+        subprocess.call(
+            (
+                " ".join(
+                    [
+                        "python",
+                        os.path.join(
+                            os.path.split(os.path.split(pyspecProcScripts.__file__)[0])[0],
+                            "examples",
+                            "proc_raw.py",
+                        ),
+                        dataset.name(),
+                        filename_out,
+                        my_exp_type,
+                    ]
+                )
+            ),
+            env=env,
+        )
     return config_dict
