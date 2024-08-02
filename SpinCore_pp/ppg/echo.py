@@ -25,7 +25,7 @@ def run_spin_echo(
     carrierFreq_MHz,
     nPoints,
     nEchoes,
-    p90_us,
+    beta_90_s_sqrtW,
     repetition_us,
     tau_us,
     SW_kHz,
@@ -60,8 +60,8 @@ def run_spin_echo(
                     Number of Echoes to be acquired.
                     This should always be 1, since this pulse
                     program doesn't generate multiple echos.
-    p90_us:         float
-                    90 time of the probe in us
+    beta_90_s_sqrtW:        float
+                    desired beta value (s sqrt(W)) specific to the probe
     repetition_us:  float
                     3-5 x T1 of the sample in seconds
     tau_us:         float
@@ -91,8 +91,8 @@ def run_spin_echo(
     # (2*desired_p90) and convert to what needs to
     # be programmed in order to get the desired
     # times
-    prog_p90_us = prog_plen(p90_us)
-    prog_p180_us = prog_plen(2 * p90_us)
+    prog_p90_us = prog_plen(beta_90_s_sqrtW, amplitude)
+    prog_p180_us = prog_plen(2 * beta_90_s_sqrtW, amplitude)
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
