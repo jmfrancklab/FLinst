@@ -16,7 +16,8 @@ from .pulse_length_conv import prog_plen
 from .config_parser_fn import configuration
 from .calc_vdlist import vdlist_from_relaxivities, return_vdlist
 from .process_first_arg import process_args
-from .simple_fns import get_integer_sampling_intervals, set_field
+from .simple_fns import get_integer_sampling_intervals
+from .field_control import set_field
 from .save_data import save_data
 
 __all__ = [
