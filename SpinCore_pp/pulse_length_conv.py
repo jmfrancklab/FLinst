@@ -21,7 +21,7 @@ def prog_plen(desired_beta, amplitude):
         The pulse length you tell spincore in order to
         get the desired β.
     """
-    if (type(desired_beta) ==float):
+    if np.isscalar(desired_beta):
         assert desired_beta < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     else:
         assert desired_beta[-1] < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
@@ -56,6 +56,21 @@ def prog_plen(desired_beta, amplitude):
            -1.37801556e+45
         ]
         c_linear = [1.19657012e+01, 8.89588619e+05] 
+    elif amplitude == 0.2:
+        c_curve = [
+                -2.11644805e-01,
+                2.44584374e+06,
+                -1.76103616e+11,
+                8.72517358e+15,
+                -2.49244433e+20,
+                3.86528389e+24,
+                -2.15180423e+28,
+                -2.52059931e+32,
+                5.16634484e+36,
+                -3.40244142e+40,
+                8.20598936e+43
+        ]
+        c_linear = [8.66829932e+00, 4.97563628e+05] 
     else:
         raise ValueError("not currently calibrated for this amplitude!!!")
 

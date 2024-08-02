@@ -18,7 +18,7 @@ from numpy import r_
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
-p90_range_us = np.linspace(0.5, 5.5, 20, endpoint=False)
+beta_range = np.linspace(0.5e-6, 280e-6, 32, endpoint=False)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -35,8 +35,9 @@ config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["echo_counter"] += 1
 # }}}
 # {{{set phase cycling
-ph1_cyc = r_[0, 1, 2, 3]
-nPhaseSteps = 4
+ph1_cyc = r_[0, 2]
+ph2_cyc = r_[0, 2]
+nPhaseSteps = len(ph1_cyc)*len(ph2_cyc)
 # }}}
 # {{{let computer set field
 input(
@@ -62,36 +63,39 @@ assert total_pts < 2**14, (
 )
 # }}}
 data = None
-for idx, p90_us in enumerate(p90_range_us):
+for idx, beta_s_sqrtW in enumerate(beta_range):
     # Just loop over the 90 times and set the indirect axis at the end
     # just like how we perform and save IR data
     data = run_spin_echo(
         deadtime_us=config_dict["deadtime_us"],
         nScans=config_dict["nScans"],
         indirect_idx=idx,
-        indirect_len=len(p90_range_us),
+        indirect_len=len(beta_range),
         ph1_cyc=ph1_cyc,
+        ph2_cyc = ph2_cyc,
         amplitude=config_dict["amplitude"],
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         nPoints=nPoints,
         nEchoes=config_dict["nEchoes"],
-        p90_us=p90_us,
+        beta_90_s_sqrtW = beta_s_sqrtW,
         repetition_us=config_dict["repetition_us"],
         tau_us=config_dict["tau_us"],
         SW_kHz=config_dict["SW_kHz"],
         ret_data=data,
     )
-data.setaxis("indirect", p90_range_us * 1e-6).set_units("indirect", "s")
+if 'indirect' in data.dimlabels:
+    data.rename('indirect','beta')
+data.setaxis("beta", beta_range).set_units("beta", "s√W")
 # {{{ chunk and save data
-data.chunk("t", ["ph1", "t2"], [4, -1])
-data.setaxis("ph1", ph1_cyc / 4)
+data.chunk("t", ["ph2", "ph1", "t2"], [2, 2, -1])
+data.setaxis("ph1", ph1_cyc / 4).setaxis("ph2", ph2_cyc / 4)
 if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-data.reorder(["ph1", "nScans", "t2"])
+data.reorder(["ph2", "ph1", "nScans", "t2"])
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "spincore_nutation_v4")
-data.set_prop("coherence_pathway", {"ph1": +1})
+data.set_prop("postproc_type", "spincore_FID_nutation_v1")
+data.set_prop("coherence_pathway", {"ph1": +1, "ph2":-2})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")
 config_dict.write()

@@ -26,7 +26,7 @@ my_exp_type = "test_equipment"
 nominal_power = 75
 nominal_atten = 1e4
 num_div_per_screen = 8
-n_lengths = 50
+n_lengths = 100
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -126,7 +126,7 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
-        time.sleep(1.0)
+        time.sleep(0.5)
         thiscapture = gds.waveform(ch=2)
         assert (
             np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6

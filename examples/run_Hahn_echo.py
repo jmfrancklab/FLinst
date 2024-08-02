@@ -53,11 +53,6 @@ print(
     "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
     % field_G
 )
-with xepr() as x:
-    assert field_G < 3700, "are you crazy??? field is too high!"
-    assert field_G > 3300, "are you crazy?? field is too low!"
-    field_G = x.set_field(field_G)
-    print("field set to ", field_G)
 # }}}
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
@@ -77,7 +72,7 @@ data = run_spin_echo(
     carrierFreq_MHz=config_dict["carrierFreq_MHz"],
     nPoints=nPoints,
     nEchoes=1,  # you should never be running a hahn echo with >1 echo
-    p90_us=config_dict["p90_us"],
+    beta_90_s_sqrtW = config_dict["beta_90_s_sqrtW"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
     SW_kHz=config_dict["SW_kHz"],
