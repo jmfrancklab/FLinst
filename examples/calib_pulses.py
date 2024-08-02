@@ -12,7 +12,8 @@ avoid damaging the instrumentation! It is advised that the attenuator be
 calibrated using the GDS and AFG beforehand
 """
 import pyspecdata as psd
-import os, time
+import os
+import time
 import SpinCore_pp as spc
 from datetime import datetime
 from Instruments import GDS_scope
@@ -48,7 +49,7 @@ if calibrating:
         n_lengths,
     )
 else:
-    desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths) #s *sqrt(W)
+    desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths)  # s *sqrt(W)
     t_pulse_us = spc.prog_plen(desired_beta, config_dict["amplitude"])
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
