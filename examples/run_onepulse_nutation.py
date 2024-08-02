@@ -17,7 +17,7 @@ from datetime import datetime
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
-p90_range_us = linspace(0.5, 15, 20, endpoint=False)
+desired_p90_range_us = linspace(0.5, 15, 20, endpoint=False)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -51,7 +51,7 @@ if adjust_field:
 ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = 4
 # }}}
-prog_p90_us = spc.prog_plen(p90_range_us)
+prog_p90_us = spc.prog_plen(desired_p90_range_us)
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
@@ -84,8 +84,8 @@ for idx, p90_us in enumerate(prog_p90_us):
     )
 # }}}
 data.rename("indirect", "p_90")
-data.setaxis("p_90", prog_p90_us * 1e-6).set_units("p_90", "s")
-data.set_prop("desired_p90s", p90_range_us)
+data.setaxis("p_90", desired_p90_range_us * 1e-6).set_units("p_90", "s")
+data.set_prop("prog_p90s", prog_p90_us)
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
