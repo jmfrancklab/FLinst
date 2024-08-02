@@ -45,8 +45,7 @@ input(
 )
 # {{{ let computer set field
 if adjust_field:
-    field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
-    spc.set_field(Field_G=config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"])
+    spc.set_field(config_dict)
 # }}}
 # {{{set phase cycling
 ph1_cyc = r_[0, 1, 2, 3]

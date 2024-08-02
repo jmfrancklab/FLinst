@@ -31,14 +31,10 @@ def get_integer_sampling_intervals(SW_kHz, time_per_segment_ms):
     return nPoints, actual_SW_kHz, new_time_per_segment_ms
 
 
-def set_field(Field_G):
+def set_field(config_dict):
     """Ensures the field is appropriate before setting the desired field.
-
-    Parameters
-    ==========
-    Field_G: float
-             desired field in G
     """
+    Field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
     with xepr() as x:
         assert Field_G < 3700, (
             "Are you mad?? The field you want, %g, is too high!" % Field_G
