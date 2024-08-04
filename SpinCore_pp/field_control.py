@@ -7,7 +7,9 @@ def set_field(argv, config_dict):
         pass
     else:
         input(
-                "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"% config_dict["carrierFreq_MHz"])
+            "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
+            % config_dict["carrierFreq_MHz"]
+        )
 
         Field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
         with xepr() as x:
