@@ -35,17 +35,7 @@ config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["FID_nutation_counter"] += 1
 # }}}
 # {{{ command-line option to leave the field untouched (if you set it once, why set it again)
-adjust_field = True
-if len(sys.argv) == 2 and sys.argv[1] == "stayput":
-    adjust_field = False
-# }}}
-input(
-    "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
-    % config_dict["carrierFreq_MHz"]
-)
-# {{{ let computer set field
-if adjust_field:
-    spc.set_field(config_dict)
+spc.set_field(sys.argv, config_dict)
 # }}}
 # {{{set phase cycling
 ph1_cyc = r_[0, 1, 2, 3]
