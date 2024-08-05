@@ -18,7 +18,7 @@ from numpy import r_
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
-beta_range = np.linspace(0.5e-6, 280e-6, 32, endpoint=False)
+beta_range = np.linspace(0.5e-6, 280e-6, 100, endpoint=False)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (

@@ -126,7 +126,7 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
-        time.sleep(0.5)
+        time.sleep(1.0)
         thiscapture = gds.waveform(ch=2)
         assert (
             np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
