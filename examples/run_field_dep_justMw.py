@@ -153,45 +153,45 @@ if phase_cycling:
     sweep_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
     if config_dict["nScans"] > 1:
         sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    sweep_data.reorder(["ph1", "indirect", "t2"])
+    sweep_data.reorder(["ph1", "indirect", "nScans", "t2"])
     sweep_data.squeeze()
     sweep_data.set_units("t2", "s")
-    fl.next("Raw - time")
-    fl.image(
-        sweep_data.C.mean("nScans")
-        .setaxis("indirect", "#")
-        .set_units("indirect", "scan #")
-    )
+#    fl.next("Raw - time")
+#    fl.image(
+#        sweep_data.mean("nScans")
+#        .setaxis("indirect", "#")
+#        .set_units("indirect", "scan #")
+#    )
     sweep_data.reorder("t2", first=False)
-    for_plot = sweep_data.C
+    for_plot = sweep_data
     for_plot.ft("t2", shift=True)
     for_plot.ft(["ph1"], unitary=True)
-    fl.next("FTed data")
-    fl.image(
-        for_plot.C.mean("nScans")
-        .setaxis("indirect", "#")
-        .set_units("indirect", "scan #")
-    )
+#    fl.next("FTed data")
+#    fl.image(
+#        for_plot.mean("nScans")
+#        .setaxis("indirect", "#")
+#        .set_units("indirect", "scan #")
+#    )
 else:
     if config_dict["nScans"] > 1:
         sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     sweep_data.rename("t", "t2")
-    fl.next("Raw - time")
-    fl.image(
-        sweep_data.C.mean("nScans")
-        .setaxis("indirect", "#")
-        .set_units("indirect", "scan #")
-    )
+#    fl.next("Raw - time")
+#    fl.image(
+#        sweep_data.C.mean("nScans")
+#        .setaxis("indirect", "#")
+#        .set_units("indirect", "scan #")
+#    )
     for_plot = sweep_data.C
     for_plot.ft("t2", shift=True)
-    fl.next("FTed data")
-    fl.image(
-        for_plot.C.mean("nScans")
-        .setaxis("indirect", "#")
-        .set_units("indirect", "scan #")
-    )
+#    fl.next("FTed data")
+#    fl.image(
+#        for_plot.mean("nScans")
+#        .setaxis("indirect", "#")
+#        .set_units("indirect", "scan #")
+#    )
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
-sweep_data.set_prop("postproc_type", "field_sweep_v2")
+sweep_data.set_prop("postproc_type", "proc_field_sweep_v2")
 sweep_data.set_prop("acq_params", config_dict.asdict())
 target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/field_dependent")
 filename_out = filename + ".h5"
