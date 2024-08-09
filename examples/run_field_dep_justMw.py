@@ -126,7 +126,7 @@ with power_control() as p:
             myfreqs_fields[B0_index + 1]["Field"] = true_B0
             myfreqs_fields[B0_index + 1]["carrierFreq"] = new_carrierFreq_MHz
             logging.info("My frequency in MHz is", new_carrierFreq_MHz)
-            run_spin_echo(
+            SpinCore_pp.ppg.run_spin_echo(
                 nScans=config_dict["nScans"],
                 indirect_idx=B0_index + 1,
                 indirect_len=len(field_axis),
