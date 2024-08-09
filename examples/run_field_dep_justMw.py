@@ -9,7 +9,6 @@ the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print "I am listening..."
 """
 import pyspecdata as psd
-import os
 import time
 import logging
 import SpinCore_pp
@@ -19,7 +18,7 @@ import numpy as np
 from numpy import r_
 from Instruments import power_control
 from Instruments.XEPR_eth import xepr
-import h5py
+import h5py as h5py
 
 fl = psd.figlist_var()
 mw_freqs = []
@@ -39,9 +38,7 @@ right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
 field_axis = r_[left:right:1.0]
-myinput = input(
-    psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?")
-)
+myinput = input(psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?"))
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
@@ -50,9 +47,7 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "field"
 config_dict["date"] = date
 config_dict["field_counter"] += 1
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
-)
+filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -150,20 +145,15 @@ sweep_data.set_prop("acq_params", config_dict.asdict())
 # {{{chunk and save data
 sweep_data.chunk("t", ["ph1", "t2"], [4, -1])
 sweep_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
-if config_dict["nScans"] > 1:
-    sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+sweep_data.setaxis("nScans", "#")
 sweep_data.reorder(["ph1"]).reorder(["nScans"]).reorder(["t2"], first=False)
 sweep_data.squeeze()
 sweep_data.set_units("t2", "s")
-sweep_data.ft("t2", shift=True)
-sweep_data.ft(["ph1"],unitary=True)
 
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
-sweep_data.set_prop("postproc_type", "field_sweep_v2")
+sweep_data.set_prop("postproc_type", "field_sweep_v3")
 sweep_data.set_prop("acq_params", config_dict.asdict())
 target_directory = "ODNP_NMR_comp/field_dependent"
-filename_out = filename + ".h5"
-nodename = sweep_data.name()
-saving_field = save_data(sweep_data, target_directory, config_dict, "field")
+saving_field = h5py.save_data(sweep_data, target_directory, config_dict, "field")
 config_dict.write()
 fl.show()
