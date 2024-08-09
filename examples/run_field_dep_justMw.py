@@ -154,6 +154,7 @@ if phase_cycling:
     if config_dict["nScans"] > 1:
         sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     sweep_data.reorder(["ph1"]).reorder(["nScans"]).reorder(["t2"], first=False)
+    sweep_data.squeeze()
     sweep_data.set_units("t2", "s")
     for_plot = sweep_data.C
     for_plot.ft("t2", shift=True)
