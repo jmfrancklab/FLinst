@@ -12,13 +12,11 @@ import pyspecdata as psd
 import time
 import logging
 import SpinCore_pp
-from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
 import numpy as np
 from numpy import r_
 from Instruments import power_control
 from Instruments.XEPR_eth import xepr
-import h5py as h5py
 
 fl = psd.figlist_var()
 mw_freqs = []
@@ -100,7 +98,7 @@ with power_control() as p:
         first_B0 = x_server.set_field(field_axis[0])
         time.sleep(3.0)
         carrierFreq_MHz = config_dict["gamma_eff_MHz_G"] * first_B0
-        sweep_data = run_spin_echo(
+        sweep_data = SpinCore_pp.ppg.run_spin_echo(
             nScans=config_dict["nScans"],
             indirect_idx=0,
             indirect_len=len(field_axis),
@@ -156,9 +154,10 @@ sweep_data.set_units("t2", "s")
 
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
 sweep_data.set_prop("postproc_type", "field_sweep_v3")
+sweep_data.set_prop("coherence_pathway", {"ph1": 1})
 sweep_data.set_prop("acq_params", config_dict.asdict())
 target_directory = "ODNP_NMR_comp/field_dependent"
-saving_field = h5py.save_data(
+saving_field = SpinCore_pp.save_data(
     sweep_data, target_directory, config_dict, "field"
 )
 config_dict.write()
