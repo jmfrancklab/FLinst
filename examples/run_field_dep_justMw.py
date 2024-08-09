@@ -148,56 +148,22 @@ with power_control() as p:
 sweep_data.set_prop("acq_params", config_dict.asdict())
 # }}}
 # {{{chunk and save data
-if phase_cycling:
-    sweep_data.chunk("t", ["ph1", "t2"], [4, -1])
-    sweep_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
-    if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    sweep_data.reorder(["ph1"]).reorder(["nScans"]).reorder(["t2"], first=False)
-    sweep_data.squeeze()
-    sweep_data.set_units("t2", "s")
-    for_plot = sweep_data.C
-    for_plot.ft("t2", shift=True)
-    for_plot.ft(["ph1"], unitary=True)
-else:
-    if config_dict["nScans"] > 1:
-        sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    sweep_data.rename("t", "t2")
-    for_plot = sweep_data.C
-    for_plot.ft("t2", shift=True)
+sweep_data.chunk("t", ["ph1", "t2"], [4, -1])
+sweep_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
+if config_dict["nScans"] > 1:
+    sweep_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+sweep_data.reorder(["ph1"]).reorder(["nScans"]).reorder(["t2"], first=False)
+sweep_data.squeeze()
+sweep_data.set_units("t2", "s")
+sweep_data.ft("t2", shift=True)
+sweep_data.ft(["ph1"],unitary=True)
+
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
 sweep_data.set_prop("postproc_type", "field_sweep_v2")
 sweep_data.set_prop("acq_params", config_dict.asdict())
-target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/field_dependent")
+target_directory = "ODNP_NMR_comp/field_dependent"
 filename_out = filename + ".h5"
 nodename = sweep_data.name()
-if os.path.exists(f"{filename_out}"):
-    print("this file already exists so we will add a node to it!")
-    with h5py.File(
-        os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
-    ) as fp:
-        if nodename in fp.keys():
-            print(
-                "this nodename already exists, so I will call it temp_field_sweep"
-            )
-            sweep_data.name("temp_field_sweep")
-            nodename = "temp_field_sweep"
-    sweep_data.hdf5_write(f"{filename_out}", directory=target_directory)
-else:
-    try:
-        sweep_data.hdf5_write(f"{filename_out}", directory=target_directory)
-    except Exception:
-        print(
-            f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_field_sweep.h5 in the current directory"
-        )
-        if os.path.exists("temp_field_sweep.h5"):
-            print("there is a temp_field_sweep.h5 already! -- I'm removing it")
-            os.remove("temp_field_sweep.h5")
-            sweep_data.hdf5_write("temp_field_sweep.h5")
-            print(
-                "if I got this far, that probably worked -- be sure to move/rename temp_field_sweep.h5 to the correct name!!"
-            )
-print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-print(("Name of saved data", sweep_data.name()))
+saving_field = save_data(sweep_data, target_directory, config_dict, "field")
 config_dict.write()
 fl.show()
