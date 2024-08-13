@@ -20,7 +20,7 @@ from Instruments import GDS_scope
 from numpy import r_
 import numpy as np
 
-calibrating = False
+calibrating = True
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
 nominal_power = 75
@@ -73,7 +73,6 @@ with GDS_scope() as gds:
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:LEV 2.3E-2")  # set trigger level
 
-    # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
     def round_for_scope(val, multiples=1):
         val_oom = np.floor(np.log10(val))
         val = np.ceil(val / 10**val_oom / multiples) * 10**val_oom * multiples
