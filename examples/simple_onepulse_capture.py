@@ -4,7 +4,6 @@ import pyspecdata as psd
 import SpinCore_pp as spc
 from datetime import datetime
 from Instruments import GDS_scope
-from numpy import r_
 import numpy as np
 
 n_lengths = 100
