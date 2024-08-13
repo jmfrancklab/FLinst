@@ -17,7 +17,7 @@ from datetime import datetime
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
-desired_p90_range_us = linspace(0.5, 15, 20, endpoint=False)
+beta_range_s_sqrtW = linspace(0.1e-6, 150e-6, 20)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -32,16 +32,18 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # {{{add file saving parameters to config dict
 config_dict["type"] = "FID_nutation"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["FID_nutation_counter"] += 1
 # }}}
 # {{{ command-line option to leave the field untouched (if you set it once, why set it again)
-spc.set_field(sys.argv, config_dict)
+if len(sys.argv) == 2 and sys.argv[1] == "stayput":
+    pass
+else:
+    spc.set_field(config_dict)
 # }}}
 # {{{set phase cycling
 ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = 4
 # }}}
-prog_p90_us = spc.prog_plen(desired_p90_range_us)
+prog_p90_us = spc.prog_plen(beta_range_s_sqrtW, config_dict["amplitude"])
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
@@ -63,7 +65,7 @@ for idx, p90_us in enumerate(prog_p90_us):
         ],
         nScans=config_dict["nScans"],
         indirect_idx=idx,
-        indirect_len=len(prog_p90_us),
+        indirect_len=len(beta_range_s_sqrtW),
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         nPoints=nPoints,
@@ -73,15 +75,15 @@ for idx, p90_us in enumerate(prog_p90_us):
         ret_data=data,
     )
 # }}}
-data.rename("indirect", "p_90")
-data.setaxis("p_90", desired_p90_range_us * 1e-6).set_units("p_90", "s")
+data.rename("indirect", "beta")
+data.setaxis("beta", desired_beta_range).set_units("beta", "s√W")
 data.set_prop("prog_p90s", prog_p90_us)
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
 if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-data.reorder(["nScans", "ph1", "p_90", "t2"])
+data.reorder(["nScans", "ph1", "beta", "t2"])
 data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_FID_nutation_v1")
 data.set_prop("coherence_pathway", {"ph1": -1})
