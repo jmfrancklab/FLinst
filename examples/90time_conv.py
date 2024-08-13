@@ -10,13 +10,12 @@ from numpy import r_
 import pyspecdata as psd
 from SpinCore_pp.pulse_length_conv import prog_plen
 
-desired_beta = r_[0:450e-6:100j]
 with psd.figlist_var() as fl:
     fl.next(r"Pulse Length vs. Desired $\beta$", legend=True)
     for amplitude in [1.0, 0.1]:
         plt.plot(
-            desired_beta,
-            prog_plen(desired_beta, amplitude),
+            r_[0:450e-6:100j],
+            prog_plen(r_[0:450e-6:100j], amplitude),
             "o",
             label=f"amp={amplitude}",
             alpha=0.5,
