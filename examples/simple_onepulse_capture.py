@@ -6,7 +6,6 @@ from datetime import datetime
 from Instruments import GDS_scope
 import numpy as np
 
-n_lengths = 100
 my_exp_type = "test_equipment"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
@@ -41,7 +40,7 @@ with GDS_scope() as gds:
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:LEV 6.4E-2")  # set trigger level
-    gds.CH2.voltscal = config_dict["amplitude"] * 0.5  # 200E-3
+    gds.CH2.voltscal = config_dict["amplitude"] * 0.5
     if config_dict["amplitude"] < 0.1:
         gds.timscal(5e-6, pos=-9.5e-6)
     else:
