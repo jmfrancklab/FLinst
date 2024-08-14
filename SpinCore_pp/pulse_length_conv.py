@@ -27,7 +27,7 @@ def prog_plen(desired_beta, amplitude):
         assert desired_beta[-1] < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     linear_threshold = 100e-6
     if amplitude == 1.0:
-        c_curve = [
+        c_nonlinear = [
             1.43847887e-01,
             6.53636766e05,
             -4.56741958e10,
@@ -42,7 +42,7 @@ def prog_plen(desired_beta, amplitude):
         ]
         c_linear = [3.56177606e00, 1.02937057e05]
     elif amplitude == 0.1:
-        c_curve = [
+        c_nonlinear = [
             -1.53710953e-01,
             4.78586837e06,
             -6.10725991e11,
@@ -62,7 +62,7 @@ def prog_plen(desired_beta, amplitude):
     # }}}
     def zonefit(desired_beta):
         if desired_beta < linear_threshold:
-            return np.polyval(c_curve[::-1], desired_beta)
+            return np.polyval(c_nonlinear[::-1], desired_beta)
         else:
             return np.polyval(c_linear[::-1], desired_beta)
 
