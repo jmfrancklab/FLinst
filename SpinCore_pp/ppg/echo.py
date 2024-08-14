@@ -16,6 +16,7 @@ from pyspecdata import strm
 import time
 import logging
 
+
 # {{{spin echo ppg
 def run_spin_echo(
     nScans,
@@ -103,7 +104,9 @@ def run_spin_echo(
         configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints)
         run_scans_time_list.append(time.time())
         run_scans_names.append("configure Rx")
-        acq_time_ms = configureRX(SW_kHz, nPoints, nScans, nEchoes, nPhaseSteps)
+        acq_time_ms = configureRX(
+            SW_kHz, nPoints, nScans, nEchoes, nPhaseSteps
+        )
         run_scans_time_list.append(time.time())
         run_scans_names.append("init")
         init_ppg()
@@ -142,13 +145,17 @@ def run_spin_echo(
             else:
                 # {{{ dtype for structured array
                 times_dtype = np.dtype(
-                    [(indirect_fields[0], np.double), (indirect_fields[1], np.double)]
+                    [
+                        (indirect_fields[0], np.double),
+                        (indirect_fields[1], np.double),
+                    ]
                 )
                 # }}}
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
             time_axis = r_[0:dataPoints] / (SW_kHz * 1e3)
             ret_data = psp.ndshape(
-                [indirect_len, nScans, len(time_axis)], ["indirect", "nScans", "t"]
+                [indirect_len, nScans, len(time_axis)],
+                ["indirect", "nScans", "t"],
             ).alloc(dtype=np.complex128)
             ret_data.setaxis("indirect", mytimes)
             ret_data.setaxis("t", time_axis).set_units("t", "s")
@@ -163,7 +170,9 @@ def run_spin_echo(
         stopBoard()
         run_scans_time_list.append(time.time())
         this_array = np.array(run_scans_time_list)
-        logging.debug(strm("stored scan", nScans_idx, "for indirect_idx", indirect_idx))
+        logging.debug(
+            strm("stored scan", nScans_idx, "for indirect_idx", indirect_idx)
+        )
         logging.debug(strm("checkpoints:", this_array - this_array[0]))
         logging.debug(
             strm(
