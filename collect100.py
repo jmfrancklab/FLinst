@@ -51,7 +51,7 @@ def collect(date,id_string,captures):
         print("loaded GDS")
         for x in range(1,capture_length+1):
             print("entering capture",x)
-            ch1_waveform = g.waveform(ch=1)
+            ch1_waveform = g.waveform(ch=2)
             print("GOT WAVEFORM")
             data = concat([ch1_waveform],'ch').reorder('t')
             if x == 1:
@@ -73,7 +73,7 @@ def collect(date,id_string,captures):
     s.labels('capture',captures)
     s.name('accumulated_'+date)
     s.hdf5_write(date+'_'+id_string+'.h5',
-            directory=getDATADIR(exp_type='ODNP_NMR_comp/noise_tests'))
+            directory=getDATADIR(exp_type='noise_tests'))
     print("name of data",s.name())
     print("units should be",s.get_units('t'))
     print("shape of data",ndshape(s))
