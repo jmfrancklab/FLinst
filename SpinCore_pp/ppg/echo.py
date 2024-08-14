@@ -37,54 +37,55 @@ def run_spin_echo(
     deblank_us=1.0,
     amplitude=1.0,
 ):
-    """run nScans and slot them into the indirect_idx index of ret_data -- assume
+    """
+    run nScans and slot them into the indirect_idx index of ret_data -- assume
     that the first time this is run, it will be run with ret_data=None and that
     after that, you will pass in ret_data this generates an "indirect" axis.
 
     Parameters
     ==========
-    nScans:         int
-                    number of repeats of the pulse sequence (for averaging over data)
-    indirect_idx:   int
-                    index along the 'indirect' dimension
-    indirect_len:   int
-                    size of indirect axis.
-                    Used to allocate space for the data once the first scan is run.
-    adcOffset:      int
-                    offset of ADC acquired with SpinCore_apps/C_examples/adc_offset.exe
-    carrierFreq_MHz:    float
-                        carrier frequency to be set in MHz
-    nPoints:        int
-                    number of points for the data
-    nEchoes:        int
-                    Number of Echoes to be acquired.
-                    This should always be 1, since this pulse
-                    program doesn't generate multiple echos.
-    p90_us:         float
-                    90 time of the probe in us
-    repetition_us:  float
-                    3-5 x T1 of the sample in seconds
-    tau_us:         float
-                    Echo Time should be a few ms for a good hermitian function to be
-                    applied later in processing. Standard tau_us = 3500.
-    SW_kHz:         float
-                    spectral width of the data. Minimum = 1.9
+    nScans: int
+        number of repeats of the pulse sequence (for averaging over data)
+    indirect_idx: int
+        index along the 'indirect' dimension
+    indirect_len: int
+        size of indirect axis.
+        Used to allocate space for the data once the first scan is run.
+    adcOffset: int
+        offset of ADC acquired with SpinCore_apps/C_examples/adc_offset.exe
+    carrierFreq_MHz: float
+        carrier frequency to be set in MHz
+    nPoints: int
+        number of points for the data
+    nEchoes: int
+        Number of Echoes to be acquired.
+        This should always be 1, since this pulse
+        program doesn't generate multiple echos.
+    p90_us: float
+        90 time of the probe in us
+    repetition_us: float
+        3-5 x T1 of the sample in seconds
+    tau_us: float
+        Echo Time should be a few ms for a good hermitian function to be
+        applied later in processing. Standard tau_us = 3500.
+    SW_kHz: float
+        spectral width of the data. Minimum = 1.9
     indirect_fields: tuple (pair) of str or (default) None
-                    Name for the first field of the structured array
-                    that stores the indirect dimension coordinates.
-                    We use a structured array, e.g., to store both start and
-                    stop times for the experiment.
+        Name for the first field of the structured array
+        that stores the indirect dimension coordinates.
+        We use a structured array, e.g., to store both start and
+        stop times for the experiment.
 
-                    If you want the indirect dimension coordinates
-                    to be a normal array, set this to None
+        If you want the indirect dimension coordinates
+        to be a normal array, set this to None
 
-                    This parameter is only used when `ret_data` is set to `None`.
-    ph1_cyc:        array
-                    phase steps for the first pulse
-    ph2_cyc:        array
-                    phase steps for the second pulse
-    ret_data:       nddata (default None)
-                    returned data from previous run or `None` for the first run.
+        This parameter is only used when `ret_data` is set to `None`.
+    ph1_cyc: array
+        phase steps for the first pulse
+    ph2_cyc: array
+        phase steps for the second pulse
+    ret_data: nddata (default None)
+        returned data from previous run or `None` for the first run.
     """
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
