@@ -39,7 +39,8 @@ def run_spin_echo(
     amplitude=1.0,
     plen_as_beta=True,
 ):
-    """run nScans and slot them into the indirect_idx index of ret_data -- assume
+    """
+    run nScans and slot them into the indirect_idx index of ret_data -- assume
     that the first time this is run, it will be run with ret_data=None and that
     after that, you will pass in ret_data this generates an "indirect" axis.
 
