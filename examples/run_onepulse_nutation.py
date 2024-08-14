@@ -38,6 +38,10 @@ config_dict["FID_nutation_counter"] += 1
 if len(sys.argv) == 2 and sys.argv[1] == "stayput":
     pass
 else:
+    input(
+        "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
+        % config_dict["carrierFreq_MHz"]
+    )
     spc.set_field(config_dict)
 # }}}
 # {{{set phase cycling
