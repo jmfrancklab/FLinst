@@ -89,9 +89,9 @@ with GDS_scope() as gds:
     thiscapture.ift("t")
     # }}}
     data = thiscapture
-data.set_prop("programmed_t_pulse_us",t90_pulse_us)
+data.set_prop("programmed_t_pulse_us", t90_pulse_us)
 data.set_units("t", "s")
-# data is already converted to analytic so no further 
+# data is already converted to analytic so no further
 # preprocessing needs to be done
 data.set_prop("postproc_type", None)
 data.set_prop("acq_params", config_dict.asdict())
