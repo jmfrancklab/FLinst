@@ -1,5 +1,6 @@
 from Instruments.XEPR_eth import xepr
 import pyspecdata as psd
+import logging
 
 
 def set_field(config_dict):
@@ -15,5 +16,5 @@ def set_field(config_dict):
             "Are you mad?? The field you want, %g, is too low!" % Field_G
         )
         Field_G = x.set_field(Field_G)
-        psd.logger.info(psd.strm("Field set to ", Field_G))
+        logging.info(psd.strm("Field set to ", Field_G))
     return
