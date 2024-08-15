@@ -17,7 +17,7 @@ from datetime import datetime
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
-beta_range_s_sqrtW = linspace(0.1e-6, 150e-6, 20)
+beta_s_sqrtW_array = linspace(0.1e-6, 150e-6, 20)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -48,7 +48,7 @@ else:
 ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = 4
 # }}}
-prog_p90_us = spc.prog_plen(beta_range_s_sqrtW, config_dict["amplitude"])
+p90_us_array = spc.prog_plen(beta_s_sqrtW_array, config_dict["amplitude"])
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
@@ -58,9 +58,9 @@ assert total_pts < 2**14, (
 # }}}
 # {{{ acquire FID nutation
 data = None
-for idx, p90_us in enumerate(prog_p90_us):
+for idx, p90_us in enumerate(p90_us_array):
     data = generic(
-        ppg_list=[
+        ppg_array=[
             ("phase_reset", 1),
             ("delay_TTL", config_dict["deblank_us"]),
             ("pulse_TTL", p90_us, "ph1", ph1_cyc),
@@ -70,7 +70,7 @@ for idx, p90_us in enumerate(prog_p90_us):
         ],
         nScans=config_dict["nScans"],
         indirect_idx=idx,
-        indirect_len=len(beta_range_s_sqrtW),
+        indirect_len=len(beta_s_sqrtW_array),
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         nPoints=nPoints,
@@ -81,13 +81,13 @@ for idx, p90_us in enumerate(prog_p90_us):
     )
 # }}}
 data.rename("indirect", "beta")
-data.setaxis("beta", beta_range_s_sqrtW).set_units("beta", "s√W")
-data.set_prop("prog_p90_us", prog_p90_us)
+data.setaxis("beta", beta_s_sqrtW_array).set_units("beta", "s√W")
+data.set_prop("prog_p90_us", p90_us_array)
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
 if config_dict["nScans"] > 1:
-    data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+    data.setaxis("nScans", "#")
 data.reorder(["nScans", "ph1", "beta", "t2"])
 data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_FID_nutation_v2")
