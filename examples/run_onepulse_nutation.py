@@ -60,7 +60,7 @@ assert total_pts < 2**14, (
 data = None
 for idx, p90_us in enumerate(p90_us_array):
     data = generic(
-        ppg_array=[
+        ppg_list=[
             ("phase_reset", 1),
             ("delay_TTL", config_dict["deblank_us"]),
             ("pulse_TTL", p90_us, "ph1", ph1_cyc),
