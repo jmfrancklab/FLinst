@@ -76,6 +76,7 @@ with GDS_scope() as gds:
     spc.stop_ppg()
     spc.runBoard()
     spc.stopBoard()
+# }}}    
     time.sleep(1.0)
     thiscapture = gds.waveform(ch=2)
     # {{{ just convert to analytic here, and also downsample
@@ -91,9 +92,7 @@ with GDS_scope() as gds:
     data = thiscapture
 data.set_prop("programmed_t_pulse_us", t90_pulse_us)
 data.set_units("t", "s")
-# data is already converted to analytic so no further
-# preprocessing needs to be done
-data.set_prop("postproc_type", None)
+data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
 config_dict.write()
