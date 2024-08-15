@@ -41,10 +41,8 @@ def run_IR(
     plen_as_beta=True,
 ):
     """
-    Run a single (signal averaged) scan out of an inversion recovery and
-    generate a single nddata with a vd dimension.  We assume the first
-    time this is run, ret_data=None, after which we will pass in
-    ret_data.
+    Run a single (signal averaged) scan out of an inversion recovery and generate a single nddata with a vd dimension.
+    We assume the first time this is run, ret_data=None, after which we will pass in ret_data.
 
     Parameters
     ==========
