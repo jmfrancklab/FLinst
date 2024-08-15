@@ -6,6 +6,8 @@ def prog_plen(desired_beta, amplitude):
     Takes the desired β (μs√(W)) and tells the user
     what pulse length should be programmed in order to
     get the desired β
+    ** Note: the following coefficients are specifically for when the
+    deblanking is 1 us and therefore the pulse shapes are wonky **
 
     Parameters
     ==========

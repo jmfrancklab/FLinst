@@ -19,7 +19,9 @@ def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
         config_dict pulled from the active.ini file
     counter_type: str
         type of counter you are incrementing
-    PR: need documentation for proc
+    proc: boolean
+        Dictates whether the processing script, proc_raw is ran on the
+        acquired data
 
     Returns
     =======
