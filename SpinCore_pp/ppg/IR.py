@@ -8,9 +8,9 @@ from .. import (
     stopBoard,
 )
 from .. import load as spincore_load
-from .. import prog_plen
 import pyspecdata as psp
 import numpy as np
+from .. import prog_plen
 from numpy import r_
 from pyspecdata import strm
 import time
