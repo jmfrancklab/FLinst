@@ -92,7 +92,7 @@ def run_IR(
     ret_data: nddata (default None)
         returned data from previous run or `None` for the first run.
     plen_as_beta: boolean
-        Is plen supplied as a β value [s√W] or directly as programmed length (μs)
+        Is plen supplied as a β value [s√W] or directly as programmed length [μs]
     """
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
