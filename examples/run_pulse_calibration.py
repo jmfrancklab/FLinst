@@ -59,7 +59,6 @@ tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 with GDS_scope() as gds:
     # {{{ set up settings for GDS
     gds.reset()
-    gds.autoset # PR this is a method, and you are not calling it here
     gds.CH1.disp = True
     gds.CH2.disp = True
     gds.write(":CHAN1:DISP OFF")
