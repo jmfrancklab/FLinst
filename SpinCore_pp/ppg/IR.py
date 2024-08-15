@@ -102,7 +102,9 @@ def run_IR(
     # be programmed in order to get the desired
     # times
     prog_p90_us = prog_plen(plen, amplitude) if plen_as_beta else plen
-    prog_p180_us = prog_plen(2 * plen, amplitude) if plen_as_beta else (2*plen)
+    prog_p180_us = (
+        prog_plen(2 * plen, amplitude) if plen_as_beta else (2 * plen)
+    )
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
