@@ -107,8 +107,7 @@ with GDS_scope() as gds:
             config_dict["amplitude"],
             nPoints,
         )
-        # PR: is this given in ms? if so, should be reflected in variable name
-        acq_time = spc.configureRX(
+        acq_time_ms = spc.configureRX(
             # Rx scans, echos, and nPhaseSteps set to 1
             config_dict["SW_kHz"],
             nPoints,
@@ -116,7 +115,7 @@ with GDS_scope() as gds:
             1,
             1,
         )
-        config_dict["acq_time_ms"] = acq_time
+        config_dict["acq_time_ms"] = acq_time_ms
         spc.init_ppg()
         spc.load(
             [
@@ -158,7 +157,7 @@ if calibrating:
 else:
     data.setaxis("beta", desired_beta)
     data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
-# PR why have you *still* not incorporated a postproc name??
+data.set_prop("postproc_type","GDS_capture_vs")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
