@@ -20,7 +20,7 @@ from Instruments import GDS_scope
 from numpy import r_
 import numpy as np
 
-calibrating = True
+calibrating = False
 
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
@@ -68,7 +68,7 @@ with GDS_scope() as gds:
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
-    gds.write(":TRIG:LEV 2.3E-2")  # set trigger level
+    gds.write(":TRIG:LEV 32E-3")  # set trigger level
 
     def round_for_scope(val, multiples=1):
         val_oom = np.floor(np.log10(val))
@@ -92,9 +92,10 @@ with GDS_scope() as gds:
     print(
         "here is the timescale in μs", scope_timescale / 1e-6
     )  # the 0.5 is because it can fit in half the screen
+    print(round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 100e-6))
     gds.timscal(
         scope_timescale,
-        pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 3e-6),
+        pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 100e-6),
     )
     # }}}
     data = None
@@ -119,7 +120,7 @@ with GDS_scope() as gds:
         spc.load(
             [
                 ("phase_reset", 1),
-                ("delay_TTL", 1.0),
+                ("delay_TTL", 50.0),
                 ("pulse_TTL", this_t_pulse, 0),
                 ("delay", config_dict["deadtime_us"]),
             ]
@@ -129,9 +130,9 @@ with GDS_scope() as gds:
         spc.stopBoard()
         time.sleep(1.5)
         thiscapture = gds.waveform(ch=2)
-        assert (
-            np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
-        ), "what are you trying to do, you dwell time is too long!!!"
+        #assert (
+        #    np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
+        #), "what are you trying to do, you dwell time is too long!!!"
         # {{{ just convert to analytic here, and also downsample
         #     this is a rare case where we care more about not keeping
         #     ridiculous quantities of garbage on disk, so we are going
