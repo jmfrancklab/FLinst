@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def prog_plen(desired_beta, amplitude):
+def prog_plen(desired_beta, settings):
     """
     Takes the desired β (μs√(W)) and tells the user
     what pulse length should be programmed in order to
@@ -14,8 +14,11 @@ def prog_plen(desired_beta, amplitude):
     desired_beta: float
         the desired β you wish the spincore to output,
         in μs*sqrt(W)
-    amplitude:  float
-        amplitude setting of measurement
+    settings:  # PR what is the name of this class
+        contains the following keys.  It's crucial that these get used in the pulse sequence.
+
+        :amplitude: float
+        :deblank_us: float
 
     Returns
     =======
@@ -23,12 +26,22 @@ def prog_plen(desired_beta, amplitude):
         The pulse length you tell spincore in order to
         get the desired β.
     """
+    assert isinstance(
+        settings, whatever
+    )  # PR whatever is the config dict class -- you need to import it
     if np.isscalar(desired_beta):
-        assert desired_beta < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
+        assert (
+            desired_beta < 1000e-6
+        ), "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     else:
-        assert desired_beta[-1] < 1000e-6, "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
+        assert (
+            desired_beta[-1] < 1000e-6
+        ), "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     linear_threshold = 100e-6
-    if amplitude == 1.0:
+    assert (
+        settings["deblank_us"] == 50
+    ), "currently only calibrated for deblank_us = 50, so you almost definitely want to set that value in your active.ini"
+    if settings["amplitude"] == 1.0:
         c_nonlinear = [
             1.43847887e-01,
             6.53636766e05,
@@ -43,7 +56,7 @@ def prog_plen(desired_beta, amplitude):
             -5.47275992e43,
         ]
         c_linear = [3.56177606e00, 1.02937057e05]
-    elif amplitude == 0.1:
+    elif settings["amplitude"] == 0.1:
         c_nonlinear = [
             -1.53710953e-01,
             4.78586837e06,
