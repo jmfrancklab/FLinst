@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def prog_plen(desired_beta, amplitude):
+def prog_plen(desired_beta, settings):
     """
     Takes the desired β (μs√(W)) and tells the user
     what pulse length should be programmed in order to
@@ -14,8 +14,11 @@ def prog_plen(desired_beta, amplitude):
     desired_beta: float
         the desired β you wish the spincore to output,
         in μs*sqrt(W)
-    amplitude:  float
-        amplitude setting of measurement
+    settings:  # PR what is the name of this class
+        contains the following keys.  It's crucial that these get used in the pulse sequence.
+
+        :amplitude: float
+        :deblank_us: float
 
     Returns
     =======
@@ -23,6 +26,9 @@ def prog_plen(desired_beta, amplitude):
         The pulse length you tell spincore in order to
         get the desired β.
     """
+    assert isinstance(
+        settings, whatever
+    )  # PR whatever is the config dict class -- you need to import it
     if np.isscalar(desired_beta):
         assert (
             desired_beta < 1000e-6
@@ -32,8 +38,11 @@ def prog_plen(desired_beta, amplitude):
             desired_beta[-1] < 1000e-6
         ), "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     linear_threshold = 100e-6
+    assert (
+        settings["deblank_us"] == 50
+    ), "currently only calibrated for deblank_us = 50, so you almost definitely want to set that value in your active.ini"
     if settings["amplitude"] == 1.0:
-        c_curve = [
+        c_nonlinear = [
             -8.84841307e-02,
             6.55556440e05,
             -4.69857455e10,
@@ -48,7 +57,7 @@ def prog_plen(desired_beta, amplitude):
         ]
         c_linear = [3.48764362e00, 1.01357692e05]
     elif settings["amplitude"] == 0.1:
-        c_curve = [
+        c_nonlinear = [
             -1.62998207e-01,
             1.21649137e06,
             -9.52394324e09,
@@ -63,7 +72,7 @@ def prog_plen(desired_beta, amplitude):
         ]
         c_linear = [1.87827645e00, 1.06425500e06]
     elif settings["amplitude"] == 0.2:
-        c_curve = [
+        c_nonlinear = [
             -1.34853331e00,
             7.97484995e05,
             -1.53053658e10,
@@ -78,7 +87,7 @@ def prog_plen(desired_beta, amplitude):
         ]
         c_linear = [3.54846532e00, 4.97504125e05]
     elif settings["amplitude"] == 0.05:
-        c_curve = [
+        c_nonlinear = [
             -5.44563661e00,
             2.96227215e06,
             -5.72743016e10,
@@ -98,7 +107,7 @@ def prog_plen(desired_beta, amplitude):
     # }}}
     def zonefit(desired_beta):
         if desired_beta < linear_threshold:
-            return np.polyval(c_curve[::-1], desired_beta)
+            return np.polyval(c_nonlinear[::-1], desired_beta)
         else:
             return np.polyval(c_linear[::-1], desired_beta)
 
