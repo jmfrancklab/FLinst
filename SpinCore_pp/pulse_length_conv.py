@@ -32,7 +32,7 @@ def prog_plen(desired_beta, amplitude):
             desired_beta[-1] < 1000e-6
         ), "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     linear_threshold = 100e-6
-    if amplitude == 1.0:
+    if settings["amplitude"] == 1.0:
         c_curve = [
             -8.84841307e-02,
             6.55556440e05,
@@ -47,7 +47,7 @@ def prog_plen(desired_beta, amplitude):
             -6.77665633e43,
         ]
         c_linear = [3.48764362e00, 1.01357692e05]
-    elif amplitude == 0.1:
+    elif settings["amplitude"] == 0.1:
         c_curve = [
             -1.62998207e-01,
             1.21649137e06,
@@ -62,7 +62,7 @@ def prog_plen(desired_beta, amplitude):
             5.25471331e43,
         ]
         c_linear = [1.87827645e00, 1.06425500e06]
-    elif amplitude == 0.2:
+    elif settings["amplitude"] == 0.2:
         c_curve = [
             -1.34853331e00,
             7.97484995e05,
@@ -77,7 +77,7 @@ def prog_plen(desired_beta, amplitude):
             -5.22477826e39,
         ]
         c_linear = [3.54846532e00, 4.97504125e05]
-    elif amplitude == 0.05:
+    elif settings["amplitude"] == 0.05:
         c_curve = [
             -5.44563661e00,
             2.96227215e06,
