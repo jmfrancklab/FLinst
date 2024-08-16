@@ -17,7 +17,7 @@ from datetime import datetime
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
-beta_range_s_sqrtW = linspace(0.5e-6, 240e-6, 100)
+beta_range_s_sqrtW = linspace(0.1e-6, 150e-6, 20)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -35,16 +35,13 @@ config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["FID_nutation_counter"] += 1
 # }}}
 # {{{ command-line option to leave the field untouched (if you set it once, why set it again)
-adjust_field = True
-if len(sys.argv) == 2 and sys.argv[1] == "stayput":
-    adjust_field = False
-# }}}
 input(
     "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
-# {{{ let computer set field
-if adjust_field:
+if len(sys.argv) == 2 and sys.argv[1] == "stayput":
+    pass
+else:
     spc.set_field(config_dict)
 # }}}
 # {{{set phase cycling
@@ -52,7 +49,6 @@ ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = 4
 # }}}
 prog_p90_us = spc.prog_plen(beta_range_s_sqrtW, config_dict["amplitude"])
-print("heres the 90 list",prog_p90_us)
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
@@ -86,7 +82,7 @@ for idx, p90_us in enumerate(prog_p90_us):
 # }}}
 data.rename("indirect", "beta")
 data.setaxis("beta", beta_range_s_sqrtW).set_units("beta", "s√W")
-data.set_prop("p_90s", prog_p90_us)
+data.set_prop("prog_p90_us", prog_p90_us)
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
@@ -94,7 +90,7 @@ if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
 data.reorder(["nScans", "ph1", "beta", "t2"])
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "spincore_FID_nutation_v1")
+data.set_prop("postproc_type", "spincore_FID_nutation_v2")
 data.set_prop("coherence_pathway", {"ph1": -1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "FID_nutation")
