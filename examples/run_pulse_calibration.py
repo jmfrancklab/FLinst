@@ -1,6 +1,6 @@
 r"""
-Calibrate pulses output from RF amplifier
-=========================================
+Use the Scope to Calibrate pulses output from RF amplifier
+===========================================================
 If calibrating the pulse lengths, a series of pulse lengths are sent to the 
 spincore directly and the output pulse is captured on the GDS oscilloscope.
 If testing the calibration or capturing using a series of desired betas,
@@ -20,7 +20,8 @@ from Instruments import GDS_scope
 from numpy import r_
 import numpy as np
 
-calibrating = False
+calibrating = True
+
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
 nominal_power = 75
@@ -40,12 +41,9 @@ config_dict = spc.configuration("active.ini")
 # }}}
 if calibrating:
     t_pulse_us = np.linspace(
-        0.5,
-        350
-        / np.sqrt(nominal_power)
-        / config_dict[
-            "amplitude"
-        ],  # if the amplitude is small we want to go out to much longer pulse lengths
+        # if the amplitude is small we want to go out to much longer pulse lengths
+        0.5 / np.sqrt(nominal_power) / config_dict["amplitude"],
+        350 / np.sqrt(nominal_power) / config_dict["amplitude"],
         n_lengths,
     )
 else:
@@ -61,7 +59,6 @@ tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 with GDS_scope() as gds:
     # {{{ set up settings for GDS
     gds.reset()
-    gds.autoset
     gds.CH1.disp = True
     gds.CH2.disp = True
     gds.write(":CHAN1:DISP OFF")
@@ -73,10 +70,13 @@ with GDS_scope() as gds:
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:LEV 2.3E-2")  # set trigger level
 
-    # PR COMMENT: I tried to make the following so that it could be used flexibly with a range of powers
     def round_for_scope(val, multiples=1):
         val_oom = np.floor(np.log10(val))
-        val = np.ceil(val / 10**val_oom / multiples) * 10**val_oom * multiples
+        val = (
+            np.ceil(val / 10**val_oom / multiples)
+            * 10**val_oom
+            * multiples
+        )
         return val
 
     gds.CH2.voltscal = round_for_scope(
@@ -93,7 +93,8 @@ with GDS_scope() as gds:
         "here is the timescale in μs", scope_timescale / 1e-6
     )  # the 0.5 is because it can fit in half the screen
     gds.timscal(
-        scope_timescale, pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 3e-6)
+        scope_timescale,
+        pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 3e-6),
     )
     # }}}
     data = None
@@ -105,7 +106,7 @@ with GDS_scope() as gds:
             config_dict["amplitude"],
             nPoints,
         )
-        acq_time = spc.configureRX(
+        acq_time_ms = spc.configureRX(
             # Rx scans, echos, and nPhaseSteps set to 1
             config_dict["SW_kHz"],
             nPoints,
@@ -113,7 +114,7 @@ with GDS_scope() as gds:
             1,
             1,
         )
-        config_dict["acq_time_ms"] = acq_time
+        config_dict["acq_time_ms"] = acq_time_ms
         spc.init_ppg()
         spc.load(
             [
@@ -132,10 +133,10 @@ with GDS_scope() as gds:
             np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
         ), "what are you trying to do, you dwell time is too long!!!"
         # {{{ just convert to analytic here, and also downsample
+        #     this is a rare case where we care more about not keeping
+        #     ridiculous quantities of garbage on disk, so we are going
+        #     to throw some stuff out beforehand
         thiscapture.ft("t", shift=True)
-        # this is a rare case where we care more about not keeping
-        # ridiculous quantities of garbage on disk, so we are going to
-        # throw some stuff out beforehand
         thiscapture = thiscapture["t":(0, None)]["t":(None, 24e6)]
         thiscapture *= 2
         thiscapture["t", 0] *= 0.5
@@ -155,6 +156,7 @@ if calibrating:
 else:
     data.setaxis("beta", desired_beta)
     data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
+data.set_prop("postproc_type","GDS_capture_vs")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)

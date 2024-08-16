@@ -141,7 +141,7 @@ class NMRWindow(QMainWindow):
             carrierFreq_MHz=self.myconfig["carrierFreq_MHz"],
             nPoints=self.npts,
             nEchoes=self.myconfig["nEchoes"],
-            beta_90_s_sqrtW=self.myconfig["beta_90_s_sqrtW"],
+            plen=self.myconfig["beta_90_s_sqrtW"],
             repetition_us=self.myconfig["repetition_us"],
             amplitude=self.myconfig["amplitude"],
             tau_us=self.myconfig["tau_us"],

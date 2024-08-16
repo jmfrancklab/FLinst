@@ -6,6 +6,8 @@ def prog_plen(desired_beta, amplitude):
     Takes the desired β (μs√(W)) and tells the user
     what pulse length should be programmed in order to
     get the desired β
+    ** Note: the following coefficients are specifically for when the
+    deblanking is 1 us and therefore the pulse shapes are wonky **
 
     Parameters
     ==========
@@ -28,7 +30,7 @@ def prog_plen(desired_beta, amplitude):
     linear_threshold = 100e-6
     if amplitude == 1.0:
         c_curve =  [
-                8.84841307e-02,
+                -8.84841307e-02,
                 6.55556440e+05,
                 -4.69857455e+10,
                 2.93923872e+15,
@@ -89,7 +91,7 @@ def prog_plen(desired_beta, amplitude):
     # }}}
     def zonefit(desired_beta):
         if desired_beta < linear_threshold:
-            return np.polyval(c_curve[::-1], desired_beta)
+            return np.polyval(c_nonlinear[::-1], desired_beta)
         else:
             return np.polyval(c_linear[::-1], desired_beta)
 

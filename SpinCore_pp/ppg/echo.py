@@ -39,7 +39,8 @@ def run_spin_echo(
     amplitude=1.0,
     plen_as_beta=True,
 ):
-    """run nScans and slot them into the indirect_idx index of ret_data -- assume
+    """
+    run nScans and slot them into the indirect_idx index of ret_data -- assume
     that the first time this is run, it will be run with ret_data=None and that
     after that, you will pass in ret_data this generates an "indirect" axis.
 
@@ -89,7 +90,7 @@ def run_spin_echo(
     ret_data: nddata (default None)
         returned data from previous run or `None` for the first run.
     plen_as_beta: boolean
-        Is plen supplied as a β value [s√W] or directly as programmed length (μs)
+        Is plen supplied as a β value [s√W] or directly as programmed length [μs]
     """
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
@@ -97,7 +98,9 @@ def run_spin_echo(
     # be programmed in order to get the desired
     # times
     prog_p90_us = prog_plen(plen, amplitude) if plen_as_beta else plen
-    prog_p180_us = prog_plen(2 * plen, amplitude) if plen_as_beta else plen
+    prog_p180_us = (
+        prog_plen(2 * plen, amplitude) if plen_as_beta else (2 * plen)
+    )
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
