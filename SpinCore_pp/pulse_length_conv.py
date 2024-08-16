@@ -91,7 +91,7 @@ def prog_plen(desired_beta, amplitude):
     # }}}
     def zonefit(desired_beta):
         if desired_beta < linear_threshold:
-            return np.polyval(c_nonlinear[::-1], desired_beta)
+            return np.polyval(c_curve[::-1], desired_beta)
         else:
             return np.polyval(c_linear[::-1], desired_beta)
 
