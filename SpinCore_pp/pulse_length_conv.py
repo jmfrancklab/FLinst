@@ -14,7 +14,7 @@ def prog_plen(desired_beta, settings):
     desired_beta: float
         the desired β you wish the spincore to output,
         in μs*sqrt(W)
-    settings:  # PR what is the name of this class
+    settings:  configuration
         contains the following keys.  It's crucial that these get used in the pulse sequence.
 
         :amplitude: float
