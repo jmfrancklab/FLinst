@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def prog_plen(desired_beta, settings):
     """
     Takes the desired β (μs√(W)) and tells the user
@@ -27,8 +26,8 @@ def prog_plen(desired_beta, settings):
         get the desired β.
     """
     assert isinstance(
-        settings, whatever
-    )  # PR whatever is the config dict class -- you need to import it
+        settings, "You need to pass your configuration dict so I know what the amplitude and deblank time are"
+    )  
     if np.isscalar(desired_beta):
         assert (
             desired_beta < 1000e-6
