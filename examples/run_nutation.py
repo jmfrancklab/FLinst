@@ -8,8 +8,9 @@ that we are able to see when the signal rotates through 90 to
 """
 import pyspecdata as psd
 import os
+import sys
 import SpinCore_pp
-from SpinCore_pp import get_integer_sampling_intervals, save_data
+from SpinCore_pp import get_integer_sampling_intervals, set_field,save_data
 from Instruments.XEPR_eth import xepr
 from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
@@ -18,7 +19,7 @@ from numpy import r_
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
-beta_range = np.linspace(0.5e-6, 280e-6, 100, endpoint=False)
+beta_range = np.linspace(0.5e-6, 150e-6, 20)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -44,16 +45,10 @@ input(
     "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
-field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
-print(
-    "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
-    % field_G
-)
-with xepr() as x:
-    assert field_G < 3700, "are you crazy??? field is too high!"
-    assert field_G > 3300, "are you crazy?? field is too low!"
-    field_G = x.set_field(field_G)
-    print("field set to ", field_G)
+if len(sys.argv) == 2 and sys.argv[1] == "stayput":
+    pass
+else:
+    set_field(config_dict)
 # }}}
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
@@ -67,21 +62,13 @@ for idx, beta_s_sqrtW in enumerate(beta_range):
     # Just loop over the 90 times and set the indirect axis at the end
     # just like how we perform and save IR data
     data = run_spin_echo(
-        deadtime_us=config_dict["deadtime_us"],
-        nScans=config_dict["nScans"],
         indirect_idx=idx,
         indirect_len=len(beta_range),
         ph1_cyc=ph1_cyc,
         ph2_cyc = ph2_cyc,
-        amplitude=config_dict["amplitude"],
-        adcOffset=config_dict["adc_offset"],
-        carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         nPoints=nPoints,
-        nEchoes=config_dict["nEchoes"],
-        beta_90_s_sqrtW = beta_s_sqrtW,
-        repetition_us=config_dict["repetition_us"],
-        tau_us=config_dict["tau_us"],
-        SW_kHz=config_dict["SW_kHz"],
+        settings = config_dict,
+        plen = beta_s_sqrtW,
         ret_data=data,
     )
 if 'indirect' in data.dimlabels:

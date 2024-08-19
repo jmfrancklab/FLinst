@@ -17,7 +17,7 @@ from datetime import datetime
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
-beta_s_sqrtW_array = linspace(0.1e-6, 150e-6, 20)
+beta_s_sqrtW_array = linspace(0.5e-6, 150e-6, 20)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -48,7 +48,7 @@ else:
 ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = 4
 # }}}
-p90_us_array = spc.prog_plen(beta_s_sqrtW_array, config_dict["amplitude"])
+p90_us_array = spc.prog_plen(beta_s_sqrtW_array, config_dict)
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (

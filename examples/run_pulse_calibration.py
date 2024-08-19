@@ -43,7 +43,7 @@ if calibrating:
     t_pulse_us = np.linspace(
         # if the amplitude is small we want to go out to much longer pulse lengths
         0.5 / np.sqrt(nominal_power) / config_dict["amplitude"],
-        280 / np.sqrt(nominal_power) / config_dict["amplitude"],
+        300 / np.sqrt(nominal_power) / config_dict["amplitude"],
         n_lengths,
     )
 else:
@@ -87,16 +87,18 @@ with GDS_scope() as gds:
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
     print("here is the max pulse length", t_pulse_us.max())
     scope_timescale = round_for_scope(
-        t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=10
+        t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=20
     )
     print(
         "here is the timescale in μs", scope_timescale / 1e-6
     )  # the 0.5 is because it can fit in half the screen
+    print(round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 5e-6,
+            multiples = 1))
     gds.timscal(
         scope_timescale,
-        pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6,
-            multiples = 2),
-    )
+        pos=60e-6)#round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 5e-6,
+            #multiples = 1),
+   # )
     # }}}
     data = None
     for idx, this_t_pulse in enumerate(t_pulse_us):
@@ -128,7 +130,7 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
-        time.sleep(1.5)
+        time.sleep(1)
         thiscapture = gds.waveform(ch=2)
         #assert (
         #    np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6

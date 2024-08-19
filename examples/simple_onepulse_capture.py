@@ -18,7 +18,8 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
-t90_pulse_us = 20
+desired_beta = config_dict["beta_90_s_sqrtW"]
+t90_pulse_us = spc.prog_plen(desired_beta,config_dict)
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_capture"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
@@ -40,11 +41,11 @@ with GDS_scope() as gds:
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:LEV 6.4E-2")  # set trigger level
-    gds.CH2.voltscal = config_dict["amplitude"] * 0.5
+    gds.CH2.voltscal = 50e-3#config_dict["amplitude"] * 0.5
     if config_dict["amplitude"] < 0.1:
-        gds.timscal(5e-6, pos=-9.5e-6)
+        gds.timscal(100e-6, pos=-250e-6)
     else:
-        gds.timscal(5e-6, pos=9.5e-6)
+        gds.timscal(20e-6, pos=60e-6)
     # )
     # }}}
     data = None
