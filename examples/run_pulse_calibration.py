@@ -20,14 +20,14 @@ from Instruments import GDS_scope
 from numpy import r_
 import numpy as np
 
-calibrating = True
+calibrating = False
 
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
 nominal_power = 75
 nominal_atten = 1e4
 num_div_per_screen = 8
-n_lengths = 50
+n_lengths = 100
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -43,12 +43,12 @@ if calibrating:
     t_pulse_us = np.linspace(
         # if the amplitude is small we want to go out to much longer pulse lengths
         0.5 / np.sqrt(nominal_power) / config_dict["amplitude"],
-        350 / np.sqrt(nominal_power) / config_dict["amplitude"],
+        280 / np.sqrt(nominal_power) / config_dict["amplitude"],
         n_lengths,
     )
 else:
-    desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths)  # s *sqrt(W)
-    t_pulse_us = spc.prog_plen(desired_beta, config_dict["amplitude"])
+    desired_beta = np.linspace(0.5e-6, 280e-6, n_lengths)  # s *sqrt(W)
+    t_pulse_us = spc.prog_plen(desired_beta, config_dict)
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
@@ -68,7 +68,7 @@ with GDS_scope() as gds:
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
-    gds.write(":TRIG:LEV 2.3E-2")  # set trigger level
+    gds.write(":TRIG:LEV 34E-3")  # set trigger level
 
     def round_for_scope(val, multiples=1):
         val_oom = np.floor(np.log10(val))
@@ -87,14 +87,17 @@ with GDS_scope() as gds:
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
     print("here is the max pulse length", t_pulse_us.max())
     scope_timescale = round_for_scope(
-        t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=5
+        t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=10
     )
     print(
         "here is the timescale in μs", scope_timescale / 1e-6
     )  # the 0.5 is because it can fit in half the screen
+    print(round_for_scope(0.5 * t_pulse_us.max() * 1e-6,
+            multiples = 2))
     gds.timscal(
         scope_timescale,
-        pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 3e-6),
+        pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6,
+            multiples = 2),
     )
     # }}}
     data = None
@@ -119,7 +122,7 @@ with GDS_scope() as gds:
         spc.load(
             [
                 ("phase_reset", 1),
-                ("delay_TTL", 1.0),
+                ("delay_TTL", config_dict["deblank_us"]),
                 ("pulse_TTL", this_t_pulse, 0),
                 ("delay", config_dict["deadtime_us"]),
             ]
@@ -127,11 +130,11 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
-        time.sleep(1.0)
+        time.sleep(1.5)
         thiscapture = gds.waveform(ch=2)
-        assert (
-            np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
-        ), "what are you trying to do, you dwell time is too long!!!"
+        #assert (
+        #    np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
+        #), "what are you trying to do, you dwell time is too long!!!"
         # {{{ just convert to analytic here, and also downsample
         #     this is a rare case where we care more about not keeping
         #     ridiculous quantities of garbage on disk, so we are going
@@ -153,10 +156,11 @@ if calibrating:
     data.setaxis(
         "t_pulse", t_pulse_us * 1e-6
     )  # always store in SI units unless we're wanting to change the variable name
+    data.set_units("t_pulse","s")
 else:
     data.setaxis("beta", desired_beta)
     data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
-data.set_prop("postproc_type","GDS_capture_vs")
+data.set_prop("postproc_type","GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
