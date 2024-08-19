@@ -4,9 +4,8 @@ import pyspecdata as psd
 import SpinCore_pp as spc
 from datetime import datetime
 from Instruments import GDS_scope
-from numpy import r_
 import numpy as np
-n_lengths = 100
+
 my_exp_type = "test_equipment"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
@@ -41,12 +40,12 @@ with GDS_scope() as gds:
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:LEV 6.4E-2")  # set trigger level
-    gds.CH2.voltscal = config_dict['amplitude']*0.5#200E-3
-    if config_dict["amplitude"] <0.1:
-        gds.timscal(5E-6,pos=-9.5e-6)
+    gds.CH2.voltscal = config_dict["amplitude"] * 0.5
+    if config_dict["amplitude"] < 0.1:
+        gds.timscal(5e-6, pos=-9.5e-6)
     else:
-        gds.timscal(5E-6, pos = 9.5e-6)
-    #)
+        gds.timscal(5e-6, pos=9.5e-6)
+    # )
     # }}}
     data = None
     spc.configureTX(
@@ -77,6 +76,7 @@ with GDS_scope() as gds:
     spc.stop_ppg()
     spc.runBoard()
     spc.stopBoard()
+# }}}    
     time.sleep(1.0)
     thiscapture = gds.waveform(ch=2)
     # {{{ just convert to analytic here, and also downsample
@@ -89,9 +89,10 @@ with GDS_scope() as gds:
     thiscapture["t", 0] *= 0.5
     thiscapture.ift("t")
     # }}}
-    data = thiscapture    
+    data = thiscapture
 data.set_prop("programmed_t_pulse_us", t90_pulse_us)
 data.set_units("t", "s")
+data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
 config_dict.write()
