@@ -1,4 +1,5 @@
 import numpy as np
+import SpinCore_pp as spc
 
 def prog_plen(desired_beta, settings):
     """
@@ -26,8 +27,8 @@ def prog_plen(desired_beta, settings):
         get the desired β.
     """
     assert isinstance(
-        settings, "You need to pass your configuration dict so I know what the amplitude and deblank time are"
-    )  
+        settings,spc.config_parser_fn.configuration), "You need to pass your configuration dict so I know what the amplitude and deblank time are"
+      
     if np.isscalar(desired_beta):
         assert (
             desired_beta < 1000e-6

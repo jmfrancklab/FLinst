@@ -134,19 +134,12 @@ class NMRWindow(QMainWindow):
         # }}}
         # {{{acquire echo
         self.echo_data = run_spin_echo(
-            nScans=self.myconfig["nScans"],
-            indirect_idx=0,
-            indirect_len=1,
-            adcOffset=self.myconfig["adc_offset"],
-            carrierFreq_MHz=self.myconfig["carrierFreq_MHz"],
-            nPoints=self.npts,
-            nEchoes=self.myconfig["nEchoes"],
-            plen=self.myconfig["beta_90_s_sqrtW"],
-            repetition_us=self.myconfig["repetition_us"],
-            amplitude=self.myconfig["amplitude"],
-            tau_us=self.myconfig["tau_us"],
-            SW_kHz=self.myconfig["SW_kHz"],
-            ret_data=None,
+                settings = self.myconfig,
+                indirect_idx=0,
+                indirect_len=1,
+                nPoints=self.npts,
+                plen=self.myconfig["beta_90_s_sqrtW"],
+                ret_data=None,
         )
         # }}}
         # {{{setting acq_params
