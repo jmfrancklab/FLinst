@@ -68,7 +68,7 @@ with GDS_scope() as gds:
     gds.write(":CHAN2:IMP 5.0E+1")  # set impedance to 50 ohm
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
-    gds.write(":TRIG:LEV 2.3E-2")  # set trigger level
+    gds.write(":TRIG:LEV 34E-3")  # set trigger level
 
     def round_for_scope(val, multiples=1):
         val_oom = np.floor(np.log10(val))
@@ -153,10 +153,11 @@ if calibrating:
     data.setaxis(
         "t_pulse", t_pulse_us * 1e-6
     )  # always store in SI units unless we're wanting to change the variable name
+    data.set_units("t_pulse", "s")
 else:
     data.setaxis("beta", desired_beta)
     data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
-data.set_prop("postproc_type","GDS_capture_v1")
+data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
