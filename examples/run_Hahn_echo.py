@@ -72,8 +72,8 @@ data = run_spin_echo(
     indirect_len=1,
     ph1_cyc=ph1_cyc,
     nPoints=nPoints,
-    plen = config_dict["beta_90_s_sqrtW"],
-    settings = config_dict,
+    plen=config_dict["beta_90_s_sqrtW"],
+    settings=config_dict,
     ret_data=None,
 )
 # }}}

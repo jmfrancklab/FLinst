@@ -14,10 +14,26 @@ import numpy as np
 from .XEPR_eth import xepr as xepr_from_module
 import time
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget  # QtWidgets is for GUI components
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)  # QtWidgets is for GUI components
 from PyQt5.QtCore import Qt  # QtCore is for core non-GUI functionalities
 from PyQt5.QtGui import QIcon  # QtGui is for handling icons and images
-from PyQt5.QtWidgets import QFileDialog, QMessageBox, QLineEdit, QComboBox, QPushButton, QCheckBox, QSlider, QHBoxLayout, QAction
+from PyQt5.QtWidgets import (
+    QFileDialog,
+    QMessageBox,
+    QLineEdit,
+    QComboBox,
+    QPushButton,
+    QCheckBox,
+    QSlider,
+    QHBoxLayout,
+    QAction,
+)
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
 from pyspecdata import gammabar_H
@@ -134,12 +150,12 @@ class NMRWindow(QMainWindow):
         # }}}
         # {{{acquire echo
         self.echo_data = run_spin_echo(
-                settings = self.myconfig,
-                indirect_idx=0,
-                indirect_len=1,
-                nPoints=self.npts,
-                plen=self.myconfig["beta_90_s_sqrtW"],
-                ret_data=None,
+            settings=self.myconfig,
+            indirect_idx=0,
+            indirect_len=1,
+            nPoints=self.npts,
+            plen=self.myconfig["beta_90_s_sqrtW"],
+            ret_data=None,
         )
         # }}}
         # {{{setting acq_params
