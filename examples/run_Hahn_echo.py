@@ -50,7 +50,7 @@ input(
 # {{{ let computer set field
 field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
 print(
-    "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
+    "Based on that and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
     % field_G
 )
 with xepr() as x:
