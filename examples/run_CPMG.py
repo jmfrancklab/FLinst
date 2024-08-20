@@ -8,10 +8,10 @@ and after your tau through a series of delays.
 If you wish to keep the field as is without adjustment, follow
 the 'py run_CPMG.py' command with 'stayput' (e.g. 'py run_CPMG.py stayput')
 """
-from pyspecdata import getDATADIR
-import os
-import sys
-from numpy import pi, array, r_
+from pylab import *
+from pyspecdata import *
+import os, sys
+from numpy import *
 import SpinCore_pp
 from SpinCore_pp import prog_plen, get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import generic
@@ -82,12 +82,17 @@ config_dict["tau_us"] = (
     2 * config_dict["deadtime_us"] + 1e3 * config_dict["echo_acq_ms"]
 ) / 2
 assert (
-    config_dict["tau_us"] > 2 * prog_p90_us / pi + marker_us + config_dict["deblank_us"]
+    config_dict["tau_us"]
+    > 2 * prog_p90_us / pi + marker_us + config_dict["deblank_us"]
 )
 assert config_dict["deadtime_us"] > config_dict["deblank_us"] + 2 * marker_us
 print(
     "If you are measuring on a scope, the time from the start (or end) of one 180 pulse to the next should be %0.1f us"
-    % (2 * config_dict["deadtime_us"] + 1e3 * config_dict["echo_acq_ms"] + prog_p180_us)
+    % (
+        2 * config_dict["deadtime_us"]
+        + 1e3 * config_dict["echo_acq_ms"]
+        + prog_p180_us
+    )
 )
 # }}}
 # {{{check total points
@@ -122,7 +127,9 @@ data = generic(
         ("acquire", config_dict["echo_acq_ms"]),
         (
             "delay",
-            config_dict["deadtime_us"] - 2 * marker_us - config_dict["deblank_us"],
+            config_dict["deadtime_us"]
+            - 2 * marker_us
+            - config_dict["deblank_us"],
         ),
         ("jumpto", "echo_label"),
         # In the line above I assume this takes
@@ -151,11 +158,10 @@ data.chunk(
     ["ph2", "ph_diff", "nEcho", "t2"],
     [len(ph2), len(ph_diff), config_dict["nEchoes"], -1],
 )
-data.setaxis("nEcho", r_[0 : config_dict["nEchoes"]]).setaxis("ph2", ph2 / 4).setaxis(
-    "ph_diff", ph_diff / 4
-)
-data.set_units("t2", "s")
-data.set_prop("postproc_type", "spincore_CPMG_v2")
+data.setaxis("nEcho", r_[0 : config_dict["nEchoes"]]).setaxis(
+    "ph2", ph2 / 4
+).setaxis("ph_diff", ph_diff / 4)
+data.set_prop("postproc_type", "spincore_diffph_SE_v2")
 data.set_prop("coherence_pathway", {"ph_overall": -1, "ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "cpmg")

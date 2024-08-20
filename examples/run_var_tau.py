@@ -5,8 +5,7 @@ Varied Tau Experiment
 A standard echo that is repeated varying the echo time between pulses. The tau value is adjusted 
 to ensure a symmetric echo.
 """
-from pyspecdata import figlist_var, getDATADIR
-from numpy import r_
+from pyspecdata import *
 import os
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
@@ -24,7 +23,9 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "Var_Tau"
 config_dict["date"] = date
 config_dict["echo_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -75,8 +76,8 @@ var_tau_data = run_spin_echo(
     ret_data=None,
 )
 mytau_axis = var_tau_data.getaxis("indirect")
-mytau_axis[0]["tau_adjust"] = tau_adjust_range[0]
-mytau_axis[0]["tau"] = tau[0]
+mytau_axis[0]["tau_adjust"] = tau_adjust
+mytaus_axis[0]["tau"] = tau
 # {{{run varied tau
 for tau_idx, val in enumerate(tau_adjust_range[1:]):
     tau_adjust = val  # us
@@ -105,9 +106,11 @@ for tau_idx, val in enumerate(tau_adjust_range[1:]):
     )
     mytau_axis = var_tau_data.getaxis("indirect")
     mytau_axis[tau_idx + 1]["tau_adjust"] = tau_adjust
-    mytau_axis[tau_idx + 1]["tau"] = tau
+    mytaus_axis[tau_idx + 1]["tau"] = tau
 if phase_cycling:
-    var_tau_data.chunk("t", ["ph1", "ph2", "t2"], [len(ph1_cyc), len(ph2_cyc) - 1])
+    var_tau_data.chunk(
+        "t", ["ph1", "ph2", "t2"], [len(ph1_cyc), len(ph2_cyc) - 1]
+    )
     var_tau_data.setaxis("ph1", ph1_cyc)
     var_tau_data.setaxis("ph2", ph2_cyc)
     if config_dict["nScans"] > 1:
@@ -136,7 +139,7 @@ else:
     fl.image(for_plot)
 var_tau_data.name(config_dict["type"] + "_" + str(config_dict["echo_counter"]))
 var_tau_data.set_prop(
-    "postproc_type", "SpinCore_var_tau_v2"
+    "postproc_type", "SpinCore_var_tau_v1"
 )  # still needs to be added to load_Data
 var_tau_data.set_prop("acq_params", config_dict.asdict())
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/var_tau")
@@ -148,14 +151,16 @@ if os.path.exists(f"{filename_out}"):
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
     ) as fp:
         if nodename in fp.keys():
-            print("this nodename already exists, so I will call it temp_var_tau")
+            print(
+                "this nodename already exists, so I will call it temp_var_tau"
+            )
             var_tau_data.name("temp_var_tau")
             nodename = "temp_var_tau"
         var_tau_data.hdf5_write(f"{filename_out}", directory=target_directory)
 else:
     try:
         var_tau_data.hdf5_write(f"{filename_out}", directory=target_directory)
-    except Exception:
+    except:
         print(
             f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_var_tau.h5 in the current directory"
         )
