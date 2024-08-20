@@ -35,7 +35,9 @@ right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
 field_axis = r_[left:right:1.0]
-myinput = input(psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?"))
+myinput = input(
+    psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?")
+)
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
@@ -44,7 +46,9 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "field"
 config_dict["date"] = date
 config_dict["field_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -148,7 +152,7 @@ sweep_data.squeeze()
 sweep_data.set_units("t2", "s")
 
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
-sweep_data.set_prop("postproc_type", "field_sweep_v3")
+sweep_data.set_prop("postproc_type", "spincore_generalproc_v1")
 sweep_data.set_prop("coherence_pathway", {"ph1": 1})
 sweep_data.set_prop("acq_params", config_dict.asdict())
 target_directory = "ODNP_NMR_comp/field_dependent"

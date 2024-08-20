@@ -24,7 +24,9 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "Var_Tau"
 config_dict["date"] = date
 config_dict["echo_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -107,7 +109,9 @@ for tau_idx, val in enumerate(tau_adjust_range[1:]):
     mytau_axis[tau_idx + 1]["tau_adjust"] = tau_adjust
     mytau_axis[tau_idx + 1]["tau"] = tau
 if phase_cycling:
-    var_tau_data.chunk("t", ["ph1", "ph2", "t2"], [len(ph1_cyc), len(ph2_cyc) - 1])
+    var_tau_data.chunk(
+        "t", ["ph1", "ph2", "t2"], [len(ph1_cyc), len(ph2_cyc) - 1]
+    )
     var_tau_data.setaxis("ph1", ph1_cyc)
     var_tau_data.setaxis("ph2", ph2_cyc)
     if config_dict["nScans"] > 1:
@@ -139,6 +143,7 @@ var_tau_data.set_prop(
     "postproc_type", "SpinCore_var_tau_v2"
 )  # still needs to be added to load_Data
 var_tau_data.set_prop("acq_params", config_dict.asdict())
+var_tau_data.set_prop("coherence_pathway",{"ph1":1})
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/var_tau")
 filename_out = filename + ".h5"
 nodename = var_tau_data.name()
@@ -148,7 +153,9 @@ if os.path.exists(f"{filename_out}"):
         os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
     ) as fp:
         if nodename in fp.keys():
-            print("this nodename already exists, so I will call it temp_var_tau")
+            print(
+                "this nodename already exists, so I will call it temp_var_tau"
+            )
             var_tau_data.name("temp_var_tau")
             nodename = "temp_var_tau"
         var_tau_data.hdf5_write(f"{filename_out}", directory=target_directory)

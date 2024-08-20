@@ -100,12 +100,17 @@ config_dict["tau_us"] = (
     2 * config_dict["deadtime_us"] + 1e3 * config_dict["echo_acq_ms"]
 ) / 2
 assert (
-    config_dict["tau_us"] > 2 * prog_p90_us / pi + marker_us + config_dict["deblank_us"]
+    config_dict["tau_us"]
+    > 2 * prog_p90_us / pi + marker_us + config_dict["deblank_us"]
 )
 assert config_dict["deadtime_us"] > config_dict["deblank_us"] + 2 * marker_us
 print(
     "If you are measuring on a scope, the time from the start (or end) of one 180 pulse to the next should be %0.1f us"
-    % (2 * config_dict["deadtime_us"] + 1e3 * config_dict["echo_acq_ms"] + prog_p180_us)
+    % (
+        2 * config_dict["deadtime_us"]
+        + 1e3 * config_dict["echo_acq_ms"]
+        + prog_p180_us
+    )
 )
 # }}}
 # {{{check total points
@@ -136,7 +141,9 @@ data = generic(
         ("acquire", config_dict["echo_acq_ms"]),
         (
             "delay",
-            config_dict["deadtime_us"] - 2 * marker_us - config_dict["deblank_us"],
+            config_dict["deadtime_us"]
+            - 2 * marker_us
+            - config_dict["deblank_us"],
         ),
         ("delay", marker_us),  # placeholder for jumpto
         # NOTE: here the tau_us is defined as
@@ -150,7 +157,9 @@ data = generic(
         ("acquire", config_dict["echo_acq_ms"]),
         (
             "delay",
-            config_dict["deadtime_us"] - 2 * marker_us - config_dict["deblank_us"],
+            config_dict["deadtime_us"]
+            - 2 * marker_us
+            - config_dict["deblank_us"],
         ),
         ("jumpto", "echo_label"),
         # In the line above I assume this takes
@@ -179,11 +188,11 @@ data.chunk(
     ["ph1", "ph2", "ph_overall", "nEcho", "t2"],
     [len(ph1), len(ph2), len(ph_overall), config_dict["nEchoes"], -1],
 )
+data.setaxis("nEcho", r_[0 : config_dict["nEchoes"]]).setaxis(
+    "ph1", ph1 / 4
+).setaxis("ph2", ph2 / 4).setaxis("ph_overall", ph_overall / 4)
+data.set_prop("postproc_type", "spincore_diffph_SE_v2")
 data.set_units("t2", "s")
-data.setaxis("nEcho", r_[0 : config_dict["nEchoes"]]).setaxis("ph1", ph1 / 4).setaxis(
-    "ph2", ph2 / 4
-).setaxis("ph_overall", ph_overall / 4)
-data.set_prop("postproc_type", "spincore_largecyc_CPMG_v1")
 data.set_prop(
     "coherence_pathway",
     {

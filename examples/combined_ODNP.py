@@ -156,6 +156,7 @@ control_thermal.name("control_thermal")
 control_thermal.set_prop("postproc_type", Ep_postproc)
 control_thermal.set_prop("acq_params", config_dict.asdict())
 control_thermal.name("control_thermal")
+control_thermal.set_prop("coherence_pathway",{"ph1":1})
 nodename = control_thermal.name()
 # {{{ on first write, if we can't access the directory, write to a temp file
 try:
@@ -216,6 +217,7 @@ if phase_cycling:
 vd_data.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
 vd_data.name("FIR_noPower")
 vd_data.set_prop("stop_time", time.time())
+vd_data.set_prop("coherence_pathway",{"ph1":+1,"ph2":-2})
 vd_data.set_prop("start_time", ini_time)
 vd_data.set_prop("acq_params", config_dict.asdict())
 vd_data.set_prop("postproc_type", IR_postproc)
@@ -335,6 +337,7 @@ with power_control() as p:
     DNP_data.set_prop("postproc_type", Ep_postproc)
     DNP_data.set_prop("acq_params", config_dict.asdict())
     DNP_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+    DNP_data.set_prop("coherence_pathway",{"ph1":1})
     DNP_data.set_units("t2", "s")
     if phase_cycling:
         DNP_data.chunk("t", ["ph1", "t2"], [len(Ep_ph1_cyc), -1])
@@ -415,6 +418,7 @@ with power_control() as p:
         vd_data.set_prop("stop_time", time.time())
         vd_data.set_prop("acq_params", config_dict.asdict())
         vd_data.set_prop("postproc_type", IR_postproc)
+        vd_data.set_prop("coherence_pathway",{"ph1":+1,"ph2":-2})
         vd_data.rename("indirect", "vd")
         vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
         vd_data.set_units("t2", "s")
