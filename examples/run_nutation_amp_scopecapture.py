@@ -1,6 +1,16 @@
-from pyspecdata import figlist_var, getDATADIR, ndshape
+"""
+Amp varied Nutation
+===================
+A Hahn echo is output directly to the GDS oscilloscope from the SpinCore.
+The amplitude is varied through a series that the user defines.
+It is very important to not that there MUST BE at least a 40 dBm 
+attenuator between the RF amplifier output and the GDS oscilloscope input
+to avoid damaging the instrumentation! It is advised that the attenuator be
+calibrated using the GDS and AFG beforehand
+"""
+import pyspecdata as psd
 import os
-import SpinCore_pp
+import SpinCore_pp as spc
 from datetime import datetime
 import numpy as np
 import h5py
@@ -8,57 +18,42 @@ from Instruments.XEPR_eth import xepr
 from Instruments.gds import GDS_scope
 from SpinCore_pp.ppg import run_spin_echo
 
-target_directory = getDATADIR(exp_type="ODNP_NMR_comp/nutation")
-raise RuntimeError(
-    "This pulse program has been updated to use active.ini, and the spin echo ppg function, but has not yet been tested!"
-)
+amp_range = np.linspace(0, 0.5, 200)[1:]
+nominal_power = 75
+nominal_atten = 1e4
+num_div_per_screen = 16
+my_exp_type = "ODNP_NMR_comp/nutation"
+assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
-nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
+(
+    nPoints,
+    config_dict["SW_kHz"],
+    config_dict["acq_time_ms"],
+) = get_integer_sampling_intervals(config_dict["SW_kHz"], config_dict["acq_time_ms"])
 # }}}
-# {{{create filename and save to config file
-date = datetime.now().strftime("%y%m%d")
+# {{{add file saving parameters to config dict
 config_dict["type"] = "nutation"
-config_dict["date"] = date
+config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["echo_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
 # }}}
-# {{{let computer set field
-print(
-    "I'm assuming that you've tuned your probe to",
-    config_dict["carrierFreq_MHz"],
-    "since that's what's in your .ini file",
-)
-Field = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
-print(
-    "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
-    % Field
-)
-with xepr() as x:
-    assert Field < 3700, "are you crazy??? field is too high!"
-    assert Field > 3300, "are you crazy?? field is too low!"
-    Field = x.set_field(Field)
-    print("field set to ", Field)
-# }}}
-# {{{ phase cycling
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
-phase_cycling = True
-if phase_cycling:
-    ph1 = np.r_[0, 1, 2, 3]
-    ph2 = np.r_[0, 2]
-    nPhaseSteps = 8
-if not phase_cycling:
-    nPhaseSteps = 1
-# NOTE: Number of segments is nEchoes * nPhaseSteps
-data_length = 2 * nPoints * config_dict["nEchoes"] * nPhaseSteps
-# }}}
-# {{{ ppg
-amp_range = np.linspace(0, 0.5, 200)[1:]  # ,endpoint=False)
-datalist = []
 with GDS_scope() as g:
+    g.reset()
+    g.autoset
+    g.CH1.disp = True
+    g.CH2.disp = True
+    g.write(":CHAN1:DISP OFF")
+    g.write(":CHAN2:DISP ON")
+    g.write(":CHAN3:DISP OFF")
+    g.write(":CHAN4:DISP OFF")
+    g.write(":CHAN2:IM 5.0E+1") # set impedance to 50 ohms
+    g.write(":TRIG:SOUR CH2")
+    g.write(":TRIG:MOD NORMAL")
+    g.write(":TRIG:LEV 1.5E-2")
     g.acquire_mode("HIR")
-    for index, val in enumerate(amp_range):
-        amplitude = val  # pulse amp, set from 0.0 to 1.0
+    if config
+    for index, amplitude in enumerate(amp_range):
         echo_data = run_spin_echo(
             nScans=config_dict["nScans"],
             indirect_idx=0,

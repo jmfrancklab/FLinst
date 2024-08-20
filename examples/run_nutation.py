@@ -18,7 +18,8 @@ from numpy import r_
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
-p90_range_us = np.linspace(0.5, 5.5, 20, endpoint=False)
+beta_range_s_sqrtW = np.linspace(0.5e-6, 100e-6, 20)
+prog_p90_us = prog_plen(beta_range_s_sqrtW,config_dict["amplitude"])
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 (
@@ -66,6 +67,7 @@ for idx, p90_us in enumerate(p90_range_us):
     # just like how we perform and save IR data
     data = run_spin_echo(
         deadtime_us=config_dict["deadtime_us"],
+        deblank_us = config_dict["deblank_us"],
         nScans=config_dict["nScans"],
         indirect_idx=idx,
         indirect_len=len(p90_range_us),
@@ -82,18 +84,18 @@ for idx, p90_us in enumerate(p90_range_us):
         SW_kHz=config_dict["SW_kHz"],
         ret_data=data,
     )
-data.rename("indirect", "p_90")
-data.setaxis("p_90", p90_range_us * 1e-6).set_units("p_90", "s")
+data.rename("indirect", "beta")
+data.setaxis("beta", beta_range_s_sqrtW).set_units("beta", "s√W")
+data.set_prop("p_90s",prog_p90_us)
 # {{{ chunk and save data
 data.chunk("t", ["ph2", "ph1", "t2"], [2, 2, -1])
 data.setaxis("ph1", ph1_cyc / 4).setaxis("ph2", ph2_cyc / 4)
 if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-data.reorder(["nScans", "ph2", "ph1", "p_90", "t2"])
+data.reorder(["nScans", "ph2", "ph1", "beta", "t2"])
 data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_nutation_v5")
 data.set_prop("coherence_pathway", {"ph1": +1, "ph2": -2})
-data.set_prop("prog_p90s", prog_plen(p90_range_us))
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")
 config_dict.write()
