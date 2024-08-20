@@ -13,8 +13,7 @@ import time
 import logging
 import SpinCore_pp
 from datetime import datetime
-import numpy as np
-from numpy import r_
+from numpy import r_, log10, zeros_like
 from Instruments import power_control
 from Instruments.XEPR_eth import xepr
 
@@ -36,9 +35,7 @@ right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
 field_axis = r_[left:right:1.0]
-myinput = input(
-    psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?")
-)
+myinput = input(psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?"))
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
@@ -47,9 +44,7 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "field"
 config_dict["date"] = date
 config_dict["field_counter"] += 1
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
-)
+filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -65,7 +60,7 @@ powers = r_[config_dict["max_power"]]
 min_dBm_step = 0.5
 for x in range(len(powers)):
     dB_settings = (
-        round(10 * (np.log10(powers[x]) + 3.0) / min_dBm_step) * min_dBm_step
+        round(10 * (log10(powers[x]) + 3.0) / min_dBm_step) * min_dBm_step
     )  # round to nearest min_dBm_step
 print("dB_settings", dB_settings)
 print("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
@@ -93,7 +88,7 @@ with power_control() as p:
             break
     if p.get_power_setting() < dB_settings:
         raise ValueError("After 10 tries, this power has still not settled")
-    meter_powers = np.zeros_like(dB_settings)
+    meter_powers = zeros_like(dB_settings)
     with xepr() as x_server:
         first_B0 = x_server.set_field(field_axis[0])
         time.sleep(3.0)

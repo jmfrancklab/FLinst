@@ -7,13 +7,11 @@ This needs to be run in sync with the power control server. To do so:
         wait until you see "I am listening" before continuing with the experiment.
     At the end of the experiment you will have a series of FIR experiments, a progressive power saturation dataset, and a log of the power over time saved as nodes in an h5 file.
 """
-import numpy as np
-from numpy import r_
+from numpy import r_, zeros_like
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
 import pyspecdata as psd
-from pyspecdata import strm
 import os
 import time
 import h5py
@@ -101,8 +99,8 @@ if myinput.lower().startswith("n"):
 powers = 1e-3 * 10 ** (dB_settings / 10.0)
 # }}}
 # {{{ these change if we change the way the data is saved
-IR_postproc = "spincore_IR_v1"  # note that you have changed the way the data is saved, and so this should change likewise!!!!
-Ep_postproc = "spincore_ODNP_v3"
+IR_postproc = "spincore_IR_v3"  # note that you have changed the way the data is saved, and so this should change likewise!!!!
+Ep_postproc = "spincore_ODNP_v5"
 # }}}
 # {{{check total points
 total_points = len(Ep_ph1_cyc) * nPoints
@@ -153,6 +151,7 @@ if phase_cycling:
     control_thermal.chunk("t", ["ph1", "t2"], [len(Ep_ph1_cyc), -1])
     control_thermal.setaxis("ph1", Ep_ph1_cyc / 4)
     control_thermal.reorder(["ph1", "nScans", "t2"])
+control_thermal.set_units("t2", "s")
 control_thermal.name("control_thermal")
 control_thermal.set_prop("postproc_type", Ep_postproc)
 control_thermal.set_prop("acq_params", config_dict.asdict())
@@ -176,7 +175,7 @@ except Exception:
         )
 # }}}
 logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-logger.debug(strm("Name of saved data", control_thermal.name()))
+logger.debug(psd.strm("Name of saved data", control_thermal.name()))
 # }}}
 # {{{IR at no power
 #   this is outside the log, so to deal with this during processing, just check
@@ -207,6 +206,7 @@ for vd_idx, vd in enumerate(vd_list_us):
     )
 vd_data.rename("indirect", "vd")
 vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
+vd_data.set_units("t2", "s")
 if phase_cycling:
     vd_data.chunk(
         "t", ["ph2", "ph1", "t2"], [len(IR_ph1_cyc), len(IR_ph2_cyc), -1]
@@ -237,7 +237,7 @@ with h5py.File(
 vd_data.hdf5_write(filename, directory=target_directory)
 # }}}
 logger.debug("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-logger.debug(strm("Name of saved data", vd_data.name()))
+logger.debug(psd.strm("Name of saved data", vd_data.name()))
 # }}}
 # {{{run enhancement
 input(
@@ -282,7 +282,7 @@ with power_control() as p:
             time_axis_coords = DNP_data.getaxis("indirect")
         time_axis_coords[j]["start_times"] = DNP_ini_time
         time_axis_coords[j]["stop_times"] = DNP_thermal_done
-    power_settings_dBm = np.zeros_like(dB_settings)
+    power_settings_dBm = zeros_like(dB_settings)
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
@@ -332,9 +332,10 @@ with power_control() as p:
         )
         time_axis_coords[j + thermal_scans]["stop_times"] = time.time()
     DNP_data.set_prop("stop_time", time.time())
-    DNP_data.set_prop("postproc_type", "spincore_ODNP_v4")
+    DNP_data.set_prop("postproc_type", Ep_postproc)
     DNP_data.set_prop("acq_params", config_dict.asdict())
     DNP_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+    DNP_data.set_units("t2", "s")
     if phase_cycling:
         DNP_data.chunk("t", ["ph1", "t2"], [len(Ep_ph1_cyc), -1])
         DNP_data.setaxis("ph1", Ep_ph1_cyc / 4)
@@ -359,7 +360,7 @@ with power_control() as p:
                 "if I got this far, that probably worked -- be sure to move/rename temp_ODNP.h5 to the correct name!!"
             )
     logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-    logger.debug(strm("Name of saved data", DNP_data.name()))
+    logger.debug(psd.strm("Name of saved data", DNP_data.name()))
     # }}}
     # {{{run IR
     last_dB_setting = 10
@@ -416,6 +417,7 @@ with power_control() as p:
         vd_data.set_prop("postproc_type", IR_postproc)
         vd_data.rename("indirect", "vd")
         vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
+        vd_data.set_units("t2", "s")
         if phase_cycling:
             vd_data.chunk(
                 "t",
