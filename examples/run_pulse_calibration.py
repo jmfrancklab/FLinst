@@ -156,7 +156,7 @@ if calibrating:
 else:
     data.setaxis("beta", desired_beta)
     data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
-data.set_prop("postproc_type","GDS_capture_vs")
+data.set_prop("postproc_type","GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
