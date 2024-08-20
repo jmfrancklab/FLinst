@@ -19,14 +19,16 @@ from numpy import r_
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 beta_range_s_sqrtW = np.linspace(0.5e-6, 100e-6, 20)
-prog_p90_us = prog_plen(beta_range_s_sqrtW,config_dict["amplitude"])
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
+prog_p90_us = prog_plen(beta_range_s_sqrtW, config_dict["amplitude"])
 (
     nPoints,
     config_dict["SW_kHz"],
     config_dict["acq_time_ms"],
-) = get_integer_sampling_intervals(config_dict["SW_kHz"], config_dict["acq_time_ms"])
+) = get_integer_sampling_intervals(
+    config_dict["SW_kHz"], config_dict["acq_time_ms"]
+)
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "nutation"
@@ -62,15 +64,15 @@ assert total_pts < 2**14, (
 )
 # }}}
 data = None
-for idx, p90_us in enumerate(p90_range_us):
+for idx, p90_us in enumerate(prog_p90_us):
     # Just loop over the 90 times and set the indirect axis at the end
     # just like how we perform and save IR data
     data = run_spin_echo(
         deadtime_us=config_dict["deadtime_us"],
-        deblank_us = config_dict["deblank_us"],
+        deblank_us=config_dict["deblank_us"],
         nScans=config_dict["nScans"],
         indirect_idx=idx,
-        indirect_len=len(p90_range_us),
+        indirect_len=len(prog_p90_us),
         ph1_cyc=ph1_cyc,
         ph2_cyc=ph2_cyc,
         amplitude=config_dict["amplitude"],
@@ -86,7 +88,7 @@ for idx, p90_us in enumerate(p90_range_us):
     )
 data.rename("indirect", "beta")
 data.setaxis("beta", beta_range_s_sqrtW).set_units("beta", "s√W")
-data.set_prop("p_90s",prog_p90_us)
+data.set_prop("p_90s", prog_p90_us)
 # {{{ chunk and save data
 data.chunk("t", ["ph2", "ph1", "t2"], [2, 2, -1])
 data.setaxis("ph1", ph1_cyc / 4).setaxis("ph2", ph2_cyc / 4)

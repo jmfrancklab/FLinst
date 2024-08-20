@@ -13,8 +13,6 @@ import os
 import SpinCore_pp as spc
 from datetime import datetime
 import numpy as np
-import h5py
-from Instruments.XEPR_eth import xepr
 from Instruments.gds import GDS_scope
 from SpinCore_pp.ppg import run_spin_echo
 
@@ -22,15 +20,18 @@ amp_range = np.linspace(0, 0.5, 200)[1:]
 nominal_power = 75
 nominal_atten = 1e4
 num_div_per_screen = 16
+t_pulse_us = 4
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{importing acquisition parameters
-config_dict = SpinCore_pp.configuration("active.ini")
+config_dict = spc.configuration("active.ini")
 (
     nPoints,
     config_dict["SW_kHz"],
     config_dict["acq_time_ms"],
-) = get_integer_sampling_intervals(config_dict["SW_kHz"], config_dict["acq_time_ms"])
+) = spc.get_integer_sampling_intervals(
+    config_dict["SW_kHz"], config_dict["acq_time_ms"]
+)
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "nutation"
@@ -47,13 +48,36 @@ with GDS_scope() as g:
     g.write(":CHAN2:DISP ON")
     g.write(":CHAN3:DISP OFF")
     g.write(":CHAN4:DISP OFF")
-    g.write(":CHAN2:IM 5.0E+1") # set impedance to 50 ohms
+    g.write(":CHAN2:IM 5.0E+1")  # set impedance to 50 ohms
     g.write(":TRIG:SOUR CH2")
     g.write(":TRIG:MOD NORMAL")
     g.write(":TRIG:LEV 1.5E-2")
     g.acquire_mode("HIR")
-    if config
-    for index, amplitude in enumerate(amp_range):
+
+    def round_for_scope(val, multiples=1):
+        val_oom = np.floor(np.log10(val))
+        val = (
+            np.ceil(val / 10**val_oom / multiples)
+            * 10**val_oom
+            * multiples
+        )
+        return val
+
+    g.CH2.voltscal = round_for_scope(
+        amp_range[-1]
+        * np.sqrt(2 * nominal_power / nominal_atten * 50)
+        * 2
+        / num_div_per_screen
+    )  # 2 inside is for rms-amp 2 outside is for positive and negative
+    scope_timescale = round_for_scope(
+        t_pulse_us * 1e-6 * 0.5 / num_div_per_screen, multiples=5
+    )
+    g.timscal(
+        scope_timescale,
+        pos=round_for_scope(0.5 * t_pulse_us * 1e-6 - 3e-6),
+    )
+    data = None
+    for idx, amplitude in enumerate(amp_range):
         echo_data = run_spin_echo(
             nScans=config_dict["nScans"],
             indirect_idx=0,
@@ -66,46 +90,22 @@ with GDS_scope() as g:
             repetition=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
-            ph1_cyc=ph1,
-            ph2_cyc=ph2,
+            plen_as_beta=False,
             ret_data=None,
         )
-        datalist.append(g.waveform(ch=1))
-nutation_data = np.concat(datalist, "repeats").reorder("t")
-nutation_data.chunk("t", ["ph2", "ph1", "t2"], [2, 4, -1])
-nutation_data.setaxis("ph2", np.r_[0:2] / 4).setaxis("ph1", np.r_[0:4] / 4)
-nutation_data.set_units("t2", "s")
-nutation_data.set_prop("postproc_type", "nutation_scopecapture_v1")
-nutation_data.name(config_dict["type"] + config_dict["echo_counter"])
-nutation_data.set_prop("acq_params", config_dict.asdict())
+        thiscapture = g.waveform(ch=2)
+        if data is None:
+            data = thiscapture.shape
+            data += ("amps", len(amp_range))
+            data = data.alloc()
+            data.copy_axes(thiscapture)
+            data.copy_props(thiscapture)
+        data["amps", idx] = thiscapture
+data.setaxis("amps", amp_range)
+data.set_units("t", "s")
+data.set_prop("postproc_type", "GDS_capture_v1")
+data.set_prop("acq_params", config_dict.asdict())
+config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
 # }}}
-# {{{save data
-nodename = nutation_data.name()
-filename_out = filename + ".h5"
-with h5py.File(
-    os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
-) as fp:
-    if nodename in fp.keys():
-        print(
-            "this nodename already exists, so I will call it temp_nutation_amp_%d"
-            % config_dict["echo_counter"]
-        )
-        nutation_data.name("temp__nutation_amp_%d" % config_dict["echo_counter"])
-        nodename = "temp_nutation_amp_%d" % config_dict["echo_counter"]
-        nutation_data.hdf5_write(f"{filename_out}", directory=target_directory)
-    else:
-        nutation_data.hdf5_write(f"{filename_out}", directory=target_directory)
-print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-print(("Name of saved data", nutation_data.name()))
-print(("Shape of saved data", ndshape(nutation_data)))
 config_dict.write()
-# }}}
-# {{{image data
-with figlist_var() as fl:
-    fl.next("raw data")
-    fl.image(nutation_data)
-    nutation_data.ft("t2", shift=True)
-    fl.next("FT raw data")
-    fl.image(nutation_data)
-    fl.show()
 # }}}
