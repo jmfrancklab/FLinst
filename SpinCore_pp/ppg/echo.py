@@ -105,7 +105,9 @@ def run_spin_echo(
         configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints)
         run_scans_time_list.append(time.time())
         run_scans_names.append("configure Rx")
-        acq_time_ms = configureRX(SW_kHz, nPoints, RX_nScans, nEchoes, nPhaseSteps)
+        acq_time_ms = configureRX(
+            SW_kHz, nPoints, RX_nScans, nEchoes, nPhaseSteps
+        )
         run_scans_time_list.append(time.time())
         run_scans_names.append("init")
         init_ppg()
