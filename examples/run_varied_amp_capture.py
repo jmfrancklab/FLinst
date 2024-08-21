@@ -21,7 +21,7 @@ nominal_power = 75
 nominal_atten = 1e4
 num_div_per_screen = 16
 t_pulse_us = 4
-my_exp_type = "ODNP_NMR_comp/nutation"
+my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -34,7 +34,7 @@ config_dict = spc.configuration("active.ini")
 )
 # }}}
 # {{{add file saving parameters to config dict
-config_dict["type"] = "nutation"
+config_dict["type"] = "echo"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["echo_counter"] += 1
 # }}}
