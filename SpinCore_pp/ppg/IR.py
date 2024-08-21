@@ -16,6 +16,7 @@ from pyspecdata import strm
 import time
 import logging
 
+
 # {{{IR ppg
 def run_IR(
     nScans,
@@ -86,8 +87,7 @@ def run_IR(
     ph2_cyc: array
         phase steps for the second pulse
     ret_data: nddata (default None)
-        returned data from previous run or `None` for the first run.
-"""
+        returned data from previous run or `None` for the first run."""
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
     # (2*desired_p90) and convert to what needs to
@@ -147,13 +147,17 @@ def run_IR(
             else:
                 # {{{ dtype for structured array
                 times_dtype = np.dtype(
-                    [(indirect_fields[0], np.double), (indirect_fields[1], np.double)]
+                    [
+                        (indirect_fields[0], np.double),
+                        (indirect_fields[1], np.double),
+                    ]
                 )
                 # }}}
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
             time_axis = r_[0:dataPoints] / (SW_kHz * 1e3)
             ret_data = psp.ndshape(
-                [indirect_len, nScans, len(time_axis)], ["indirect", "nScans", "t"]
+                [indirect_len, nScans, len(time_axis)],
+                ["indirect", "nScans", "t"],
             ).alloc(dtype=np.complex128)
             ret_data.setaxis("indirect", mytimes)
             ret_data.setaxis("t", time_axis).set_units("t", "s")
@@ -168,7 +172,9 @@ def run_IR(
         stopBoard()
         run_scans_time_list.append(time.time())
         this_array = np.array(run_scans_time_list)
-        logging.debug(strm("stored scan", nScans_idx, "for indirect_idx", indirect_idx))
+        logging.debug(
+            strm("stored scan", nScans_idx, "for indirect_idx", indirect_idx)
+        )
         logging.debug(strm("checkpoints:", this_array - this_array[0]))
         logging.debug(
             strm(
@@ -180,4 +186,6 @@ def run_IR(
             )
         )
     return ret_data
+
+
 # }}}

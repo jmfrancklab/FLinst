@@ -25,11 +25,18 @@ def save_data(dataset, my_exp_type, config_dict, counter_type):
     config_dict: dict
         the updated config dict after appropriately incrementing the counter
     """
-    target_directory = psd.getDATADIR(exp_type = my_exp_type)
+    target_directory = psd.getDATADIR(exp_type=my_exp_type)
     # {{{ create filename
-    filename_out = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"+".h5"
+    filename_out = (
+        f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+        + ".h5"
+    )
     # }}}
-    nodename = config_dict["type"] + "_" + str(config_dict["%s_counter" % counter_type])
+    nodename = (
+        config_dict["type"]
+        + "_"
+        + str(config_dict["%s_counter" % counter_type])
+    )
     dataset.name(nodename)
     if os.path.exists(f"{target_directory}{filename_out}"):
         print("this file already exists so we will add a node to it!")
@@ -59,7 +66,9 @@ def save_data(dataset, my_exp_type, config_dict, counter_type):
                 [
                     "python",
                     os.path.join(
-                        os.path.split(os.path.split(pyspecProcScripts.__file__)[0])[0],
+                        os.path.split(
+                            os.path.split(pyspecProcScripts.__file__)[0]
+                        )[0],
                         "examples",
                         "proc_raw.py",
                     ),
