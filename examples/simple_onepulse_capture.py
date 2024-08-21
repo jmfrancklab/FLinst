@@ -18,13 +18,12 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
-t90_pulse_us = 20
+t90_pulse_us = 20 # PR why isn't this in the config dict
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_capture"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["misc_counter"] += 1
 # }}}
-# {{{ ppg
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 with GDS_scope() as gds:
     # {{{ set up settings for GDS
@@ -40,6 +39,7 @@ with GDS_scope() as gds:
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:LEV 6.4E-2")  # set trigger level
+    # PR there were the functions that rounded the voltage and timescale to values that the scope was happy with.  What happened to those?
     gds.CH2.voltscal = config_dict["amplitude"] * 0.5
     if config_dict["amplitude"] < 0.1:
         gds.timscal(5e-6, pos=-9.5e-6)
@@ -48,6 +48,7 @@ with GDS_scope() as gds:
     # )
     # }}}
     data = None
+    # {{{ ppg
     spc.configureTX(
         config_dict["adc_offset"],
         config_dict["carrierFreq_MHz"],
@@ -76,7 +77,7 @@ with GDS_scope() as gds:
     spc.stop_ppg()
     spc.runBoard()
     spc.stopBoard()
-# }}}    
+    # }}}    
     time.sleep(1.0)
     thiscapture = gds.waveform(ch=2)
     # {{{ just convert to analytic here, and also downsample
