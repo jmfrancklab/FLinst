@@ -4,9 +4,9 @@ import SpinCore_pp as spc
 
 def prog_plen(desired_beta, settings):
     """
-    Takes the desired β (μs√(W)) and tells the user
-    what pulse length should be programmed in order to
-    get the desired β
+    Takes the desired β (μs√(W)) and configuration file 
+    to calculate what pulse length should be programmed in order to
+    get the desired β based on the amplitude and deblank setting.
     Parameters
     ==========
     desired_beta: float
