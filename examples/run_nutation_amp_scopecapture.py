@@ -1,8 +1,8 @@
 """
-Amp varied Nutation
-===================
+Amp variation
+=============
 A Hahn echo is output directly to the GDS oscilloscope from the SpinCore.
-The amplitude is varied through a series that the user defines.
+The amplitude is varied through a list that the user defines.
 It is very important to not that there MUST BE at least a 40 dBm 
 attenuator between the RF amplifier output and the GDS oscilloscope input
 to avoid damaging the instrumentation! It is advised that the attenuator be
