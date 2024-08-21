@@ -48,7 +48,7 @@ if calibrating:
     )
 else:
     desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths)  # s *sqrt(W)
-    t_pulse_us = spc.prog_plen(desired_beta, config_dict["amplitude"])
+    t_pulse_us = spc.prog_plen(desired_beta, config_dict)
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
@@ -119,7 +119,7 @@ with GDS_scope() as gds:
         spc.load(
             [
                 ("phase_reset", 1),
-                ("delay_TTL", 1.0),
+                ("delay_TTL", config_dict["deblank_us"]),
                 ("pulse_TTL", this_t_pulse, 0),
                 ("delay", config_dict["deadtime_us"]),
             ]
