@@ -6,6 +6,9 @@ from datetime import datetime
 from Instruments import GDS_scope
 import numpy as np
 
+nominal_power = 75
+nominal_atten = 1e4
+num_div_per_screen = 8
 my_exp_type = "test_equipment"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
@@ -18,7 +21,7 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
-t90_pulse_us = 20 # PR why isn't this in the config dict
+p90_us = config_dict["p90_us"]
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_capture"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
@@ -39,13 +42,30 @@ with GDS_scope() as gds:
     gds.write(":TRIG:SOUR CH2")
     gds.write(":TRIG:MOD NORMAL")  # set trigger mode to normal
     gds.write(":TRIG:LEV 6.4E-2")  # set trigger level
+
+    def round_for_scope(val, multiples=1):
+        val_oom = np.floor(np.log10(val))
+        val = (
+            np.ceil(val / 10**val_oom / multiples)
+            * 10**val_oom
+            * multiples
+        )
+        return val
+
     # PR there were the functions that rounded the voltage and timescale to values that the scope was happy with.  What happened to those?
-    gds.CH2.voltscal = config_dict["amplitude"] * 0.5
-    if config_dict["amplitude"] < 0.1:
-        gds.timscal(5e-6, pos=-9.5e-6)
-    else:
-        gds.timscal(5e-6, pos=9.5e-6)
-    # )
+    gds.CH2.voltscal = round_for_scope(
+        config_dict["amplitude"]
+        * np.sqrt(2 * nominal_power / nominal_atten * 50)
+        * 2
+        / num_div_per_screen
+    )  # 2 inside is for rms-amp 2 outside is for positive and negative
+    scope_timescale = round_for_scope(
+        p90_us * 1e-6 * 0.5 / num_div_per_screen, multiple=5
+    )  # the 0.5 is there because it can fit in half the screen
+    print("Here is the timescale in μs", scope_timescale / 1e-6)
+    gds.timscal(
+        scope_timescale, pos=round_for_scope(0.5 * p90_us * 1e-6 - 3e-6)
+    )
     # }}}
     data = None
     # {{{ ppg
@@ -70,14 +90,14 @@ with GDS_scope() as gds:
         [
             ("phase_reset", 1),
             ("delay_TTL", config_dict["deblank_us"]),
-            ("pulse_TTL", t90_pulse_us, 0),
+            ("pulse_TTL", p90_us, 0),
             ("delay", config_dict["deadtime_us"]),
         ]
     )
     spc.stop_ppg()
     spc.runBoard()
     spc.stopBoard()
-    # }}}    
+    # }}}
     time.sleep(1.0)
     thiscapture = gds.waveform(ch=2)
     # {{{ just convert to analytic here, and also downsample
@@ -91,7 +111,7 @@ with GDS_scope() as gds:
     thiscapture.ift("t")
     # }}}
     data = thiscapture
-data.set_prop("programmed_t_pulse_us", t90_pulse_us)
+data.set_prop("programmed_t_pulse_us", p90_us)
 data.set_units("t", "s")
 data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_prop("acq_params", config_dict.asdict())
