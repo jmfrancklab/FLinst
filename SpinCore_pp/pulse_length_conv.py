@@ -7,25 +7,21 @@ def prog_plen(desired_beta, settings):
     Takes the desired β (μs√(W)) and tells the user
     what pulse length should be programmed in order to
     get the desired β
-    ** Note: the following coefficients are specifically for when the
-    deblanking is 1 us and therefore the pulse shapes are wonky **
-
     Parameters
     ==========
     desired_beta: float
-        the desired β you wish the spincore to output,
-        in μs*sqrt(W)
+                    the desired β you wish the spincore to output,
+                    in μs*sqrt(W)
     settings:  configuration
-        contains the following keys.  It's crucial that these get used in the pulse sequence.
+                    contains the following keys.  It's crucial that these get used in the pulse sequence.
 
-        :amplitude: float
-        :deblank_us: float
+                    :amplitude: float
+                    :deblank_us: float
 
     Returns
     =======
     retval: float
-        The pulse length you tell spincore in order to
-        get the desired β.
+            The pulse length you tell spincore in order to get the desired β.
     """
     assert isinstance(
         settings, spc.config_parser_fn.configuration
@@ -58,24 +54,6 @@ def prog_plen(desired_beta, settings):
             -6.77665633e43,
         ]
         c_linear = [3.48764362e00, 1.01357692e05]
-    elif settings["amplitude"] == 0.1:
-        linear_threshold = (
-            270e-6  # we found different thresholds for different amplitudes
-        )
-        c_nonlinear = [
-            -1.62998207e-01,
-            1.21649137e06,
-            -9.52394324e09,
-            4.27424338e13,
-            2.74572110e19,
-            -1.52994986e24,
-            4.03585362e28,
-            -6.08790488e32,
-            5.37176819e36,
-            -2.58581092e40,
-            5.25471331e43,
-        ]
-        c_linear = [1.87827645e00, 1.06425500e06]
     elif settings["amplitude"] == 0.2:
         linear_threshold = (
             310e-6  # we found different thresholds for different amplitudes
@@ -94,6 +72,24 @@ def prog_plen(desired_beta, settings):
             -5.22477826e39,
         ]
         c_linear = [3.54846532e00, 4.97504125e05]
+    elif settings["amplitude"] == 0.1:
+        linear_threshold = (
+            270e-6  # we found different thresholds for different amplitudes
+        )
+        c_nonlinear = [
+            -1.62998207e-01,
+            1.21649137e06,
+            -9.52394324e09,
+            4.27424338e13,
+            2.74572110e19,
+            -1.52994986e24,
+            4.03585362e28,
+            -6.08790488e32,
+            5.37176819e36,
+            -2.58581092e40,
+            5.25471331e43,
+        ]
+        c_linear = [1.87827645e00, 1.06425500e06]
     elif settings["amplitude"] == 0.05:
         linear_threshold = (
             150e-6  # we found different thresholds for different amplitudes

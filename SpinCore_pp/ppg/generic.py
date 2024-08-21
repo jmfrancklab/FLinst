@@ -32,7 +32,6 @@ def generic(
     ret_data=None,
     amplitude=1.0,
     manual_echoes=0,
-    # PR this guy needs to be changed too!
 ):
     """
     run nScans and slot them into the indirect_idx index of ret_data -- assume
