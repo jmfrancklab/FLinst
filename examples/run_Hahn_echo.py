@@ -50,7 +50,7 @@ input(
 # {{{ let computer set field
 field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
 print(
-    "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
+    "Based on that and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
     % field_G
 )
 with xepr() as x:
@@ -87,6 +87,8 @@ data.set_units("t2", "s")
 data.setaxis("ph1", ph1_cyc / 4)
 data.reorder(["ph1", "nScans", "t2"])
 data.set_prop("postproc_type", "spincore_SE_v2")
+data.set_units("t2", "s")
+data.set_prop("coherence_pathway",{"ph1":1})
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")
