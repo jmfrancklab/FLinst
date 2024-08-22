@@ -8,10 +8,10 @@ and after your tau through a series of delays.
 If you wish to keep the field as is without adjustment, follow
 the 'py run_CPMG.py' command with 'stayput' (e.g. 'py run_CPMG.py stayput')
 """
-from pylab import *
-from pyspecdata import *
-import os, sys
-from numpy import *
+from pyspecdata import getDATADIR
+import os
+import sys
+from numpy import pi, array, r_
 import SpinCore_pp
 from SpinCore_pp import prog_plen, get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import generic
@@ -161,7 +161,8 @@ data.chunk(
 data.setaxis("nEcho", r_[0 : config_dict["nEchoes"]]).setaxis(
     "ph2", ph2 / 4
 ).setaxis("ph_diff", ph_diff / 4)
-data.set_prop("postproc_type", "spincore_diffph_SE_v2")
+data.set_units("t2", "s")
+data.set_prop("postproc_type", "spincore_CPMG_v2")
 data.set_prop("coherence_pathway", {"ph_overall": -1, "ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "cpmg")
