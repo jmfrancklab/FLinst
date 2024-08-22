@@ -5,7 +5,8 @@ Varied Tau Experiment
 A standard echo that is repeated varying the echo time between pulses. The tau value is adjusted 
 to ensure a symmetric echo.
 """
-from pyspecdata import *
+from pyspecdata import figlist_var, getDATADIR
+from numpy import r_
 import os
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
@@ -76,8 +77,8 @@ var_tau_data = run_spin_echo(
     ret_data=None,
 )
 mytau_axis = var_tau_data.getaxis("indirect")
-mytau_axis[0]["tau_adjust"] = tau_adjust
-mytaus_axis[0]["tau"] = tau
+mytau_axis[0]["tau_adjust"] = tau_adjust_range[0]
+mytau_axis[0]["tau"] = tau[0]
 # {{{run varied tau
 for tau_idx, val in enumerate(tau_adjust_range[1:]):
     tau_adjust = val  # us
@@ -106,7 +107,7 @@ for tau_idx, val in enumerate(tau_adjust_range[1:]):
     )
     mytau_axis = var_tau_data.getaxis("indirect")
     mytau_axis[tau_idx + 1]["tau_adjust"] = tau_adjust
-    mytaus_axis[tau_idx + 1]["tau"] = tau
+    mytau_axis[tau_idx + 1]["tau"] = tau
 if phase_cycling:
     var_tau_data.chunk(
         "t", ["ph1", "ph2", "t2"], [len(ph1_cyc), len(ph2_cyc) - 1]
@@ -139,9 +140,10 @@ else:
     fl.image(for_plot)
 var_tau_data.name(config_dict["type"] + "_" + str(config_dict["echo_counter"]))
 var_tau_data.set_prop(
-    "postproc_type", "SpinCore_var_tau_v1"
+    "postproc_type", "SpinCore_var_tau_v2"
 )  # still needs to be added to load_Data
 var_tau_data.set_prop("acq_params", config_dict.asdict())
+var_tau_data.set_prop("coherence_pathway",{"ph1":1})
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/var_tau")
 filename_out = filename + ".h5"
 nodename = var_tau_data.name()
@@ -160,7 +162,7 @@ if os.path.exists(f"{filename_out}"):
 else:
     try:
         var_tau_data.hdf5_write(f"{filename_out}", directory=target_directory)
-    except:
+    except Exception:
         print(
             f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_var_tau.h5 in the current directory"
         )
