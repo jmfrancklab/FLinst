@@ -136,7 +136,7 @@ with GDS_scope() as gds:
         thiscapture = gds.waveform(ch=2)
         assert (
             np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
-        ), "what are you trying to do, you dwell time is too long!!!"
+        ), "what are you trying to do, your dwell time is too long!!!"
         # {{{ just convert to analytic here, and also downsample
         #     this is a rare case where we care more about not keeping
         #     ridiculous quantities of garbage on disk, so we are going
