@@ -59,7 +59,9 @@ tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 with GDS_scope() as gds:
     # {{{ set up settings for GDS
     gds.reset()
-    gds.CH1.disp = True
+    gds.CH1.disp = True  # Even though we turn the display off 2 lines below,
+    #                      the oscilloscope seems to require this command initially.
+    #                      Debugging is needed in future.
     gds.CH2.disp = True
     gds.write(":CHAN1:DISP OFF")
     gds.write(":CHAN2:DISP ON")
@@ -72,7 +74,7 @@ with GDS_scope() as gds:
 
     def round_for_scope(val, multiples=1):
         """Determine a rounded number for setting
-        the appropriate time scale on the oscilloscope
+        the appropriate volt/time scale on the oscilloscope
         """
         val_oom = np.floor(np.log10(val))
         val = (
@@ -90,7 +92,7 @@ with GDS_scope() as gds:
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
     scope_timescale = round_for_scope(
         t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=5
-    )  # the 0.5 is because it can fit in half the screen
+    )  # the 0.5 is because so it can fit in half the screen
     print(
         "The timescale for the max pulse length, %f, in μs is %f"
         % (t_pulse_us.max(), scope_timescale / 1e-6)
