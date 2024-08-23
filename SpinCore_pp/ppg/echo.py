@@ -88,6 +88,7 @@ def run_spin_echo(
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * settings["nEchoes"] * nPhaseSteps
+    RX_nScans = 1
     for nScans_idx in range(settings["nScans"]):
         run_scans_time_list = [time.time()]
         run_scans_names = ["configure"]
@@ -103,7 +104,7 @@ def run_spin_echo(
         acq_time_ms = configureRX(
             settings["SW_kHz"],
             nPoints,
-            settings["nScans"],
+            RX_nScans,
             settings["nEchoes"],
             nPhaseSteps,
         )
