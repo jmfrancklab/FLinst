@@ -24,10 +24,10 @@ calibrating = True
 
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
-nominal_power = 75
+nominal_power = 75  # in W
 nominal_atten = 1e4
 num_div_per_screen = 8
-n_lengths = 50
+n_lengths = 50  # number of points acquired
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -39,6 +39,11 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
+# {{{ add file saving parameters to config dict
+config_dict["type"] = "pulse_calib"
+config_dict["date"] = datetime.now().strftime("%y%m%d")
+config_dict["misc_counter"] += 1
+# }}}
 if calibrating:
     t_pulse_us = np.linspace(
         # if the amplitude is small we want to go out to much longer pulse lengths
@@ -49,11 +54,6 @@ if calibrating:
 else:
     desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths)  # s *sqrt(W)
     t_pulse_us = spc.prog_plen(desired_beta, config_dict)
-# {{{ add file saving parameters to config dict
-config_dict["type"] = "pulse_calib"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["misc_counter"] += 1
-# }}}
 # {{{ ppg
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 with GDS_scope() as gds:
@@ -71,6 +71,9 @@ with GDS_scope() as gds:
     gds.write(":TRIG:LEV 34E-3")  # set trigger level
 
     def round_for_scope(val, multiples=1):
+        """Determine a rounded number for setting
+        the appropriate time scale on the oscilloscope
+        """
         val_oom = np.floor(np.log10(val))
         val = (
             np.ceil(val / 10**val_oom / multiples)
@@ -85,13 +88,13 @@ with GDS_scope() as gds:
         * 2
         / num_div_per_screen
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
-    print("here is the max pulse length", t_pulse_us.max())
     scope_timescale = round_for_scope(
         t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=5
-    )
-    print(
-        "here is the timescale in μs", scope_timescale / 1e-6
     )  # the 0.5 is because it can fit in half the screen
+    print(
+        "The timescale for the max pulse length, %f, in μs is %f"
+        % (t_pulse_us.max(), scope_timescale / 1e-6)
+    )
     gds.timscal(
         scope_timescale,
         pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6 - 3e-6),
@@ -106,7 +109,8 @@ with GDS_scope() as gds:
             config_dict["amplitude"],
             nPoints,
         )
-        acq_time_ms = spc.configureRX(
+        config_dict["acq_time_ms"] = spc.configureRX(
+            # we aren't acquiring but this is still needed to set up the SpinCore
             # Rx scans, echos, and nPhaseSteps set to 1
             config_dict["SW_kHz"],
             nPoints,
@@ -114,7 +118,6 @@ with GDS_scope() as gds:
             1,
             1,
         )
-        config_dict["acq_time_ms"] = acq_time_ms
         spc.init_ppg()
         spc.load(
             [
@@ -143,19 +146,20 @@ with GDS_scope() as gds:
         thiscapture.ift("t")
         # }}}
         if data is None:
+            # {{ set up the shape of the data so that we can just drop in the following indices
             data = thiscapture.shape
             data += (indirect, n_lengths)
             data = data.alloc()
             data.copy_axes(thiscapture)
             data.copy_props(thiscapture)
+            # }}}
         data[indirect, idx] = thiscapture
 if calibrating:
-    data.setaxis(
-        "t_pulse", t_pulse_us * 1e-6
+    data.setaxis("t_pulse", t_pulse_us * 1e-6).set_units(
+        "t_pulse", "s"
     )  # always store in SI units unless we're wanting to change the variable name
-    data.set_units("t_pulse", "s")
 else:
-    data.setaxis("beta", desired_beta)
+    data.setaxis("beta", desired_beta).set_units("beta", "s√W")
     data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
 data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
