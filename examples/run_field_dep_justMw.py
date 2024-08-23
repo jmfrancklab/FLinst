@@ -162,4 +162,5 @@ saving_field = SpinCore_pp.save_data(
     sweep_data, target_directory, config_dict, "field"
 )
 config_dict.write()
+# }}}
 fl.show()
