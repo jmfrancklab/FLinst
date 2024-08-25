@@ -237,16 +237,38 @@ class configuration(object):
             except Exception:
                 continue
             self._params[paramname] = converter(temp)
+        # {{{ auto-register all counters
+        if "file_names" in self.configobj.keys():
+            for paramname in [
+                j
+                for j in self.configobj.keys()
+                if j.lower().endswith("_counter")
+            ]:
+                self.registered_params[paramname] = (
+                    int,
+                    "file_names",
+                    1,
+                    "a counter",
+                )
+                self._params[paramname] = int(
+                    self.configobj["file_names"][paramname]
+                )
+        # }}}
         self._case_insensitive_keys = {
             j.lower(): j for j in self.registered_params.keys()
         }
 
     def __getitem__(self, key):
         # {{{ auto-register counters
-        if key.lower().endswith('_counter'):
+        if key.lower().endswith("_counter"):
             if key.lower() not in self._case_insensitive_keys.keys():
                 self._case_insensitive_keys[key.lower()] = key
-                self.registered_params[key] = (int, "file_names", 1, "a counter")
+                self.registered_params[key] = (
+                    int,
+                    "file_names",
+                    1,
+                    "a counter",
+                )
         # }}}
         key = self._case_insensitive_keys[key.lower()]
         if key not in self._params.keys():
