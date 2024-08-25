@@ -205,49 +205,6 @@ class configuration(object):
             None,
             "number of IR experiments collected in the ODNP experiment",
         ),
-        # reviewed to here
-        "odnp_counter": (
-            int,
-            "file_names",
-            0,
-            "number of ODNP experiments that have been performed so far for that particular sample on that day",
-        ),
-        "echo_counter": (
-            int,
-            "file_names",
-            0,
-            "number of echo experiments performed for a particular sample that day- usually incremented when getting on resonance",
-        ),
-        "cpmg_counter": (
-            int,
-            "file_names",
-            0,
-            "number of cpmg experiments performed for a particular sample that day",
-        ),
-        "IR_counter": (
-            int,
-            "file_names",
-            0,
-            "number of inversion recovery experiments performed for a particular sample that day",
-        ),
-        "field_counter": (
-            int,
-            "file_names",
-            0,
-            "number of field sweeps performed for a particular sample that day",
-        ),
-        "misc_counter": (
-            int,
-            "file_names",
-            0,
-            "number of miscellaneous expts performed for a particular sample that day",
-        ),
-        "FID_nutation_counter": (
-            int,
-            "file_names",
-            0,
-            "number of FID nutations performed for a particular sample that day",
-        ),
         "date": (int, "file_names", None, "today's date"),
         "chemical": (
             str,
@@ -285,6 +242,12 @@ class configuration(object):
         }
 
     def __getitem__(self, key):
+        # {{{ auto-register counters
+        if key.lower().endswith('_counter'):
+            if key.lower() not in self._case_insensitive_keys.keys():
+                self._case_insensitive_keys[key.lower()] = key
+                self.registered_params[key] = (int, "file_names", 1, "a counter")
+        # }}}
         key = self._case_insensitive_keys[key.lower()]
         if key not in self._params.keys():
             converter, section, default, _ = self.registered_params[key]
