@@ -241,7 +241,7 @@ class configuration(object):
         if "file_names" in self.configobj.keys():
             for paramname in [
                 j
-                for j in self.configobj.keys()
+                for j in self.configobj["file_names"].keys()
                 if j.lower().endswith("_counter")
             ]:
                 self.registered_params[paramname] = (
