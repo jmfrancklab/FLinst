@@ -1,12 +1,14 @@
 import numpy as np
+from numpy import r_
 import SpinCore_pp as spc
 
 
 def prog_plen(desired_beta, settings):
     """
-    Takes the desired β (μs√(W)) and configuration file 
+    Takes the desired β (μs√(W)) and configuration file
     to calculate what pulse length should be programmed in order to
     get the desired β based on the amplitude and deblank setting.
+
     Parameters
     ==========
     desired_beta: float
@@ -40,7 +42,7 @@ def prog_plen(desired_beta, settings):
     ), "currently only calibrated for deblank_us = 50, so you almost definitely want to set that value in your active.ini"
     if settings["amplitude"] == 1.0:
         linear_threshold = 100e-6
-        c_nonlinear = [
+        c_nonlinear = r_[
             -8.84841307e-02,
             6.55556440e05,
             -4.69857455e10,
@@ -53,12 +55,12 @@ def prog_plen(desired_beta, settings):
             3.49583577e40,
             -6.77665633e43,
         ]
-        c_linear = [3.48764362e00, 1.01357692e05]
+        c_linear = r_[3.48764362e00, 1.01357692e05]
     elif settings["amplitude"] == 0.2:
         linear_threshold = (
             310e-6  # we found different thresholds for different amplitudes
         )
-        c_nonlinear = [
+        c_nonlinear = r_[
             -1.34853331e00,
             7.97484995e05,
             -1.53053658e10,
@@ -71,12 +73,12 @@ def prog_plen(desired_beta, settings):
             1.86321080e35,
             -5.22477826e39,
         ]
-        c_linear = [3.54846532e00, 4.97504125e05]
+        c_linear = r_[3.54846532e00, 4.97504125e05]
     elif settings["amplitude"] == 0.1:
         linear_threshold = (
             270e-6  # we found different thresholds for different amplitudes
         )
-        c_nonlinear = [
+        c_nonlinear = r_[
             -1.62998207e-01,
             1.21649137e06,
             -9.52394324e09,
@@ -89,12 +91,12 @@ def prog_plen(desired_beta, settings):
             -2.58581092e40,
             5.25471331e43,
         ]
-        c_linear = [1.87827645e00, 1.06425500e06]
+        c_linear = r_[1.87827645e00, 1.06425500e06]
     elif settings["amplitude"] == 0.05:
         linear_threshold = (
             150e-6  # we found different thresholds for different amplitudes
         )
-        c_nonlinear = [
+        c_nonlinear = r_[
             -5.44563661e00,
             2.96227215e06,
             -5.72743016e10,
@@ -107,7 +109,7 @@ def prog_plen(desired_beta, settings):
             1.00367069e39,
             -9.54606566e41,
         ]
-        c_linear = [3.66783425e00, 2.30130747e06]
+        c_linear = r_[3.66783425e00, 2.30130747e06]
     else:
         raise ValueError("not currently calibrated for this amplitude!!!")
 
