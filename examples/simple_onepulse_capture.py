@@ -113,7 +113,7 @@ with GDS_scope() as gds:
     #     ridiculous quantities of garbage on disk, so we are going to
     #     throw some stuff out beforehand
     thiscapture.ft("t", shift=True)
-    thiscapture = thiscapture["t":(0, None)]["t":(None, 24e6)]
+    thiscapture = thiscapture["t":(0, 24e6)]
     thiscapture *= 2
     thiscapture["t", 0] *= 0.5
     thiscapture.ift("t")
