@@ -88,7 +88,7 @@ for idx, p90_us in enumerate(prog_p90_us):
     )
 data.rename("indirect", "beta")
 data.setaxis("beta", beta_range_s_sqrtW).set_units("beta", "s√W")
-idata.set_prop("prog_p90_us", prog_p90_us)
+data.set_prop("prog_p90_us", prog_p90_us)
 # {{{ chunk and save data
 data.chunk("t", ["ph2", "ph1", "t2"], [2, 2, -1])
 data.setaxis("ph1", ph1_cyc / 4).setaxis("ph2", ph2_cyc / 4)
