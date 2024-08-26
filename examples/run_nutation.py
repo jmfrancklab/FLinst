@@ -88,7 +88,7 @@ for idx, p90_us in enumerate(prog_p90_us):
     )
 data.rename("indirect", "beta")
 data.setaxis("beta", beta_range_s_sqrtW).set_units("beta", "s√W")
-data.set_prop("p_90s", prog_p90_us)
+data.set_prop("prog_p90_us", prog_p90_us)
 # {{{ chunk and save data
 data.chunk("t", ["ph2", "ph1", "t2"], [2, 2, -1])
 data.setaxis("ph1", ph1_cyc / 4).setaxis("ph2", ph2_cyc / 4)
@@ -96,7 +96,7 @@ if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
 data.reorder(["nScans", "ph2", "ph1", "beta", "t2"])
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "spincore_nutation_v5")
+data.set_prop("postproc_type", "spincore_nutation_v6")
 data.set_prop("coherence_pathway", {"ph1": +1, "ph2": -2})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")
