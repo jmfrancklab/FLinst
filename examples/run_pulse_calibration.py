@@ -162,7 +162,7 @@ if calibrating:
     )  # always store in SI units unless we're wanting to change the variable name
 else:
     data.setaxis("beta", desired_beta).set_units("beta", "s√W")
-    data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
+    data.set_prop("programmed_t_pulse", t_pulse_us * 1e-6) #use SI units
 data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
