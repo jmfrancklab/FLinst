@@ -26,10 +26,10 @@ def run_spin_echo(
     carrierFreq_MHz,
     nPoints,
     nEchoes,
+    plen,
     repetition_us,
     tau_us,
     SW_kHz,
-    plen,
     indirect_fields=None,
     ph1_cyc=r_[0, 1, 2, 3],
     ph2_cyc=r_[0],
@@ -63,6 +63,9 @@ def run_spin_echo(
         Number of Echoes to be acquired.
         This should always be 1, since this pulse
         program doesn't generate multiple echos.
+    plen: float
+        desired length of the pulse -- either μs or s√W
+        (see plen_as_beta)
     repetition_us: float
         3-5 x T1 of the sample in seconds
     tau_us: float
@@ -70,9 +73,6 @@ def run_spin_echo(
         applied later in processing. Standard tau_us = 3500.
     SW_kHz: float
         spectral width of the data. Minimum = 1.9
-    plen: float
-        desired length of the pulse -- either μs or s√W
-        (see plen_as_beta)
     indirect_fields: tuple (pair) of str or (default) None
         Name for the first field of the structured array
         that stores the indirect dimension coordinates.

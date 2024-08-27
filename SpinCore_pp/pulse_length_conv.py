@@ -3,9 +3,9 @@ from numpy import r_
 import SpinCore_pp as spc
 
 
-def prog_plen(desired_beta, settings):
+def prog_plen(desired_beta, amplitude, deblank_us):
     """
-    Takes the desired β (μs√(W)) and configuration file
+    Takes the desired β (μs√(W)), amplitude and deblank_us settings
     to calculate what pulse length should be programmed in order to
     get the desired β based on the amplitude and deblank setting.
 
@@ -14,20 +14,16 @@ def prog_plen(desired_beta, settings):
     desired_beta: float
                     the desired β you wish the spincore to output,
                     in μs*sqrt(W)
-    settings:  configuration
-                    contains the following keys.  It's crucial that these get used in the pulse sequence.
-
-                    :amplitude: float
-                    :deblank_us: float
-
+    amplitude: float
+                amplitude setting of the output rf pulse
+    deblank_us: float
+                deblanking period before the actual output
+                rf pulse
     Returns
     =======
     retval: float
             The pulse length you tell spincore in order to get the desired β.
     """
-    assert isinstance(
-        settings, spc.config_parser_fn.configuration
-    ), "You need to pass your configuration dict so I know what the amplitude and deblank time are"
 
     if np.isscalar(desired_beta):
         assert (
@@ -38,9 +34,9 @@ def prog_plen(desired_beta, settings):
             desired_beta[-1] < 1000e-6
         ), "You asked for a desired beta of over 1,000 μs√W.  This is not the beta value you are looking for!!!"
     assert (
-        settings["deblank_us"] == 50
+        deblank_us == 50
     ), "currently only calibrated for deblank_us = 50, so you almost definitely want to set that value in your active.ini"
-    if settings["amplitude"] == 1.0:
+    if amplitude == 1.0:
         linear_threshold = 100e-6
         c_nonlinear = r_[
             -8.84841307e-02,
@@ -56,7 +52,7 @@ def prog_plen(desired_beta, settings):
             -6.77665633e43,
         ]
         c_linear = r_[3.48764362e00, 1.01357692e05]
-    elif settings["amplitude"] == 0.2:
+    elif amplitude == 0.2:
         linear_threshold = (
             310e-6  # we found different thresholds for different amplitudes
         )
@@ -74,7 +70,7 @@ def prog_plen(desired_beta, settings):
             -5.22477826e39,
         ]
         c_linear = r_[3.54846532e00, 4.97504125e05]
-    elif settings["amplitude"] == 0.1:
+    elif amplitude == 0.1:
         linear_threshold = (
             270e-6  # we found different thresholds for different amplitudes
         )
@@ -92,7 +88,7 @@ def prog_plen(desired_beta, settings):
             5.25471331e43,
         ]
         c_linear = r_[1.87827645e00, 1.06425500e06]
-    elif settings["amplitude"] == 0.05:
+    elif amplitude == 0.05:
         linear_threshold = (
             150e-6  # we found different thresholds for different amplitudes
         )
