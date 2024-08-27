@@ -90,7 +90,6 @@ data.chunk(
     ["ph1", "t2"],
     [len(ph1_cyc), -1],
 )
-data.set_units("t2", "s")
 data.setaxis("ph1", ph1_cyc / 4)
 data.reorder(["ph1", "nScans", "t2"])
 data.set_prop("postproc_type", "spincore_SE_v2")
