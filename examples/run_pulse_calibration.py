@@ -53,7 +53,9 @@ if calibrating:
     )
 else:
     desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths)  # s *sqrt(W)
-    t_pulse_us = spc.prog_plen(desired_beta, config_dict)
+    t_pulse_us = spc.prog_plen(
+        desired_beta, config_dict["amplitude"], config_dict["deblank_us"]
+    )
 # {{{ ppg
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 with GDS_scope() as gds:
@@ -142,7 +144,7 @@ with GDS_scope() as gds:
         #     ridiculous quantities of garbage on disk, so we are going
         #     to throw some stuff out beforehand
         thiscapture.ft("t", shift=True)
-        thiscapture = thiscapture["t":(0, None)]["t":(None, 24e6)]
+        thiscapture = thiscapture["t":(0, 24e6)]
         thiscapture *= 2
         thiscapture["t", 0] *= 0.5
         thiscapture.ift("t")
@@ -157,12 +159,12 @@ with GDS_scope() as gds:
             # }}}
         data[indirect, idx] = thiscapture
 if calibrating:
-    data.setaxis("t_pulse", t_pulse_us * 1e-6).set_units(
+    data.setaxis("t_pulse", t_pulse_us / 1e6).set_units(
         "t_pulse", "s"
     )  # always store in SI units unless we're wanting to change the variable name
 else:
     data.setaxis("beta", desired_beta).set_units("beta", "s√W")
-    data.set_prop("programmed_t_pulse", t_pulse_us * 1e-6)  # use SI units
+    data.set_prop("programmed_t_pulse", t_pulse_us / 1e6)  # use SI units
 data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
