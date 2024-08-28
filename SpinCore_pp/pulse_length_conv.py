@@ -4,7 +4,7 @@ from numpy import r_
 
 def prog_plen(desired_beta, settings):
     """
-    Takes the desired β (s√(W)) and configuration file 
+    Takes the desired β (s√(W)) and configuration file
     to calculate what pulse length should be programmed in order to
     get the desired β based on the amplitude and deblank setting.
 
@@ -57,55 +57,55 @@ def prog_plen(desired_beta, settings):
             310e-6  # we found different thresholds for different amplitudes
         )
         c_nonlinear = r_[
-                1.62924179e+02,
-                4.91729568e+05,
-                -1.99215893e+09,
-                -6.38076923e+13,
-                -1.05046642e+18,
-                -1.04830747e+22,
-                -6.88084080e+25,
-                -3.02459440e+29,
-                -8.58707023e+32,
-                -1.41598700e+36,
-                -1.02210088e+39,
+            1.62924179e02,
+            4.91729568e05,
+            -1.99215893e09,
+            -6.38076923e13,
+            -1.05046642e18,
+            -1.04830747e22,
+            -6.88084080e25,
+            -3.02459440e29,
+            -8.58707023e32,
+            -1.41598700e36,
+            -1.02210088e39,
         ]
-        c_linear = r_[-7.43656432e+00, 5.48421364e+05]
+        c_linear = r_[-7.43656432e00, 5.48421364e05]
     elif settings["amplitude"] == 0.1:
         linear_threshold = (
             270e-6  # we found different thresholds for different amplitudes
         )
         c_nonlinear = r_[
-                2.93528215e+02,
-                9.59757416e+05,
-                -1.32947207e+10,
-                -5.17620066e+14,
-                -1.05255134e+19,
-                -1.27041564e+23,
-                -9.58050939e+26,
-                -4.56587780e+30,
-                -1.33800953e+34,
-                -2.20250690e+37,
-                -1.55941251e+40
+            2.93528215e02,
+            9.59757416e05,
+            -1.32947207e10,
+            -5.17620066e14,
+            -1.05255134e19,
+            -1.27041564e23,
+            -9.58050939e26,
+            -4.56587780e30,
+            -1.33800953e34,
+            -2.20250690e37,
+            -1.55941251e40,
         ]
-        c_linear = r_[4.38010537e+00, 1.06971597e+06]
+        c_linear = r_[4.38010537e00, 1.06971597e06]
     elif settings["amplitude"] == 0.05:
         linear_threshold = (
             150e-6  # we found different thresholds for different amplitudes
         )
         c_nonlinear = r_[
-            3.75442878e+02,
-            2.00599762e+06,
-            -8.17658362e+10,
-            -6.14612522e+15,
-            -2.47655751e+20,
-            -5.88569415e+24,
-            -8.65005568e+28,
-            -7.95171001e+32,
-            -4.45091091e+36,
-            -1.38696656e+40,
-            -1.84433605e+43
+            3.75442878e02,
+            2.00599762e06,
+            -8.17658362e10,
+            -6.14612522e15,
+            -2.47655751e20,
+            -5.88569415e24,
+            -8.65005568e28,
+            -7.95171001e32,
+            -4.45091091e36,
+            -1.38696656e40,
+            -1.84433605e43,
         ]
-        c_linear = r_[2.31318373e+00, 2.49223410e+06]
+        c_linear = r_[2.31318373e00, 2.49223410e06]
     else:
         raise ValueError("not currently calibrated for this amplitude!!!")
 
@@ -114,7 +114,9 @@ def prog_plen(desired_beta, settings):
         if desired_beta > linear_threshold:
             return np.polyval(c_linear[::-1], desired_beta)
         else:
-            return np.polyval(c_nonlinear[::-1], desired_beta - linear_threshold)
+            return np.polyval(
+                c_nonlinear[::-1], desired_beta - linear_threshold
+            )
 
     ret_val = np.vectorize(zonefit)(desired_beta)
     if ret_val.size > 1:
