@@ -52,7 +52,7 @@ if calibrating:
         n_lengths,
     )
 else:
-    desired_beta = np.linspace(0.5e-6, 400e-6, n_lengths)  # s *sqrt(W)
+    desired_beta = np.linspace(0.5e-6, 300e-6, n_lengths)  # s *sqrt(W)
     t_pulse_us = spc.prog_plen(desired_beta, config_dict)
 # {{{ ppg
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
