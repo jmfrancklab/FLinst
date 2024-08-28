@@ -1,17 +1,17 @@
 r"""
 Use the Scope to Calibrate pulses output from RF amplifier
 ===========================================================
-If calibrating the pulse lengths, a series of pulse lengths are sent to the 
-spincore directly and the output pulse is captured on the GDS oscilloscope.
-If testing the calibration or capturing using a series of desired betas,
-the calibrating conditional should be set to false and the script will calibrate
-the pulse lengths so that the output of the amplifier produces the desired beta.
-It is very important to note that there MUST BE at least a 40 dBm
-attenuator between the RF amplifier output and the GDS oscilloscope input to
-avoid damaging the instrumentation! It is advised that the attenuator be
-calibrated using the GDS and AFG beforehand.
-
+If calibrating the pulse lengths, a series of pulse lengths are directly output
+from the SpinCore to the rf amplifier where the output pulse is captured on the
+GDS oscilloscope.  If testing the calibration or capturing using a series of
+desired betas, the calibrating conditional should be set to false and the
+script will calibrate the pulse lengths so that the output of the amplifier
+produces the desired beta.  It is very important to note that there MUST BE at
+least a 40 dBm attenuator between the RF amplifier output and the GDS
+oscilloscope input to avoid damaging the instrumentation! It is advised that
+the attenuator be calibrated using the GDS and AFG beforehand.
 """
+
 import pyspecdata as psd
 import os
 import time
@@ -21,7 +21,7 @@ from Instruments import GDS_scope
 from numpy import r_
 import numpy as np
 
-calibrating = False
+calibrating = True
 
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
@@ -83,6 +83,7 @@ with GDS_scope() as gds:
             * multiples
         )
         return val
+
     gds.CH2.voltscal = round_for_scope(
         config_dict["amplitude"]
         * np.sqrt(2 * nominal_power / nominal_atten * 50)
@@ -90,7 +91,7 @@ with GDS_scope() as gds:
         / num_div_per_screen
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
     scope_timescale = round_for_scope(
-        t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=10
+        t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=5
     )  # the 0.5 is because so it can fit in half the screen
     print(
         "The timescale for the max pulse length, %f, in μs is %f"
@@ -98,8 +99,11 @@ with GDS_scope() as gds:
     )
     gds.timscal(
         scope_timescale,
-        pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6,
-            multiples = 0.25),
+        pos=round_for_scope(
+            0.5 * t_pulse_us.max() * 1e-6,
+            multiples=0.25  # we only shift it a very small amount so
+            #                  the multiples is very small
+        ),
     )
     # }}}
     data = None
@@ -135,7 +139,10 @@ with GDS_scope() as gds:
         spc.stopBoard()
         time.sleep(1.0)
         thiscapture = gds.waveform(ch=2)
-        if (config_dict["amplitude"] > 0.08):
+        # check that the dwell time for all amplitudes (except 0.05 which
+        # is an exception due to much longer pulse times) is
+        # appropriate to avoid aliasing
+        if config_dict["amplitude"] > 0.08:
             assert (
                 np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
             ), "what are you trying to do, your dwell time is too long!!!"
@@ -161,14 +168,14 @@ with GDS_scope() as gds:
         data[indirect, idx] = thiscapture
 if calibrating:
     # always store in SI units unless we're wanting to change the variable name
-    data.setaxis("t_pulse", t_pulse_us * 1e-6).set_units(
-        "t_pulse", "s"
-    )  
+    data.setaxis("t_pulse", t_pulse_us * 1e-6).set_units("t_pulse", "s")
 else:
     data.setaxis("beta", desired_beta).set_units("beta", "s√W")
     data.set_prop("programmed_t_pulse", t_pulse_us * 1e-6)  # use SI units
 data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = spc.save_data(data, my_exp_type, config_dict, "pulse_calib", proc=False)
+config_dict = spc.save_data(
+    data, my_exp_type, config_dict, "pulse_calib", proc=False
+)
 config_dict.write()

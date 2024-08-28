@@ -57,7 +57,7 @@ def run_IR(
         Size of indirect axis which is used to allocate space for the data once
         the first scan is run.
     adcOffset : int
-        Ofset of ADC acquired with SpinCore_apps/C_examples/adc_offset.exe
+        Offset of ADC acquired with SpinCore_apps/C_examples/adc_offset.exe
     carrierFreq_MHz : float
         Carrier frequency to be set in MHz.
     nPoints : int
@@ -85,7 +85,6 @@ def run_IR(
         to be a normal array, set this to None
 
         This parameter is only used when `ret_data` is set to `None`.
-
     ph1_cyc : array
         Phase steps for the first pulse.
     ph2_cyc : array
@@ -96,7 +95,7 @@ def run_IR(
         Determines if plen is supplied as a β value [s√W] or directly as
         programmed length [μs].
     """
-    
+
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
     # (2*desired_p90) and convert to what needs to
@@ -119,7 +118,9 @@ def run_IR(
         configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints)
         run_scans_time_list.append(time.time())
         run_scans_names.append("configure Rx")
-        acq_time_ms = configureRX(SW_kHz, nPoints, RX_nScans, nEchoes, nPhaseSteps)
+        acq_time_ms = configureRX(
+            SW_kHz, nPoints, RX_nScans, nEchoes, nPhaseSteps
+        )
         run_scans_time_list.append(time.time())
         run_scans_names.append("init")
         init_ppg()
