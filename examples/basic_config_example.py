@@ -53,8 +53,12 @@ print(
     "and I'm going to increment it.  If you re-run this script, this value should increase",
 )
 myconfig["echo_counter"] += 1
-myconfig.write()  # this should write the adc offset and whatever else we've changed
 # }}}
+# {{{ now try a counter that doesn't exist yet
+myconfig["bogus_counter"] += 1
+print("bogus counter is",myconfig["bogus_counter"])
+# }}}
+myconfig.write()  # this should write the adc offset and whatever else we've changed
 # {{{ an example of pulling a full list of keyword arguments for a function
 relevant_kwargs = {
     j: myconfig[j]
