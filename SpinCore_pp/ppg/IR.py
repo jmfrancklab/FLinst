@@ -108,7 +108,7 @@ def run_IR(
         prog_p180_us = prog_plen(2 * plen, settings)
     else:
         prog_p90_us = plen
-        prog_180_us = 2 * plen
+        prog_p180_us = 2 * plen
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
