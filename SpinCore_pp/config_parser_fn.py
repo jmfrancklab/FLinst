@@ -247,7 +247,7 @@ class configuration(object):
                 self.registered_params[paramname] = (
                     int,
                     "file_names",
-                    1,
+                    0,
                     "a counter",
                 )
                 self._params[paramname] = int(
@@ -266,7 +266,7 @@ class configuration(object):
                 self.registered_params[key] = (
                     int,
                     "file_names",
-                    1,
+                    0,
                     "a counter",
                 )
         # }}}
