@@ -1,6 +1,5 @@
 import numpy as np
 from numpy import r_
-import SpinCore_pp as spc
 
 
 def prog_plen(desired_beta, settings):
