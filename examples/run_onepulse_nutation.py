@@ -48,7 +48,7 @@ else:
 ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = 4
 # }}}
-p90_us_array = spc.prog_plen(beta_s_sqrtW_array, config_dict["amplitude"])
+p90_us_array = spc.prog_plen(beta_s_sqrtW_array, config_dict)
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
