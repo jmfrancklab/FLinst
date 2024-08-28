@@ -4,7 +4,7 @@ from numpy import r_
 
 def prog_plen(desired_beta, settings):
     """
-    Takes the desired β (μs√(W)) and configuration file 
+    Takes the desired β (s√(W)) and configuration file 
     to calculate what pulse length should be programmed in order to
     get the desired β based on the amplitude and deblank setting.
 
@@ -12,7 +12,7 @@ def prog_plen(desired_beta, settings):
     ==========
     desired_beta : float
         the desired β you wish the spincore to output,
-        in μs*sqrt(W)
+        in s*sqrt(W)
     settings :  dict-like
         contains the following keys.  It's crucial that these get used in the pulse sequence.
 

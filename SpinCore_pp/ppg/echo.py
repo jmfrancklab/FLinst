@@ -81,7 +81,6 @@ def run_spin_echo(
         set this to None.
 
         This parameter is only used when `ret_data` is set to `None`.
-
     ph1_cyc : array
         Phase steps for the first pulse.
     ph2_cyc : array
