@@ -101,8 +101,8 @@ with GDS_scope() as gds:
         scope_timescale,
         pos=round_for_scope(
             0.5 * t_pulse_us.max() * 1e-6,
-            multiples=0.25  # we only shift it a very small amount so
-            #                  the multiples is very small
+            multiples=0.25  # very small since we are only shifting the
+            #                 beginning of the pulse length a small amount
         ),
     )
     # }}}
