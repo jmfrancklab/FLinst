@@ -317,6 +317,10 @@ class configuration(object):
         return self._params.keys()
 
     def write(self):
+        #print(self.registered_params)#dict
+        #print(self.registered_params.items())#list of tuples
+        print(self._params.keys())
+        quit()
         for (
             paramname,
             (converter, section, default, _),

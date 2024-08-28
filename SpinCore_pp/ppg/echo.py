@@ -19,15 +19,24 @@ import logging
 
 # {{{spin echo ppg
 def run_spin_echo(
-    settings,
+    nScans,
     indirect_idx,
     indirect_len,
+    adcOffset,
+    carrierFreq_MHz,
     nPoints,
+    nEchoes,
     plen,
+    repetition_us,
+    tau_us,
+    SW_kHz,
     indirect_fields=None,
     ph1_cyc=r_[0, 1, 2, 3],
     ph2_cyc=r_[0],
     ret_data=None,
+    deadtime_us=10.0,
+    deblank_us=1.0,
+    amplitude=1.0,
     plen_as_beta=True,
 ):
     """
@@ -96,7 +105,6 @@ def run_spin_echo(
         prog_p90_us = plen
         prog_p180_us = 2 * plen
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
-    RX_nScans = 1
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
     RX_nScans = 1
@@ -127,14 +135,14 @@ def run_spin_echo(
         spincore_load(
             [
                 ("phase_reset", 1),
-                ("delay_TTL", settings["deblank_us"]),
+                ("delay_TTL", deblank_us),
                 ("pulse_TTL", prog_p90_us, "ph1", ph1_cyc),
-                ("delay", settings["tau_us"]),
-                ("delay_TTL", settings["deblank_us"]),
+                ("delay", tau_us),
+                ("delay_TTL", deblank_us),
                 ("pulse_TTL", prog_p180_us, "ph2", ph2_cyc),
-                ("delay", settings["deadtime_us"]),
-                ("acquire", settings["acq_time_ms"]),
-                ("delay", settings["repetition_us"]),
+                ("delay", deadtime_us),
+                ("acquire", acq_time_ms),
+                ("delay", repetition_us),
             ]
         )
         run_scans_time_list.append(time.time())
@@ -145,7 +153,7 @@ def run_spin_echo(
         runBoard()
         run_scans_time_list.append(time.time())
         run_scans_names.append("get data")
-        raw_data = getData(data_length, nPoints, settings["nEchoes"], nPhaseSteps)
+        raw_data = getData(data_length, nPoints, nEchoes, nPhaseSteps)
         run_scans_time_list.append(time.time())
         run_scans_names.append("shape data")
         data_array = []
@@ -164,14 +172,14 @@ def run_spin_echo(
                 )
                 # }}}
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
-            time_axis = r_[0:dataPoints] / (settings["SW_kHz"] * 1e3)
+            time_axis = r_[0:dataPoints] / (SW_kHz * 1e3)
             ret_data = psp.ndshape(
-                [indirect_len, settings["nScans"], len(time_axis)],
+                [indirect_len, nScans, len(time_axis)],
                 ["indirect", "nScans", "t"],
             ).alloc(dtype=np.complex128)
             ret_data.setaxis("indirect", mytimes)
             ret_data.setaxis("t", time_axis).set_units("t", "s")
-            ret_data.setaxis("nScans", r_[0:settings["nScans"]])
+            ret_data.setaxis("nScans", r_[0:nScans])
         elif indirect_idx == 0 and nScans_idx == 0:
             raise ValueError(
                 "you seem to be on the first scan, but ret_data is not None -- it is "

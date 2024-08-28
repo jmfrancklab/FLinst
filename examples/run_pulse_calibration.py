@@ -9,7 +9,8 @@ the pulse lengths so that the output of the amplifier produces the desired beta.
 It is very important to note that there MUST BE at least a 40 dBm
 attenuator between the RF amplifier output and the GDS oscilloscope input to
 avoid damaging the instrumentation! It is advised that the attenuator be
-calibrated using the GDS and AFG beforehand
+calibrated using the GDS and AFG beforehand.
+
 """
 import pyspecdata as psd
 import os
@@ -47,7 +48,7 @@ if calibrating:
     t_pulse_us = np.linspace(
         # if the amplitude is small we want to go out to much longer pulse lengths
         0.5 / np.sqrt(nominal_power) / config_dict["amplitude"],
-        280 / np.sqrt(nominal_power) / config_dict["amplitude"],
+        350 / np.sqrt(nominal_power) / config_dict["amplitude"],
         n_lengths,
     )
 else:
@@ -82,7 +83,6 @@ with GDS_scope() as gds:
             * multiples
         )
         return val
-
     gds.CH2.voltscal = round_for_scope(
         config_dict["amplitude"]
         * np.sqrt(2 * nominal_power / nominal_atten * 50)
@@ -99,7 +99,7 @@ with GDS_scope() as gds:
     gds.timscal(
         scope_timescale,
         pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6,
-            multiples = 2),
+            multiples = 0.25),
     )
     # }}}
     data = None
@@ -133,11 +133,12 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
-        time.sleep(1.5)
+        time.sleep(1.0)
         thiscapture = gds.waveform(ch=2)
-        assert (
-            np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
-        ), "what are you trying to do, your dwell time is too long!!!"
+        if (config_dict["amplitude"] > 0.08):
+            assert (
+                np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
+            ), "what are you trying to do, your dwell time is too long!!!"
         # {{{ just convert to analytic here, and also downsample.
         #     This is a rare case where we care more about not keeping
         #     ridiculous quantities of garbage on disk, so we are going

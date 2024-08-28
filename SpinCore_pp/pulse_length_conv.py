@@ -38,7 +38,7 @@ def prog_plen(desired_beta, settings):
     ), "currently only calibrated for deblank_us = 50, so you almost definitely want to set that value in your active.ini"
     if settings["amplitude"] == 1.0:
         linear_threshold = 270e-6
-        c_nonlinear = [
+        c_nonlinear = r_[
             -8.84841307e-02,
             6.55556440e05,
             -4.69857455e10,
@@ -51,57 +51,61 @@ def prog_plen(desired_beta, settings):
             3.49583577e40,
             -6.77665633e43,
         ]
-        c_linear = [3.48764362e00, 1.01357692e05]
-    elif settings["amplitude"] == 0.1:
-        linear_threshold = 270e-6
-        c_nonlinear = [
-            -1.62998207e-01,
-            1.21649137e06,
-            -9.52394324e09,
-            4.27424338e13,
-            2.74572110e19,
-            -1.52994986e24,
-            4.03585362e28,
-            -6.08790488e32,
-            5.37176819e36,
-            -2.58581092e40,
-            5.25471331e43,
-        ]
-        c_linear = [1.87827645e00, 1.06425500e06]
+        c_linear = r_[3.48764362e00, 1.01357692e05]
     elif settings["amplitude"] == 0.2:
         linear_threshold = (
             310e-6  # we found different thresholds for different amplitudes
         )
         c_nonlinear = r_[
-            -1.34853331e00,
-            7.97484995e05,
-            -1.53053658e10,
-            3.36352634e14,
-            -3.46369790e18,
-            1.30572241e22,
-            5.08941012e25,
-            -6.26236299e29,
-            1.72966943e33,
-            1.86321080e35,
-            -5.22477826e39,
+                1.62924179e+02,
+                4.91729568e+05,
+                -1.99215893e+09,
+                -6.38076923e+13,
+                -1.05046642e+18,
+                -1.04830747e+22,
+                -6.88084080e+25,
+                -3.02459440e+29,
+                -8.58707023e+32,
+                -1.41598700e+36,
+                -1.02210088e+39,
         ]
-        c_linear = r_[3.54846532e00, 4.97504125e05]
+        c_linear = r_[-7.43656432e+00, 5.48421364e+05]
+    elif settings["amplitude"] == 0.1:
+        linear_threshold = (
+            270e-6  # we found different thresholds for different amplitudes
+        )
+        c_nonlinear = r_[
+                2.93528215e+02,
+                9.59757416e+05,
+                -1.32947207e+10,
+                -5.17620066e+14,
+                -1.05255134e+19,
+                -1.27041564e+23,
+                -9.58050939e+26,
+                -4.56587780e+30,
+                -1.33800953e+34,
+                -2.20250690e+37,
+                -1.55941251e+40
+        ]
+        c_linear = r_[4.38010537e+00, 1.06971597e+06]
     elif settings["amplitude"] == 0.05:
-        linear_threshold = 150e-6
-        c_nonlinear = [
-                3.75442878e+02,
-                2.00599762e+06,
-                -8.17658362e+10,
-                -6.14612522e+15,
-                -2.47655751e+20,
-                -5.88569415e+24,
-                -8.65005568e+28,
-                -7.95171001e+32,
-                -4.45091091e+36,
-                -1.38696656e+40,
-                -1.84433605e+43
-            ]
-        c_linear = [2.31318373e+00, 2.49223410e+06]
+        linear_threshold = (
+            150e-6  # we found different thresholds for different amplitudes
+        )
+        c_nonlinear = r_[
+            3.75442878e+02,
+            2.00599762e+06,
+            -8.17658362e+10,
+            -6.14612522e+15,
+            -2.47655751e+20,
+            -5.88569415e+24,
+            -8.65005568e+28,
+            -7.95171001e+32,
+            -4.45091091e+36,
+            -1.38696656e+40,
+            -1.84433605e+43
+        ]
+        c_linear = r_[2.31318373e+00, 2.49223410e+06]
     else:
         raise ValueError("not currently calibrated for this amplitude!!!")
 
