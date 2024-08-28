@@ -1,7 +1,5 @@
 "just testing/illustrating the basic function of configfiles -- really for devel purposes"
 
-import configparser
-import os
 import SpinCore_pp
 
 # initialize
@@ -11,7 +9,7 @@ myconfig = SpinCore_pp.configuration("active.ini")
 try:
     myconfig["new_thing"] = 300
     failure = False
-except:
+except Exception:
     failure = True
 if failure:
     print("I tried to set an unregistered parameter, and it failed ... good!")
@@ -21,7 +19,7 @@ else:
 try:
     retval = myconfig["another_thing"]
     failure = False
-except:
+except Exception:
     failure = True
 if failure:
     print("I tried to get an unregistered parameter, and it failed ... good!")
@@ -56,7 +54,7 @@ myconfig["echo_counter"] += 1
 # }}}
 # {{{ now try a counter that doesn't exist yet
 myconfig["bogus_counter"] += 1
-print("bogus counter is",myconfig["bogus_counter"])
+print("bogus counter is", myconfig["bogus_counter"])
 # }}}
 myconfig.write()  # this should write the adc offset and whatever else we've changed
 # {{{ an example of pulling a full list of keyword arguments for a function
