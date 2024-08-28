@@ -27,7 +27,7 @@ my_exp_type = "test_equipment"
 nominal_power = 75  # in W
 nominal_atten = 1e4
 num_div_per_screen = 8
-n_lengths = 50  # number of points acquired
+n_lengths = 50  # number of pulse lengths acquired
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -42,7 +42,7 @@ config_dict = spc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["misc_counter"] += 1
+config_dict["pulse_calib_counter"] += 1
 # }}}
 if calibrating:
     t_pulse_us = np.linspace(
