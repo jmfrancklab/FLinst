@@ -97,10 +97,13 @@ def run_spin_echo(
     # (2*desired_p90) and convert to what needs to
     # be programmed in order to get the desired
     # times
-    prog_p90_us = prog_plen(plen, amplitude, deblank_us) if plen_as_beta else plen
-    prog_p180_us = (
-        prog_plen(2 * plen, amplitude, deblank_us) if plen_as_beta else (2 * plen)
-    )
+    if plen_as_beta:
+        settings = {"amplitude": amplitude, "deblank_us": deblank_us}
+        prog_p90_us = prog_plen(plen, settings)
+        prog_p180_us = prog_plen(2 * plen, settings)
+    else:
+        prog_p90_us = plen
+        prog_p180_us = 2 * plen
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
