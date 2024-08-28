@@ -1,20 +1,19 @@
 import numpy as np
-import SpinCore_pp as spc
+from numpy import r_
+
 
 def prog_plen(desired_beta, settings):
     """
-    Takes the desired β (μs√(W)) and tells the user
-    what pulse length should be programmed in order to
-    get the desired β
-    ** Note: the following coefficients are specifically for when the
-    deblanking is 1 us and therefore the pulse shapes are wonky **
+    Takes the desired β (s√(W)) and configuration file 
+    to calculate what pulse length should be programmed in order to
+    get the desired β based on the amplitude and deblank setting.
 
     Parameters
     ==========
-    desired_beta: float
+    desired_beta : float
         the desired β you wish the spincore to output,
-        in μs*sqrt(W)
-    settings:  configuration
+        in s*sqrt(W)
+    settings :  dict-like
         contains the following keys.  It's crucial that these get used in the pulse sequence.
 
         :amplitude: float
@@ -22,13 +21,10 @@ def prog_plen(desired_beta, settings):
 
     Returns
     =======
-    retval: float
-        The pulse length you tell spincore in order to
-        get the desired β.
+    retval : float
+        The pulse length you tell spincore in order to get the desired β.
     """
-    assert isinstance(
-        settings,spc.config_parser_fn.configuration), "You need to pass your configuration dict so I know what the amplitude and deblank time are"
-      
+
     if np.isscalar(desired_beta):
         assert (
             desired_beta < 1000e-6
@@ -73,8 +69,10 @@ def prog_plen(desired_beta, settings):
         ]
         c_linear = [1.87827645e00, 1.06425500e06]
     elif settings["amplitude"] == 0.2:
-        linear_threshold = 270e-6
-        c_nonlinear = [
+        linear_threshold = (
+            310e-6  # we found different thresholds for different amplitudes
+        )
+        c_nonlinear = r_[
             -1.34853331e00,
             7.97484995e05,
             -1.53053658e10,
@@ -87,7 +85,7 @@ def prog_plen(desired_beta, settings):
             1.86321080e35,
             -5.22477826e39,
         ]
-        c_linear = [3.54846532e00, 4.97504125e05]
+        c_linear = r_[3.54846532e00, 4.97504125e05]
     elif settings["amplitude"] == 0.05:
         linear_threshold = 150e-6
         c_nonlinear = [

@@ -11,23 +11,24 @@ def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
 
     Parameters
     ==========
-    dataset: nddata
-        acquired data in nddata format
-    my_exp_type: str
-        directory on the share drive you want to save to
-    config_dict: dict
-        config_dict pulled from the active.ini file
-    counter_type: str
-        type of counter you are incrementing
-    proc: boolean
+    dataset : nddata
+        Acquired data in nddata format.
+    my_exp_type : str
+        Directory on the share drive you want to save to.
+    config_dict : dict
+        config_dict pulled from the active.ini file.
+    counter_type : str
+        Type of counter you are incrementing.
+    proc : boolean
         Dictates whether the processing script, proc_raw is ran on the
-        acquired data
+        acquired data.
 
     Returns
     =======
-    config_dict: dict
-        the updated config dict after appropriately incrementing the counter
+    config_dict : dict
+        The updated config dict after appropriately incrementing the counter.
     """
+
     target_directory = psd.getDATADIR(exp_type=my_exp_type)
     # {{{ create filename
     filename_out = (

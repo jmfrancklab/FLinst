@@ -153,7 +153,8 @@ sweep_data.squeeze()
 sweep_data.set_units("t2", "s")
 
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
-sweep_data.set_prop("postproc_type", "field_sweep_v3")
+# 8/21/24: JF changed this to v4 b/c there were already files saved with v3 in a different format
+sweep_data.set_prop("postproc_type", "field_sweep_v4")
 sweep_data.set_prop("coherence_pathway", {"ph1": 1})
 sweep_data.set_prop("acq_params", config_dict.asdict())
 target_directory = "ODNP_NMR_comp/field_dependent"
@@ -161,4 +162,5 @@ saving_field = SpinCore_pp.save_data(
     sweep_data, target_directory, config_dict, "field"
 )
 config_dict.write()
+# }}}
 fl.show()

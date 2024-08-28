@@ -27,7 +27,7 @@ def run_IR(
     carrierFreq_MHz,
     nPoints,
     nEchoes,
-    plen,
+    p90_us,
     repetition_us,
     tau_us,
     SW_kHz,
@@ -38,7 +38,6 @@ def run_IR(
     deadtime_us=10.0,
     deblank_us=1.0,
     amplitude=1.0,
-    plen_as_beta=True,
 ):
     """
     Run a single (signal averaged) scan out of an inversion recovery and generate a single nddata with a vd dimension.
@@ -48,8 +47,7 @@ def run_IR(
     ==========
     nScans: int
         number of repeats of the pulse sequence (for averaging over data)
-    vd: int
-        The variable delay to use for this scan
+    vd: The variable delay to use for this scan
     indirect_idx: int
         index along the 'indirect' dimension
     indirect_len: int
@@ -58,16 +56,15 @@ def run_IR(
     adcOffset: int
         offset of ADC acquired with SpinCore_apps/C_examples/adc_offset.exe
     carrierFreq_MHz: float
-        carrier frequency to be set in MHz
+            carrier frequency to be set in MHz
     nPoints: int
         number of points for the data
     nEchoes: int
         Number of Echoes to be acquired.
         This should always be 1, since this pulse
         program doesn't generate multiple echos.
-    plen: float
-        desired length of the pulse -- either μs or s√W
-        (see plen_as_beta)
+    p90_us: float
+        90 time of the probe in us
     repetition_us: float
         3-5 x T1 of the sample in seconds
     tau_us: float
@@ -90,31 +87,25 @@ def run_IR(
     ph2_cyc: array
         phase steps for the second pulse
     ret_data: nddata (default None)
-        returned data from previous run or `None` for the first run.
-    plen_as_beta: boolean
-        Is plen supplied as a β value [s√W] or directly as programmed length [μs]
-    """
+        returned data from previous run or `None` for the first run."""
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
     # (2*desired_p90) and convert to what needs to
     # be programmed in order to get the desired
     # times
-    prog_p90_us = prog_plen(plen, amplitude) if plen_as_beta else plen
-    prog_p180_us = (
-        prog_plen(2 * plen, amplitude) if plen_as_beta else (2 * plen)
-    )
+    prog_p90_us = prog_plen(p90_us)
+    prog_p180_us = prog_plen(2 * p90_us)
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
+    RX_nScans = 1
     for nScans_idx in range(nScans):
         run_scans_time_list = [time.time()]
         run_scans_names = ["configure"]
         configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints)
         run_scans_time_list.append(time.time())
         run_scans_names.append("configure Rx")
-        acq_time_ms = configureRX(
-            SW_kHz, nPoints, nScans, nEchoes, nPhaseSteps
-        )
+        acq_time_ms = configureRX(SW_kHz, nPoints, RX_nScans, nEchoes, nPhaseSteps)
         run_scans_time_list.append(time.time())
         run_scans_names.append("init")
         init_ppg()
@@ -195,3 +186,6 @@ def run_IR(
             )
         )
     return ret_data
+
+
+# }}}

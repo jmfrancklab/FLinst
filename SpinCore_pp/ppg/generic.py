@@ -32,7 +32,6 @@ def generic(
     ret_data=None,
     amplitude=1.0,
     manual_echoes=0,
-    # PR this guy needs to be changed too!
 ):
     """
     run nScans and slot them into the indirect_idx index of ret_data -- assume
@@ -135,6 +134,7 @@ def generic(
     )
     # }}}
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
+    RX_nScans = 1
     for nScans_idx in range(nScans):
         run_scans_time_list = [time.time()]
         run_scans_names = ["configure"]
@@ -143,7 +143,7 @@ def generic(
         run_scans_names.append("configure Rx")
         # in the following, nScans is set to 1, because we never average
         # on the board -- doing this only messes up the amplitude
-        check = configureRX(SW_kHz, nPoints, 1, nEchoes, nPhaseSteps)
+        check = configureRX(SW_kHz, nPoints, RX_nScans, nEchoes, nPhaseSteps)
         assert np.isclose(
             check, time_per_segment_ms
         ), f"you are trying to set the acquisition time to {time_per_segment_ms}, but configureRX returns {check}"

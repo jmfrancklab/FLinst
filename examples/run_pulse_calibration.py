@@ -24,10 +24,10 @@ calibrating = False
 
 indirect = "t_pulse" if calibrating else "beta"
 my_exp_type = "test_equipment"
-nominal_power = 75
+nominal_power = 75  # in W
 nominal_atten = 1e4
 num_div_per_screen = 8
-n_lengths = 100
+n_lengths = 50  # number of pulse lengths acquired
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
@@ -39,6 +39,10 @@ config_dict = spc.configuration("active.ini")
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
 # }}}
+# {{{ add file saving parameters to config dict
+config_dict["type"] = "pulse_calib"
+config_dict["date"] = datetime.now().strftime("%y%m%d")
+# }}}
 if calibrating:
     t_pulse_us = np.linspace(
         # if the amplitude is small we want to go out to much longer pulse lengths
@@ -47,19 +51,16 @@ if calibrating:
         n_lengths,
     )
 else:
-    desired_beta = np.linspace(0.5e-6, 280e-6, n_lengths)  # s *sqrt(W)
+    desired_beta = np.linspace(0.5e-6, 300e-6, n_lengths)  # s *sqrt(W)
     t_pulse_us = spc.prog_plen(desired_beta, config_dict)
-# {{{ add file saving parameters to config dict
-config_dict["type"] = "pulse_calib"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["misc_counter"] += 1
-# }}}
 # {{{ ppg
 tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 with GDS_scope() as gds:
     # {{{ set up settings for GDS
     gds.reset()
-    gds.CH1.disp = True
+    gds.CH1.disp = True  # Even though we turn the display off 2 lines below,
+    #                      the oscilloscope seems to require this command initially.
+    #                      Debugging is needed in future.
     gds.CH2.disp = True
     gds.write(":CHAN1:DISP OFF")
     gds.write(":CHAN2:DISP ON")
@@ -71,6 +72,9 @@ with GDS_scope() as gds:
     gds.write(":TRIG:LEV 34E-3")  # set trigger level
 
     def round_for_scope(val, multiples=1):
+        """Determine a rounded number for setting
+        the appropriate volt/time scale on the oscilloscope
+        """
         val_oom = np.floor(np.log10(val))
         val = (
             np.ceil(val / 10**val_oom / multiples)
@@ -85,15 +89,13 @@ with GDS_scope() as gds:
         * 2
         / num_div_per_screen
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
-    print("here is the max pulse length", t_pulse_us.max())
     scope_timescale = round_for_scope(
         t_pulse_us.max() * 1e-6 * 0.5 / num_div_per_screen, multiples=10
-    )
+    )  # the 0.5 is because so it can fit in half the screen
     print(
-        "here is the timescale in μs", scope_timescale / 1e-6
-    )  # the 0.5 is because it can fit in half the screen
-    print(round_for_scope(0.5 * t_pulse_us.max() * 1e-6,
-            multiples = 2))
+        "The timescale for the max pulse length, %f, in μs is %f"
+        % (t_pulse_us.max(), scope_timescale / 1e-6)
+    )
     gds.timscal(
         scope_timescale,
         pos=round_for_scope(0.5 * t_pulse_us.max() * 1e-6,
@@ -109,15 +111,16 @@ with GDS_scope() as gds:
             config_dict["amplitude"],
             nPoints,
         )
-        acq_time_ms = spc.configureRX(
-            # Rx scans, echos, and nPhaseSteps set to 1
+        config_dict["acq_time_ms"] = spc.configureRX(
+            # We aren't acquiring but this is still needed to set up the
+            # SpinCore.
             config_dict["SW_kHz"],
             nPoints,
+            # Rx scans, echos, and nPhaseSteps set to 1.
             1,
             1,
             1,
         )
-        config_dict["acq_time_ms"] = acq_time_ms
         spc.init_ppg()
         spc.load(
             [
@@ -132,36 +135,39 @@ with GDS_scope() as gds:
         spc.stopBoard()
         time.sleep(1.5)
         thiscapture = gds.waveform(ch=2)
-        #assert (
-        #    np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
-        #), "what are you trying to do, you dwell time is too long!!!"
-        # {{{ just convert to analytic here, and also downsample
-        #     this is a rare case where we care more about not keeping
+        assert (
+            np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
+        ), "what are you trying to do, your dwell time is too long!!!"
+        # {{{ just convert to analytic here, and also downsample.
+        #     This is a rare case where we care more about not keeping
         #     ridiculous quantities of garbage on disk, so we are going
-        #     to throw some stuff out beforehand
+        #     to throw some stuff out beforehand.
         thiscapture.ft("t", shift=True)
-        thiscapture = thiscapture["t":(0, None)]["t":(None, 24e6)]
+        thiscapture = thiscapture["t":(0, 24e6)]
         thiscapture *= 2
         thiscapture["t", 0] *= 0.5
         thiscapture.ift("t")
         # }}}
         if data is None:
+            # {{ set up the shape of the data so that we can just drop in the
+            #    following indices
             data = thiscapture.shape
             data += (indirect, n_lengths)
             data = data.alloc()
             data.copy_axes(thiscapture)
             data.copy_props(thiscapture)
+            # }}}
         data[indirect, idx] = thiscapture
 if calibrating:
-    data.setaxis(
-        "t_pulse", t_pulse_us * 1e-6
-    )  # always store in SI units unless we're wanting to change the variable name
-    data.set_units("t_pulse","s")
+    # always store in SI units unless we're wanting to change the variable name
+    data.setaxis("t_pulse", t_pulse_us * 1e-6).set_units(
+        "t_pulse", "s"
+    )  
 else:
-    data.setaxis("beta", desired_beta)
-    data.set_prop("programmed_t_pulse_us", t_pulse_us * 1e-6)
-data.set_prop("postproc_type","GDS_capture_v1")
+    data.setaxis("beta", desired_beta).set_units("beta", "s√W")
+    data.set_prop("programmed_t_pulse", t_pulse_us * 1e-6)  # use SI units
+data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
+config_dict = spc.save_data(data, my_exp_type, config_dict, "pulse_calib", proc=False)
 config_dict.write()
