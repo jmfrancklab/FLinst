@@ -112,10 +112,11 @@ with GDS_scope() as gds:
             nPoints,
         )
         config_dict["acq_time_ms"] = spc.configureRX(
-            # we aren't acquiring but this is still needed to set up the SpinCore
-            # Rx scans, echos, and nPhaseSteps set to 1
+            # We aren't acquiring but this is still needed to set up the
+            # SpinCore.
             config_dict["SW_kHz"],
             nPoints,
+            # Rx scans, echos, and nPhaseSteps set to 1.
             1,
             1,
             1,
@@ -137,10 +138,10 @@ with GDS_scope() as gds:
         assert (
             np.diff(thiscapture["t"][r_[0:2]]).item() < 0.5 / 24e6
         ), "what are you trying to do, your dwell time is too long!!!"
-        # {{{ just convert to analytic here, and also downsample
-        #     this is a rare case where we care more about not keeping
+        # {{{ just convert to analytic here, and also downsample.
+        #     This is a rare case where we care more about not keeping
         #     ridiculous quantities of garbage on disk, so we are going
-        #     to throw some stuff out beforehand
+        #     to throw some stuff out beforehand.
         thiscapture.ft("t", shift=True)
         thiscapture = thiscapture["t":(0, 24e6)]
         thiscapture *= 2
@@ -148,7 +149,8 @@ with GDS_scope() as gds:
         thiscapture.ift("t")
         # }}}
         if data is None:
-            # {{ set up the shape of the data so that we can just drop in the following indices
+            # {{ set up the shape of the data so that we can just drop in the
+            #    following indices
             data = thiscapture.shape
             data += (indirect, n_lengths)
             data = data.alloc()
@@ -157,14 +159,15 @@ with GDS_scope() as gds:
             # }}}
         data[indirect, idx] = thiscapture
 if calibrating:
+    # always store in SI units unless we're wanting to change the variable name
     data.setaxis("t_pulse", t_pulse_us * 1e-6).set_units(
         "t_pulse", "s"
-    )  # always store in SI units unless we're wanting to change the variable name
+    )  
 else:
     data.setaxis("beta", desired_beta).set_units("beta", "s√W")
     data.set_prop("programmed_t_pulse", t_pulse_us * 1e-6)  # use SI units
 data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = spc.save_data(data, my_exp_type, config_dict, "misc", proc=False)
+config_dict = spc.save_data(data, my_exp_type, config_dict, "pulse_calib", proc=False)
 config_dict.write()
