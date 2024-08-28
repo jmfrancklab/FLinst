@@ -27,7 +27,7 @@ def run_IR(
     carrierFreq_MHz,
     nPoints,
     nEchoes,
-    p90_us,
+    plen,
     repetition_us,
     tau_us,
     SW_kHz,
@@ -38,41 +38,44 @@ def run_IR(
     deadtime_us=10.0,
     deblank_us=1.0,
     amplitude=1.0,
+    plen_as_beta=True,
 ):
     """
-    Run a single (signal averaged) scan out of an inversion recovery and generate a single nddata with a vd dimension.
-    We assume the first time this is run, ret_data=None, after which we will pass in ret_data.
+    Run a single (signal averaged) scan out of an inversion recovery and
+    generate a single nddata with a vd dimension.
+    We assume the first time this is run, ret_data=None, after which we will
+    pass in ret_data.
 
     Parameters
     ==========
-    nScans: int
-        number of repeats of the pulse sequence (for averaging over data)
-    vd: The variable delay to use for this scan
-    indirect_idx: int
-        index along the 'indirect' dimension
-    indirect_len: int
-        size of indirect axis.
-        Used to allocate space for the data once the first scan is run.
-    adcOffset: int
-        offset of ADC acquired with SpinCore_apps/C_examples/adc_offset.exe
-    carrierFreq_MHz: float
-            carrier frequency to be set in MHz
-    nPoints: int
-        number of points for the data
-    nEchoes: int
-        Number of Echoes to be acquired.
-        This should always be 1, since this pulse
-        program doesn't generate multiple echos.
-    p90_us: float
-        90 time of the probe in us
-    repetition_us: float
-        3-5 x T1 of the sample in seconds
-    tau_us: float
+    nScans : int
+        Number of repeats of the pulse sequence (for averaging over data).
+    vd : The variable delay to use for this scan.
+    indirect_idx : int
+        Index along the 'indirect' dimension.
+    indirect_len : int
+        Size of indirect axis which is used to allocate space for the data once
+        the first scan is run.
+    adcOffset : int
+        Ofset of ADC acquired with SpinCore_apps/C_examples/adc_offset.exe
+    carrierFreq_MHz : float
+        Carrier frequency to be set in MHz.
+    nPoints : int
+        Number of points for the data.
+    nEchoes : int
+        Number of Echoes to be acquired. This should always be 1, since this
+        pulse program doesn't generate multiple echos.
+    plen : float
+        Desired length of the pulse -- either μs or s√W.
+        (see plen_as_beta)
+    repetition_us : float
+        3-5 x T1 of the sample in seconds.
+    tau_us : float
         Echo Time should be a few ms for a good hermitian function to be
         applied later in processing. Standard tau_us = 3500.
-    SW_kHz: float
-        spectral width of the data. Minimum = 1.9
-    indirect_fields: tuple (pair) of str or (default) None
+    SW_kHz : float
+        Spectral width of the data. Minimum = 1.9.
+    indirect_fields : tuple (pair) of str or (default) None
         Name for the first field of the structured array
         that stores the indirect dimension coordinates.
         We use a structured array, e.g., to store both start and
@@ -82,19 +85,30 @@ def run_IR(
         to be a normal array, set this to None
 
         This parameter is only used when `ret_data` is set to `None`.
-    ph1_cyc: array
-        phase steps for the first pulse
-    ph2_cyc: array
-        phase steps for the second pulse
-    ret_data: nddata (default None)
-        returned data from previous run or `None` for the first run."""
+
+    ph1_cyc : array
+        Phase steps for the first pulse.
+    ph2_cyc : array
+        Phase steps for the second pulse.
+    ret_data : nddata (default None)
+        Returned data from previous run or `None` for the first run.
+    plen_as_beta : boolean
+        Determines if plen is supplied as a β value [s√W] or directly as
+        programmed length [μs].
+    """
+    
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
     # (2*desired_p90) and convert to what needs to
     # be programmed in order to get the desired
     # times
-    prog_p90_us = prog_plen(p90_us)
-    prog_p180_us = prog_plen(2 * p90_us)
+    if plen_as_beta:
+        settings = {"amplitude": amplitude, "deblank_us": deblank_us}
+        prog_p90_us = prog_plen(plen, settings)
+        prog_p180_us = prog_plen(2 * plen, settings)
+    else:
+        prog_p90_us = plen
+        prog_180_us = 2 * plen
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
     data_length = 2 * nPoints * nEchoes * nPhaseSteps
