@@ -1,7 +1,10 @@
-"just testing/illustrating the basic function of configfiles -- really for devel purposes"
+"""Basic config dict example
+============================
 
-import configparser
-import os
+Just testing/illustrating the basic function of configfiles -- really
+for devel purposes
+"""
+
 import SpinCore_pp
 
 # initialize
@@ -11,7 +14,7 @@ myconfig = SpinCore_pp.configuration("active.ini")
 try:
     myconfig["new_thing"] = 300
     failure = False
-except:
+except Exception:
     failure = True
 if failure:
     print("I tried to set an unregistered parameter, and it failed ... good!")
@@ -21,7 +24,7 @@ else:
 try:
     retval = myconfig["another_thing"]
     failure = False
-except:
+except Exception:
     failure = True
 if failure:
     print("I tried to get an unregistered parameter, and it failed ... good!")
@@ -53,8 +56,12 @@ print(
     "and I'm going to increment it.  If you re-run this script, this value should increase",
 )
 myconfig["echo_counter"] += 1
-myconfig.write()  # this should write the adc offset and whatever else we've changed
 # }}}
+# {{{ now try a counter that doesn't exist yet
+myconfig["bogus_counter"] += 1
+print("bogus counter is", myconfig["bogus_counter"])
+# }}}
+myconfig.write()  # this should write the adc offset and whatever else we've changed
 # {{{ an example of pulling a full list of keyword arguments for a function
 relevant_kwargs = {
     j: myconfig[j]

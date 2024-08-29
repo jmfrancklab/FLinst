@@ -77,7 +77,7 @@ data = run_spin_echo(
     carrierFreq_MHz=config_dict["carrierFreq_MHz"],
     nPoints=nPoints,
     nEchoes=1,  # you should never be running a hahn echo with >1 echo
-    p90_us=config_dict["p90_us"],
+    plen=config_dict["beta_90_s_sqrtW"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
     SW_kHz=config_dict["SW_kHz"],
@@ -94,7 +94,7 @@ data.setaxis("ph1", ph1_cyc / 4)
 data.reorder(["ph1", "nScans", "t2"])
 data.set_prop("postproc_type", "spincore_SE_v2")
 data.set_units("t2", "s")
-data.set_prop("coherence_pathway",{"ph1":1})
+data.set_prop("coherence_pathway", {"ph1": 1})
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "echo")

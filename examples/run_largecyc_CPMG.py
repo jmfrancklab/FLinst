@@ -22,6 +22,7 @@ and after your tau through a series of delays.
 If you wish to keep the field as is without adjustment, follow
 the 'py run_CPMG.py' command with 'stayput' (e.g. 'py run_CPMG.py stayput')
 """
+
 import pyspecdata as psd
 import os
 import sys
@@ -89,8 +90,8 @@ nPhaseSteps = 4**3
 # {{{ calibrate pulse lengths
 # NOTE: This is done inside the run_spin_echo rather than in the example
 # but to keep the generic function more robust we do it outside of the ppg
-prog_p90_us = prog_plen(config_dict["p90_us"])
-prog_p180_us = prog_plen(2 * config_dict["p90_us"])
+prog_p90_us = prog_plen(config_dict["beta_s_sqrtW"], config_dict)
+prog_p180_us = prog_plen(2 * config_dict["beta_s_sqrtW"], config_dict)
 # }}}
 # {{{ calculate symmetric tau
 # NOTE: here the tau_us is defined as the evolution time from the start of

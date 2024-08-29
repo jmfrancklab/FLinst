@@ -66,6 +66,12 @@ class configuration(object):
             None,
             "90 time of the probe in microseconds.\nUsed to determine 90° 180°, etc pulses",
         ),
+        "beta_90_s_sqrtW": (
+            float,
+            "acq_params",
+            20.0e-6,
+            "Beta value of the probe in seconds * sqrt(W).\nUsed to determine 90° 180°, etc pulses",
+        ),
         "gamma_eff_MHz_G": (
             float,
             "acq_params",
@@ -199,43 +205,6 @@ class configuration(object):
             None,
             "number of IR experiments collected in the ODNP experiment",
         ),
-        # reviewed to here
-        "odnp_counter": (
-            int,
-            "file_names",
-            0,
-            "number of ODNP experiments that have been performed so far for that particular sample on that day",
-        ),
-        "echo_counter": (
-            int,
-            "file_names",
-            0,
-            "number of echo experiments performed for a particular sample that day- usually incremented when getting on resonance",
-        ),
-        "cpmg_counter": (
-            int,
-            "file_names",
-            0,
-            "number of cpmg experiments performed for a particular sample that day",
-        ),
-        "IR_counter": (
-            int,
-            "file_names",
-            0,
-            "number of inversion recovery experiments performed for a particular sample that day",
-        ),
-        "field_counter": (
-            int,
-            "file_names",
-            0,
-            "number of field sweeps performed for a particular sample that day",
-        ),
-        "FID_nutation_counter": (
-            int,
-            "file_names",
-            0,
-            "number of FID nutations performed for a particular sample that day",
-        ),
         "date": (int, "file_names", None, "today's date"),
         "chemical": (
             str,
@@ -268,11 +237,39 @@ class configuration(object):
             except Exception:
                 continue
             self._params[paramname] = converter(temp)
+        # {{{ auto-register all counters
+        if "file_names" in self.configobj.keys():
+            for paramname in [
+                j
+                for j in self.configobj["file_names"].keys()
+                if j.lower().endswith("_counter")
+            ]:
+                self.registered_params[paramname] = (
+                    int,
+                    "file_names",
+                    0,
+                    "a counter",
+                )
+                self._params[paramname] = int(
+                    self.configobj["file_names"][paramname]
+                )
+        # }}}
         self._case_insensitive_keys = {
             j.lower(): j for j in self.registered_params.keys()
         }
 
     def __getitem__(self, key):
+        # {{{ auto-register counters
+        if key.lower().endswith("_counter"):
+            if key.lower() not in self._case_insensitive_keys.keys():
+                self._case_insensitive_keys[key.lower()] = key
+                self.registered_params[key] = (
+                    int,
+                    "file_names",
+                    0,
+                    "a counter",
+                )
+        # }}}
         key = self._case_insensitive_keys[key.lower()]
         if key not in self._params.keys():
             converter, section, default, _ = self.registered_params[key]

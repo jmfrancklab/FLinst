@@ -6,6 +6,7 @@ A standard echo where the 90 time is varied so
 that we are able to see when the signal rotates through 90 to 
 180 degrees.
 """
+
 import pyspecdata as psd
 import os
 import SpinCore_pp
@@ -21,7 +22,7 @@ assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 beta_range_s_sqrtW = np.linspace(0.5e-6, 100e-6, 20)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
-prog_p90_us = prog_plen(beta_range_s_sqrtW, config_dict["amplitude"])
+prog_p90_us = prog_plen(beta_range_s_sqrtW, config_dict)
 (
     nPoints,
     config_dict["SW_kHz"],
