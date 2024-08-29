@@ -5,7 +5,7 @@ import pyspecProcScripts
 import subprocess
 
 
-def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
+def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
     """save data to an h5 file with appropriately labeled nodename and performs
     rough processing
 
@@ -17,8 +17,9 @@ def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
         Directory on the share drive you want to save to.
     config_dict : dict
         Config_dict pulled from the active.ini file.
-    counter_type : str
+    counter_type : str, default None
         Type of counter you are incrementing.
+        Default of `None` sets to `config_dict['type']`
     proc : boolean
         Dictates whether the processing script, proc_raw is ran on the
         acquired data.
@@ -29,6 +30,11 @@ def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
         The updated config dict after appropriately incrementing the
         counter.
     """
+    # {{{ if we didn't explicitly pass a counter type, go ahead and use the
+    #     "type" of the experiment
+    if counter_type is None:
+        counter_type = config_dict["type"]
+    # }}}
     target_directory = psd.getDATADIR(exp_type=my_exp_type)
     # {{{ create filename
     filename_out = (
