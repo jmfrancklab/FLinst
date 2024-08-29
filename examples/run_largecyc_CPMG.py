@@ -22,6 +22,7 @@ and after your tau through a series of delays.
 If you wish to keep the field as is without adjustment, follow
 the 'py run_CPMG.py' command with 'stayput' (e.g. 'py run_CPMG.py stayput')
 """
+
 import pyspecdata as psd
 import os
 import sys

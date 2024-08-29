@@ -91,7 +91,6 @@ def run_spin_echo(
         Determines if plen is supplied as a β value [s√W] or directly as
         programmed length [μs].
     """
-
     assert nEchoes == 1, "you must only choose nEchoes=1"
     # take the desired p90 and p180
     # (2*desired_p90) and convert to what needs to

@@ -6,6 +6,7 @@ A standard echo where the 90 time is varied so
 that we are able to see when the signal rotates through 90 to 
 180 degrees.
 """
+
 import pyspecdata as psd
 import os
 import SpinCore_pp

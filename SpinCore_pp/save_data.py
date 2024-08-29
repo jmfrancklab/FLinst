@@ -16,7 +16,7 @@ def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
     my_exp_type : str
         Directory on the share drive you want to save to.
     config_dict : dict
-        config_dict pulled from the active.ini file.
+        Config_dict pulled from the active.ini file.
     counter_type : str
         Type of counter you are incrementing.
     proc : boolean
@@ -26,9 +26,9 @@ def save_data(dataset, my_exp_type, config_dict, counter_type, proc=True):
     Returns
     =======
     config_dict : dict
-        The updated config dict after appropriately incrementing the counter.
+        The updated config dict after appropriately incrementing the
+        counter.
     """
-
     target_directory = psd.getDATADIR(exp_type=my_exp_type)
     # {{{ create filename
     filename_out = (

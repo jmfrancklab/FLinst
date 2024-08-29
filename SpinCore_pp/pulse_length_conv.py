@@ -11,10 +11,11 @@ def prog_plen(desired_beta, settings):
     Parameters
     ==========
     desired_beta : float
-        the desired β you wish the spincore to output,
-        in s*sqrt(W)
+        The desired β you wish the spincore to output,
+        in s*sqrt(W).
     settings :  dict-like
-        contains the following keys.  It's crucial that these get used in the pulse sequence.
+        Contains the following keys.  It's crucial that these get used in
+        the pulse sequence.
 
         :amplitude: float
         :deblank_us: float
@@ -24,7 +25,6 @@ def prog_plen(desired_beta, settings):
     retval : float
         The pulse length you tell spincore in order to get the desired β.
     """
-
     if np.isscalar(desired_beta):
         assert (
             desired_beta < 1000e-6
@@ -111,6 +111,22 @@ def prog_plen(desired_beta, settings):
 
     # }}}
     def zonefit(desired_beta):
+        """Calculates the pulse length that should be fed to the SpinCore
+        to obtain the desired beta based off of the coefficients for the
+        linear and nonlinear regimes of the calibrated pulse lengths for
+        a given amplitude.
+
+        Parameters
+        ==========
+        desired_beta: float or list
+            Beta that the user wants to obtain from the output pulse.
+        
+        Returns
+        =======
+        retval: ndarray
+            Array containing the pulse length that will enable the
+            SpinCore to output the desired beta(s).
+        """    
         if desired_beta > linear_threshold:
             return np.polyval(c_linear[::-1], desired_beta)
         else:

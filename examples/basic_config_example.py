@@ -1,4 +1,9 @@
-"just testing/illustrating the basic function of configfiles -- really for devel purposes"
+"""Basic config dict example
+============================
+
+Just testing/illustrating the basic function of configfiles -- really
+for devel purposes
+"""
 
 import SpinCore_pp
 
