@@ -1,15 +1,19 @@
 r"""
 Use the Scope to Calibrate pulses output from RF amplifier
 ===========================================================
-If calibrating the pulse lengths, a series of pulse lengths are directly output
-from the SpinCore to the rf amplifier where the output pulse is captured on the
-GDS oscilloscope.  If testing the calibration or capturing using a series of
-desired betas, the calibrating conditional should be set to false and the
-script will calibrate the pulse lengths so that the output of the amplifier
-produces the desired beta.  It is very important to note that there MUST BE at
-least a 40 dBm attenuator between the RF amplifier output and the GDS
-oscilloscope input to avoid damaging the instrumentation! It is advised that
-the attenuator be calibrated using the GDS and AFG beforehand.
+If calibrating the pulse lengths, a series of pulse lengths (μs) are directly
+output from the SpinCore to the rf amplifier where the output pulse is captured
+on the GDS oscilloscope.  
+If testing the calibration or capturing using a series of desired betas, the
+calibrating conditional should be set to False and the script will calibrate
+the pulse lengths based on the amplitude set in the active.ini file so that the
+output of the amplifier produces the desired beta.  
+
+Note
+----
+    There MUST BE at least a 40 dBm attenuator between the RF amplifier output
+    and the GDS oscilloscope input to avoid damaging the instrumentation! It is
+    advised that the attenuator be calibrated using the GDS and AFG beforehand.
 """
 
 import pyspecdata as psd
@@ -23,13 +27,14 @@ import numpy as np
 
 calibrating = True
 
-indirect = "t_pulse" if calibrating else "beta"
-my_exp_type = "test_equipment"
 nominal_power = 75  # in W
 nominal_atten = 1e4
 num_div_per_screen = 8
 n_lengths = 50  # number of pulse lengths acquired
+indirect = "t_pulse" if calibrating else "beta"
+my_exp_type = "test_equipment"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
+tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
 # {{{ importing acquisition parameters
 config_dict = spc.configuration("active.ini")
 (
@@ -45,6 +50,7 @@ config_dict["type"] = "pulse_calib"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["pulse_calib"] += 1
 # }}}
+# {{{ Define pulse lengths in μs
 if calibrating:
     t_pulse_us = np.linspace(
         # if the amplitude is small we want to go out to much longer pulse lengths
@@ -55,10 +61,9 @@ if calibrating:
 else:
     desired_beta = np.linspace(0.5e-6, 300e-6, n_lengths)  # s *sqrt(W)
     t_pulse_us = spc.prog_plen(desired_beta, config_dict)
-# {{{ ppg
-tx_phases = np.r_[0.0, 90.0, 180.0, 270.0]
+# }}}
+# {{{ set up settings for GDS
 with GDS_scope() as gds:
-    # {{{ set up settings for GDS
     gds.reset()
     gds.CH1.disp = True  # Even though we turn the display off 2 lines below,
     #                      the oscilloscope seems to require this command initially.
@@ -87,7 +92,7 @@ with GDS_scope() as gds:
 
     gds.CH2.voltscal = round_for_scope(
         config_dict["amplitude"]
-        * np.sqrt(2 * nominal_power / nominal_atten * 50)
+        * np.sqrt(2 * nominal_power / nominal_atten * 50) # Vamp
         * 2
         / num_div_per_screen
     )  # 2 inside is for rms-amp 2 outside is for positive and negative
@@ -104,9 +109,11 @@ with GDS_scope() as gds:
             0.5 * t_pulse_us.max() * 1e-6,
             multiples=0.25  # very small since we are only shifting the
             #                 beginning of the pulse length a small amount
+            #                 to center the pulse at tmax
         ),
     )
-    # }}}
+# }}}
+# {{{ ppg
     data = None
     for idx, this_t_pulse in enumerate(t_pulse_us):
         spc.configureTX(
@@ -138,7 +145,10 @@ with GDS_scope() as gds:
         spc.stop_ppg()
         spc.runBoard()
         spc.stopBoard()
-        time.sleep(1.0)
+        time.sleep(1.0) # If you see in processing that some betas are not
+        #                 increasing, you want to increase this slightly to 1.5
+# }}}
+# {{{ capture and preprocess GDS capture
         thiscapture = gds.waveform(ch=2)
         # check that the dwell time for all amplitudes (except 0.05 which
         # is an exception due to much longer pulse times) is
@@ -158,7 +168,7 @@ with GDS_scope() as gds:
         thiscapture.ift("t")
         # }}}
         if data is None:
-            # {{ set up the shape of the data so that we can just drop in the
+            # {{{ set up the shape of the data so that we can just drop in the
             #    following indices
             data = thiscapture.shape
             data += (indirect, n_lengths)
@@ -176,6 +186,7 @@ else:
 data.set_prop("postproc_type", "GDS_capture_v1")
 data.set_units("t", "s")
 data.set_prop("acq_params", config_dict.asdict())
+# }}}
 config_dict = spc.save_data(
     data, my_exp_type, config_dict, "pulse_calib", proc=False
 )

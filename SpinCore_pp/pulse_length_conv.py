@@ -118,7 +118,7 @@ def prog_plen(desired_beta, settings):
 
         Parameters
         ==========
-        desired_beta: float or list
+        desired_beta: float
             Beta that the user wants to obtain from the output pulse.
         
         Returns
