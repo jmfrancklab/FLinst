@@ -153,6 +153,7 @@ class NMRWindow(QMainWindow):
             nScans=self.myconfig["nScans"],
             indirect_idx=0,
             indirect_len=1,
+            deblank_us = self.myconfig["deblank_us"],
             adcOffset=self.myconfig["adc_offset"],
             carrierFreq_MHz=self.myconfig["carrierFreq_MHz"],
             nPoints=self.npts,
