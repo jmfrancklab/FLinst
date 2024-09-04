@@ -37,21 +37,21 @@ def prog_plen(desired_beta, settings):
         settings["deblank_us"] == 50
     ), "currently only calibrated for deblank_us = 50, so you almost definitely want to set that value in your active.ini"
     if settings["amplitude"] == 1.0:
-        linear_threshold = 270e-6
+        linear_threshold = 200e-6
         c_nonlinear = r_[
-                 3.30445514e+01,
-                 9.55000640e+04,
-                 -3.56796291e+09,
-                 -1.67137522e+14,
-                 -3.95376217e+18,
-                 -5.45193543e+22,
-                 -4.64568743e+26,
-                 -2.47989330e+30,
-                 -8.07228547e+33,
-                 -1.46440596e+37,
-                 -1.13462887e+40
+                2.68496032e+01,
+                1.54958845e+05,
+                8.28561689e+08,
+                -3.20835099e+13,
+                -2.69415213e+18,
+                -7.30200109e+22,
+                -1.04245486e+27,
+                -8.66033141e+30,
+                -4.20815065e+34,
+                -1.11019573e+38,
+                -1.22948186e+41
          ]
-        c_linear = r_[5.08162357e-01, 1.20423636e+05]
+        c_linear = r_[1.95945884e-01, 1.33178711e+05]
     elif settings["amplitude"] == 0.2:
         linear_threshold = (
             310e-6  # we found different thresholds for different amplitudes
