@@ -117,7 +117,8 @@ class NMRWindow(QMainWindow):
             and abs(Field - self.prev_field) < 850.0 / gammabar_H * 1e4
         ):
             print(
-                "You are trying to shift by an intermediate offset, so I'm going to set the field slowly."
+                "You are trying to shift by an intermediate offset, so I'm"
+                " going to set the field slowly."
             )
             Field = self.xepr.set_field(Field)
             self.prev_field = Field
@@ -141,8 +142,8 @@ class NMRWindow(QMainWindow):
             self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"]
         )
         print(
-            "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
-            % Field
+            "Based on that, and the gamma_eff_MHz_G you have in your .ini"
+            " file, I'm setting the field to %f" % Field
         )
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
@@ -153,6 +154,7 @@ class NMRWindow(QMainWindow):
             nScans=self.myconfig["nScans"],
             indirect_idx=0,
             indirect_len=1,
+            deblank_us=self.myconfig["deblank_us"],
             adcOffset=self.myconfig["adc_offset"],
             carrierFreq_MHz=self.myconfig["carrierFreq_MHz"],
             nPoints=self.npts,
