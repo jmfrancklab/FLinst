@@ -142,8 +142,8 @@ class NMRWindow(QMainWindow):
             self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"]
         )
         print(
-            "Based on that, and the gamma_eff_MHz_G you have in your .ini file,"
-            " I'm setting the field to %f" % Field
+            "Based on that, and the gamma_eff_MHz_G you have in your .ini"
+            " file, I'm setting the field to %f" % Field
         )
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
