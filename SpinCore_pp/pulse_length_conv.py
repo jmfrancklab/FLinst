@@ -72,22 +72,22 @@ def prog_plen(desired_beta, settings):
         c_linear = r_[3.99316443e+00, 5.21058492e+05]
     elif settings["amplitude"] == 0.1:
         linear_threshold = (
-            250e-6  # we found different thresholds for different amplitudes
+            230e-6  # we found different thresholds for different amplitudes
         )
         c_nonlinear = r_[
-               2.74358514e+02,
-               1.12317375e+06,
-               4.27371973e+09,
-               2.06043592e+14,
-               4.49181228e+18,
-               5.11353282e+22,
-               3.18933028e+26,
-               1.01856009e+30,
-               1.01655541e+33,
-               -2.33756582e+36,
-               -5.00787172e+39 
+                2.51955026e+02,
+                7.25813809e+05,
+                -3.11011134e+10,
+                -1.08128822e+15,
+                -2.06213928e+19,
+                -2.43901939e+23,
+                -1.87672640e+27,
+                -9.43897849e+30,
+                -2.99801032e+34,
+                -5.46040994e+37,
+                -4.34595668e+40
                 ]
-        c_linear = r_[8.83022644e-01, 1.09339913e+06]
+        c_linear = r_[2.83491811e+00, 1.08705017e+06]
     elif settings["amplitude"] == 0.05:
         linear_threshold = (
             260e-6  # we found different thresholds for different amplitudes
