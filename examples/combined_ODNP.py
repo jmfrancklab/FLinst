@@ -1,11 +1,19 @@
 """Automated Combined DNP with Log
 ==================================
 This needs to be run in sync with the power control server. To do so:
-    1. Open Xepr on EPR computer, connect to spectrometer, enable XEPR_API and then in new terminal, run XEPR_API_server.py. When this is ready to go you will see it say "I am listening".
-    2. The experiment starts with the B12 off. It collects your IR at no power along with a series of "control" thermals. These can be used for diagnosing issues with the enhancement thermal.
-    3. You will then be prompted to turn the B12 and the power control server on. To turn the power control server on, open a new terminal and type "FLInst server",
-        wait until you see "I am listening" before continuing with the experiment.
-    At the end of the experiment you will have a series of FIR experiments, a progressive power saturation dataset, and a log of the power over time saved as nodes in an h5 file.
+    1. Open Xepr on EPR computer, connect to spectrometer, enable XEPR_API and
+    then in new terminal, run XEPR_API_server.py. When this is ready to go you
+    will see it say "I am listening".
+    2. The experiment starts with the B12 off. It collects your IR at no power
+    along with a series of "control" thermals. These can be used for diagnosing
+    issues with the enhancement thermal.
+    3. You will then be prompted to turn the B12 and the power control server
+    on. To turn the power control server on, open a new terminal and type
+    "FLInst server", wait until you see "I am listening" before continuing with
+    the experiment.
+    At the end of the experiment you will have a series of FIR experiments, a
+    progressive power saturation dataset, and a log of the power over time
+    saved as nodes in an h5 file.
 """
 from numpy import r_, zeros_like
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
@@ -49,7 +57,8 @@ if not phase_cycling:
     IR_ph1_cyc = 0.0
     IR_ph2_cyc = 0.0
 # }}}
-# {{{Make VD list based on concentration and FIR repetition delay as defined by Weiss
+# {{{Make VD list based on concentration and FIR repetition delay as defined by
+#    Weiss
 vd_kwargs = {
     j: config_dict[j]
     for j in ["krho_cold", "krho_hot", "T1water_cold", "T1water_hot"]
@@ -99,7 +108,9 @@ if myinput.lower().startswith("n"):
 powers = 1e-3 * 10 ** (dB_settings / 10.0)
 # }}}
 # {{{ these change if we change the way the data is saved
-IR_postproc = "spincore_IR_v3"  # note that you have changed the way the data is saved, and so this should change likewise!!!!
+IR_postproc = "spincore_IR_v3"  # note that you have changed the way the data
+#                                 is saved, and so this should change
+#                                 likewise!!!!
 Ep_postproc = "spincore_ODNP_v5"
 # }}}
 # {{{check total points
@@ -126,7 +137,8 @@ input(
     "B12 needs to be unplugged and turned off for the thermal! Don't have the power server running just yet"
 )
 # }}}
-# {{{Collect Thermals - serves as a control to compare the thermal of Ep to ensure no microwaves were leaking
+# {{{Collect Thermals - serves as a control to compare the thermal of Ep to
+#    ensure no microwaves were leaking
 # call A to run spin echo
 control_thermal = run_spin_echo(
     nScans=config_dict["thermal_nScans"],
@@ -138,8 +150,8 @@ control_thermal = run_spin_echo(
     carrierFreq_MHz=config_dict["carrierFreq_MHz"],
     nPoints=nPoints,
     nEchoes=config_dict["nEchoes"],
-    plen = config_dict["beta_s_sqrtW"],
-    deblank_us = config_dict["deblank_us"],
+    plen=config_dict["beta_s_sqrtW"],
+    deblank_us=config_dict["deblank_us"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
     SW_kHz=config_dict["SW_kHz"],
@@ -156,7 +168,7 @@ control_thermal.name("control_thermal")
 control_thermal.set_prop("postproc_type", Ep_postproc)
 control_thermal.set_prop("acq_params", config_dict.asdict())
 control_thermal.name("control_thermal")
-control_thermal.set_prop("coherence_pathway",{"ph1":1})
+control_thermal.set_prop("coherence_pathway", {"ph1": 1})
 nodename = control_thermal.name()
 # {{{ on first write, if we can't access the directory, write to a temp file
 try:
@@ -195,8 +207,8 @@ for vd_idx, vd in enumerate(vd_list_us):
         ph2_cyc=IR_ph2_cyc,
         vd=vd,
         nScans=config_dict["thermal_nScans"],
-        plen = config_dict["beta_s_sqrtW"],
-        deblank_us = config_dict["deblank_us"],
+        plen=config_dict["beta_s_sqrtW"],
+        deblank_us=config_dict["deblank_us"],
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         amplitude=config_dict["amplitude"],
@@ -217,7 +229,7 @@ if phase_cycling:
 vd_data.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
 vd_data.name("FIR_noPower")
 vd_data.set_prop("stop_time", time.time())
-vd_data.set_prop("coherence_pathway",{"ph1":+1,"ph2":-2})
+vd_data.set_prop("coherence_pathway", {"ph1": +1, "ph2": -2})
 vd_data.set_prop("start_time", ini_time)
 vd_data.set_prop("acq_params", config_dict.asdict())
 vd_data.set_prop("postproc_type", IR_postproc)
@@ -235,7 +247,8 @@ with h5py.File(
             f"I had problems writing to the correct file {filename} so I'm going to try to save this node as temp_noPower"
         )
         vd_data.name(nodename)
-# hdf5_write should be outside the h5py.File with block, since it opens the file itself
+# hdf5_write should be outside the h5py.File with block, since it opens the
+# file itself
 vd_data.hdf5_write(filename, directory=target_directory)
 # }}}
 logger.debug("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
@@ -256,8 +269,11 @@ with power_control() as p:
     p.mw_off()
     time.sleep(16.0)  # give some time for the power source to "settle"
     p.start_log()
-    DNP_data = None  # initially, there is no data, and run_spin_echo knows how to deal with this
-    # Run the actual thermal where the power log is recording. This will be your thermal for enhancement and can be compared to previous thermals if issues arise
+    DNP_data = None  # initially, there is no data, and run_spin_echo knows how
+    #                  to deal with this
+    # Run the actual thermal where the power log is recording. This will be
+    # your thermal for enhancement and can be compared to previous thermals if
+    # issues arise
     for j in range(thermal_scans):
         DNP_ini_time = time.time()
         # call B/C to run spin echo
@@ -271,8 +287,8 @@ with power_control() as p:
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
             amplitude=config_dict["amplitude"],
-            plen = config_dict["beta_s_sqrtW"],
-            deblank_us = config_dict["deblank_us"],
+            plen=config_dict["beta_s_sqrtW"],
+            deblank_us=config_dict["deblank_us"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
@@ -313,7 +329,8 @@ with power_control() as p:
         power_settings_dBm[j] = p.get_power_setting()
         time_axis_coords[j + thermal_scans]["start_times"] = time.time()
         # call D to run spin echo
-        # Now that the thermal is collected we increment our powers and collect our data at each power
+        # Now that the thermal is collected we increment our powers and collect
+        # our data at each power
         run_spin_echo(
             nScans=config_dict["nScans"],
             indirect_idx=j + thermal_scans,
@@ -324,8 +341,8 @@ with power_control() as p:
             nPoints=nPoints,
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
-            plen = config_dict["beta_s_sqrtW"],
-            deblank_us = config_dict["deblank_us"],
+            plen=config_dict["beta_s_sqrtW"],
+            deblank_us=config_dict["deblank_us"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
@@ -337,7 +354,7 @@ with power_control() as p:
     DNP_data.set_prop("postproc_type", Ep_postproc)
     DNP_data.set_prop("acq_params", config_dict.asdict())
     DNP_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    DNP_data.set_prop("coherence_pathway",{"ph1":1})
+    DNP_data.set_prop("coherence_pathway", {"ph1": 1})
     DNP_data.set_units("t2", "s")
     if phase_cycling:
         DNP_data.chunk("t", ["ph1", "t2"], [len(Ep_ph1_cyc), -1])
@@ -404,8 +421,8 @@ with power_control() as p:
                 ph2_cyc=IR_ph2_cyc,
                 amplitude=config_dict["amplitude"],
                 vd=vd,
-                plen = config_dict["beta_s_sqrtW"],
-                deblank_us = config_dict["deblank_us"],
+                plen=config_dict["beta_s_sqrtW"],
+                deblank_us=config_dict["deblank_us"],
                 nScans=config_dict["nScans"],
                 adcOffset=config_dict["adc_offset"],
                 carrierFreq_MHz=config_dict["carrierFreq_MHz"],
@@ -419,7 +436,7 @@ with power_control() as p:
         vd_data.set_prop("stop_time", time.time())
         vd_data.set_prop("acq_params", config_dict.asdict())
         vd_data.set_prop("postproc_type", IR_postproc)
-        vd_data.set_prop("coherence_pathway",{"ph1":+1,"ph2":-2})
+        vd_data.set_prop("coherence_pathway", {"ph1": +1, "ph2": -2})
         vd_data.rename("indirect", "vd")
         vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
         vd_data.set_units("t2", "s")
@@ -446,7 +463,8 @@ with power_control() as p:
                 )
                 vd_data.name(nodename)
                 tempcounter += 1
-        # hdf5_write should be outside the h5py.File with block, since it opens the file itself
+        # hdf5_write should be outside the h5py.File with block, since it opens
+        # the file itself
         vd_data.hdf5_write(filename, directory=target_directory)
         print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
         print(("Name of saved data", vd_data.name()))
