@@ -65,7 +65,7 @@ assert total_pts < 2**14, (
 )
 # }}}
 data = None
-for idx, p90_us in enumerate(prog_p90_us):
+for idx, beta in enumerate(beta_range_s_sqrtW):
     # Just loop over the 90 times and set the indirect axis at the end
     # just like how we perform and save IR data
     data = run_spin_echo(
@@ -81,7 +81,7 @@ for idx, p90_us in enumerate(prog_p90_us):
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
         nPoints=nPoints,
         nEchoes=config_dict["nEchoes"],
-        p90_us=p90_us,
+        plen=beta,
         repetition_us=config_dict["repetition_us"],
         tau_us=config_dict["tau_us"],
         SW_kHz=config_dict["SW_kHz"],
