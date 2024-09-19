@@ -6,7 +6,8 @@ A ppg that performs a series of echoes at a range of designated field
 values that are determined from the guessed_MHz_to_GHz value in your 
 active.ini and the field width parameter. To run this in sync with 
 the power_control_server, open a separate terminal on the NMR computer
-in your user directory and running "FLInst server" and waiting for it to print "I am listening..."
+in your user directory and running "FLInst server" and waiting for it to print
+"I am listening..."
 """
 import pyspecdata as psd
 import time
@@ -105,8 +106,8 @@ with power_control() as p:
             ph1_cyc=ph1_cyc,
             adcOffset=config_dict["adc_offset"],
             carrierFreq_MHz=carrierFreq_MHz,
-            deblank_us = config_dict["deblank_us"],
-            plen = config_dict["beta_s_sqrtW"],
+            deblank_us=config_dict["deblank_us"],
+            plen=config_dict["beta_s_sqrtW"],
             nPoints=nPoints,
             nEchoes=config_dict["nEchoes"],
             repetition_us=config_dict["repetition_us"],
@@ -135,8 +136,8 @@ with power_control() as p:
                 adcOffset=config_dict["adc_offset"],
                 carrierFreq_MHz=new_carrierFreq_MHz,
                 nPoints=nPoints,
-                deblank_us = config_dict["deblank_us"],
-                plen = config_dict["beta_s_sqrtW"],
+                deblank_us=config_dict["deblank_us"],
+                plen=config_dict["beta_s_sqrtW"],
                 nEchoes=config_dict["nEchoes"],
                 repetition_us=config_dict["repetition_us"],
                 tau_us=config_dict["tau_us"],
@@ -155,7 +156,8 @@ sweep_data.squeeze()
 sweep_data.set_units("t2", "s")
 
 sweep_data.name(config_dict["type"] + "_" + str(config_dict["field_counter"]))
-# 8/21/24: JF changed this to v4 b/c there were already files saved with v3 in a different format
+# 8/21/24: JF changed this to v4 b/c there were already files saved with v3 in
+# a different format
 sweep_data.set_prop("postproc_type", "field_sweep_v4")
 sweep_data.set_prop("coherence_pathway", {"ph1": 1})
 sweep_data.set_prop("acq_params", config_dict.asdict())
