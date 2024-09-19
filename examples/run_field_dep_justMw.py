@@ -76,7 +76,9 @@ powers = 1e-3 * 10 ** (dB_settings / 10.0)
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
-    "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try reducing the acq_time_ms to %f"
+    "You are trying to acquire %d points (too many points) -- either change SW\
+    or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try\
+    reducing the acq_time_ms to %f"
     % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
 )
 # }}}
