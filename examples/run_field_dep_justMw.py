@@ -13,6 +13,7 @@ import pyspecdata as psd
 import time
 import logging
 import SpinCore_pp
+from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
 import numpy as np
 from numpy import r_
@@ -101,7 +102,7 @@ with power_control() as p:
         first_B0 = x_server.set_field(field_axis[0])
         time.sleep(3.0)
         carrierFreq_MHz = config_dict["gamma_eff_MHz_G"] * first_B0
-        sweep_data = SpinCore_pp.ppg.run_spin_echo(
+        sweep_data = run_spin_echo(
             nScans=config_dict["nScans"],
             indirect_idx=0,
             indirect_len=len(field_axis),
@@ -109,7 +110,7 @@ with power_control() as p:
             adcOffset=config_dict["adc_offset"],
             carrierFreq_MHz=carrierFreq_MHz,
             deblank_us=config_dict["deblank_us"],
-            plen=config_dict["beta_s_sqrtW"],
+            plen=config_dict["beta_90_s_sqrtW"],
             nPoints=nPoints,
             nEchoes=config_dict["nEchoes"],
             repetition_us=config_dict["repetition_us"],
@@ -130,7 +131,7 @@ with power_control() as p:
             myfreqs_fields[B0_index + 1]["Field"] = true_B0
             myfreqs_fields[B0_index + 1]["carrierFreq"] = new_carrierFreq_MHz
             logging.info("My frequency in MHz is", new_carrierFreq_MHz)
-            SpinCore_pp.ppg.run_spin_echo(
+            run_spin_echo(
                 nScans=config_dict["nScans"],
                 indirect_idx=B0_index + 1,
                 indirect_len=len(field_axis),
@@ -139,7 +140,7 @@ with power_control() as p:
                 carrierFreq_MHz=new_carrierFreq_MHz,
                 nPoints=nPoints,
                 deblank_us=config_dict["deblank_us"],
-                plen=config_dict["beta_s_sqrtW"],
+                plen=config_dict["beta_90_s_sqrtW"],
                 nEchoes=config_dict["nEchoes"],
                 repetition_us=config_dict["repetition_us"],
                 tau_us=config_dict["tau_us"],

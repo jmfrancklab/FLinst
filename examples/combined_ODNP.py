@@ -44,10 +44,7 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "ODNP"
 config_dict["date"] = date
 config_dict["odnp_counter"] += 1
-filename = (
-    f"{config_dict['date']}        _{config_dict['chemical']}       "
-    f" _{config_dict['type']}_        {config_dict['odnp_counter']}.h5"
-)
+filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}_{config_dict['odnp_counter']}.h5"
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -156,7 +153,7 @@ control_thermal = run_spin_echo(
     carrierFreq_MHz=config_dict["carrierFreq_MHz"],
     nPoints=nPoints,
     nEchoes=config_dict["nEchoes"],
-    plen=config_dict["beta_s_sqrtW"],
+    plen=config_dict["beta_90_s_sqrtW"],
     deblank_us=config_dict["deblank_us"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
@@ -169,6 +166,8 @@ if phase_cycling:
     control_thermal.chunk("t", ["ph1", "t2"], [len(Ep_ph1_cyc), -1])
     control_thermal.setaxis("ph1", Ep_ph1_cyc / 4)
     control_thermal.reorder(["ph1", "nScans", "t2"])
+else:
+    control_thermal.rename("t","t2")
 control_thermal.set_units("t2", "s")
 control_thermal.name("control_thermal")
 control_thermal.set_prop("postproc_type", Ep_postproc)
@@ -215,7 +214,7 @@ for vd_idx, vd in enumerate(vd_list_us):
         ph2_cyc=IR_ph2_cyc,
         vd=vd,
         nScans=config_dict["thermal_nScans"],
-        plen=config_dict["beta_s_sqrtW"],
+        plen=config_dict["beta_90_s_sqrtW"],
         deblank_us=config_dict["deblank_us"],
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
@@ -227,13 +226,15 @@ for vd_idx, vd in enumerate(vd_list_us):
     )
 vd_data.rename("indirect", "vd")
 vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
-vd_data.set_units("t2", "s")
 if phase_cycling:
     vd_data.chunk(
         "t", ["ph2", "ph1", "t2"], [len(IR_ph1_cyc), len(IR_ph2_cyc), -1]
     )
     vd_data.setaxis("ph1", IR_ph1_cyc / 4)
     vd_data.setaxis("ph2", IR_ph2_cyc / 4)
+else:
+    vd_data.rename("t","t2")
+vd_data.set_units("t2", "s")
 vd_data.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
 vd_data.name("FIR_noPower")
 vd_data.set_prop("stop_time", time.time())
@@ -297,7 +298,7 @@ with power_control() as p:
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
             amplitude=config_dict["amplitude"],
-            plen=config_dict["beta_s_sqrtW"],
+            plen=config_dict["beta_90_s_sqrtW"],
             deblank_us=config_dict["deblank_us"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
@@ -351,7 +352,7 @@ with power_control() as p:
             nPoints=nPoints,
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
-            plen=config_dict["beta_s_sqrtW"],
+            plen=config_dict["beta_90_s_sqrtW"],
             deblank_us=config_dict["deblank_us"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
@@ -365,11 +366,13 @@ with power_control() as p:
     DNP_data.set_prop("acq_params", config_dict.asdict())
     DNP_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
     DNP_data.set_prop("coherence_pathway", {"ph1": 1})
-    DNP_data.set_units("t2", "s")
     if phase_cycling:
         DNP_data.chunk("t", ["ph1", "t2"], [len(Ep_ph1_cyc), -1])
         DNP_data.setaxis("ph1", Ep_ph1_cyc / 4)
         DNP_data.reorder(["ph1", "nScans", "t2"])
+    else:
+        DNP_data.rename("t","t2")
+    DNP_data.set_units("t2", "s")
     DNP_data.name(config_dict["type"])
     nodename = DNP_data.name()
     try:
@@ -434,12 +437,11 @@ with power_control() as p:
                 ph2_cyc=IR_ph2_cyc,
                 amplitude=config_dict["amplitude"],
                 vd=vd,
-                plen=config_dict["beta_s_sqrtW"],
+                plen=config_dict["beta_90_s_sqrtW"],
                 deblank_us=config_dict["deblank_us"],
                 nScans=config_dict["nScans"],
                 adcOffset=config_dict["adc_offset"],
                 carrierFreq_MHz=config_dict["carrierFreq_MHz"],
-                amplitude=config_dict["amplitude"],
                 tau_us=config_dict["tau_us"],
                 repetition_us=FIR_rep,
                 SW_kHz=config_dict["SW_kHz"],
@@ -452,7 +454,6 @@ with power_control() as p:
         vd_data.set_prop("coherence_pathway", {"ph1": +1, "ph2": -2})
         vd_data.rename("indirect", "vd")
         vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
-        vd_data.set_units("t2", "s")
         if phase_cycling:
             vd_data.chunk(
                 "t",
@@ -461,6 +462,9 @@ with power_control() as p:
             )
             vd_data.setaxis("ph1", IR_ph1_cyc / 4)
             vd_data.setaxis("ph2", IR_ph2_cyc / 4)
+        else:
+            vd_data.rename("t","t2")
+        vd_data.set_units("t2", "s")
         vd_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
         vd_data.name(T1_node_names[j])
         nodename = vd_data.name()
