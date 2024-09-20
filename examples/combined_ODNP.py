@@ -44,10 +44,10 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "ODNP"
 config_dict["date"] = date
 config_dict["odnp_counter"] += 1
-filename = f"{config_dict['date']}\
-        _{config_dict['chemical']}\
-        _{config_dict['type']}_\
-        {config_dict['odnp_counter']}.h5"
+filename = (
+    f"{config_dict['date']}        _{config_dict['chemical']}       "
+    f" _{config_dict['type']}_        {config_dict['odnp_counter']}.h5"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -119,18 +119,16 @@ Ep_postproc = "spincore_ODNP_v5"
 # {{{check total points
 total_points = len(Ep_ph1_cyc) * nPoints
 assert total_points < 2**14, (
-    "For Ep: You are trying to acquire %d points (too many points) -- either\
-    change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou\
-    could try reducing the acq_time_ms to %f"
-    % total_points,
+    "For Ep: You are trying to acquire %d points (too many points) -- either"
+    " change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou  "
+    "  could try reducing the acq_time_ms to %f" % total_points,
     config_dict["acq_time_ms"] * 16384 / total_points,
 )
 total_pts = len(IR_ph2_cyc) * len(IR_ph1_cyc) * nPoints
 assert total_pts < 2**14, (
-    "For IR: You are trying to acquire %d points (too many points) -- either\
-    change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou\
-    could try reducing the acq_time_ms to %f"
-    % total_pts,
+    "For IR: You are trying to acquire %d points (too many points) -- either  "
+    "  change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou "
+    "   could try reducing the acq_time_ms to %f" % total_pts,
     config_dict["acq_time_ms"] * 16384 / total_pts,
 )
 # }}}
@@ -141,8 +139,8 @@ if os.path.exists(filename):
         % filename
     )
 input(
-    "B12 needs to be unplugged and turned off for the thermal! Don't have the\
-    power server running just yet"
+    "B12 needs to be unplugged and turned off for the thermal! Don't have the "
+    "   power server running just yet"
 )
 # }}}
 # {{{Collect Thermals - serves as a control to compare the thermal of Ep to
@@ -183,8 +181,9 @@ try:
     control_thermal.hdf5_write(filename, directory=target_directory)
 except Exception:
     final_log.append(
-        f"I had problems writing to the correct file {filename}, so I'm going\
-        to try to save your file to temp_ctrl.h5 in the current directory"
+        f"I had problems writing to the correct file {filename}, so I'm going "
+        "       to try to save your file to temp_ctrl.h5 in the current"
+        " directory"
     )
     if os.path.exists("temp_ctrl.h5"):
         final_log.append("There is already a temp_ctrl.h5 -- I'm removing it")
@@ -253,8 +252,8 @@ with h5py.File(
         )
         nodename = "temp_noPower"
         final_log.append(
-            f"I had problems writing to the correct file {filename} so I'm\
-            going to try to save this node as temp_noPower"
+            f"I had problems writing to the correct file {filename} so I'm    "
+            "        going to try to save this node as temp_noPower"
         )
         vd_data.name(nodename)
 # hdf5_write should be outside the h5py.File with block, since it opens the
@@ -266,8 +265,8 @@ logger.debug(psd.strm("Name of saved data", vd_data.name()))
 # }}}
 # {{{run enhancement
 input(
-    "Now plug the B12 back in and start up the FLInst power control server so\
-    we can continue!"
+    "Now plug the B12 back in and start up the FLInst power control server so "
+    "   we can continue!"
 )
 with power_control() as p:
     # JF points out it should be possible to save time by removing this (b/c we
@@ -377,9 +376,9 @@ with power_control() as p:
         DNP_data.hdf5_write(filename, directory=target_directory)
     except Exception:
         print(
-            f"I had problems writing to the correct file {filename}, so I'm\
-            going to try to save your file to temp_ODNP.h5 in the current h5\
-            file"
+            f"I had problems writing to the correct file {filename}, so I'm   "
+            "         going to try to save your file to temp_ODNP.h5 in the"
+            " current h5            file"
         )
         target_directory = os.path.getcwd()
         filename = "temp_ctrl.h5"
@@ -390,8 +389,8 @@ with power_control() as p:
             os.remove("temp_ODNP.h5")
             DNP_data.hdf5_write(filename, directory=target_directory)
             final_log.append(
-                "if I got this far, that probably worked -- be sure to\
-                move/rename temp_ODNP.h5 to the correct name!!"
+                "if I got this far, that probably worked -- be sure to        "
+                "        move/rename temp_ODNP.h5 to the correct name!!"
             )
     logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     logger.debug(psd.strm("Name of saved data", DNP_data.name()))
@@ -473,8 +472,8 @@ with power_control() as p:
             while nodename in fp.keys():
                 nodename = "%s_temp_%d" % (orig_nodename, tempcounter)
                 final_log.append(
-                    "this nodename already exists, so I will call it\
-                    {nodename}"
+                    "this nodename already exists, so I will call it          "
+                    "          {nodename}"
                 )
                 vd_data.name(nodename)
                 tempcounter += 1

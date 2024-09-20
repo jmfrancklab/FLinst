@@ -43,15 +43,14 @@ nPhaseSteps = len(ph1_cyc) * len(ph2_cyc)
 # }}}
 # {{{let computer set field
 input(
-    "I'm assuming that you've tuned your probe to %f since that's what's in\
-    your .ini file. Hit enter if this is true"
+    "I'm assuming that you've tuned your probe to %f since that's what's in   "
+    " your .ini file. Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
 field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
 print(
-    "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm\
-    setting the field to %f"
-    % field_G
+    "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm   "
+    " setting the field to %f" % field_G
 )
 with xepr() as x:
     assert field_G < 3700, "are you crazy??? field is too high!"
@@ -62,9 +61,9 @@ with xepr() as x:
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
-    "You are trying to acquire %d points (too many points) -- either change SW\
-    or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try\
-    reducing the acq_time_ms to %f"
+    "You are trying to acquire %d points (too many points) -- either change SW"
+    "    or acq time so nPoints x nPhaseSteps is less than 16384\nyou could"
+    " try    reducing the acq_time_ms to %f"
     % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
 )
 # }}}
