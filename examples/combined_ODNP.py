@@ -44,7 +44,12 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "ODNP"
 config_dict["date"] = date
 config_dict["odnp_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}_{config_dict['odnp_counter']}.h5"
+filename = (
+    f"{config_dict['date']}_"
+    + f"{config_dict['chemical']}_"
+    + f"{config_dict['type']}_"
+    + f"{config_dict['odnp_counter']}.h5"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
