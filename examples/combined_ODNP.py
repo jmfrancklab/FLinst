@@ -167,7 +167,7 @@ if phase_cycling:
     control_thermal.setaxis("ph1", Ep_ph1_cyc / 4)
     control_thermal.reorder(["ph1", "nScans", "t2"])
 else:
-    control_thermal.rename("t","t2")
+    control_thermal.rename("t", "t2")
 control_thermal.set_units("t2", "s")
 control_thermal.name("control_thermal")
 control_thermal.set_prop("postproc_type", Ep_postproc)
@@ -233,7 +233,7 @@ if phase_cycling:
     vd_data.setaxis("ph1", IR_ph1_cyc / 4)
     vd_data.setaxis("ph2", IR_ph2_cyc / 4)
 else:
-    vd_data.rename("t","t2")
+    vd_data.rename("t", "t2")
 vd_data.set_units("t2", "s")
 vd_data.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
 vd_data.name("FIR_noPower")
@@ -371,7 +371,7 @@ with power_control() as p:
         DNP_data.setaxis("ph1", Ep_ph1_cyc / 4)
         DNP_data.reorder(["ph1", "nScans", "t2"])
     else:
-        DNP_data.rename("t","t2")
+        DNP_data.rename("t", "t2")
     DNP_data.set_units("t2", "s")
     DNP_data.name(config_dict["type"])
     nodename = DNP_data.name()
@@ -463,7 +463,7 @@ with power_control() as p:
             vd_data.setaxis("ph1", IR_ph1_cyc / 4)
             vd_data.setaxis("ph2", IR_ph2_cyc / 4)
         else:
-            vd_data.rename("t","t2")
+            vd_data.rename("t", "t2")
         vd_data.set_units("t2", "s")
         vd_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
         vd_data.name(T1_node_names[j])
