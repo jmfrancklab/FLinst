@@ -110,7 +110,7 @@ with power_control() as p:
             adcOffset=config_dict["adc_offset"],
             carrierFreq_MHz=carrierFreq_MHz,
             deblank_us=config_dict["deblank_us"],
-            plen=config_dict["beta_90_s_sqrtW"],
+            plen=config_dict["p90_us"],
             nPoints=nPoints,
             nEchoes=config_dict["nEchoes"],
             repetition_us=config_dict["repetition_us"],
@@ -118,6 +118,7 @@ with power_control() as p:
             SW_kHz=config_dict["SW_kHz"],
             amplitude=config_dict["amplitude"],
             indirect_fields=("Field", "carrierFreq"),
+            plen_as_beta=False,
             ret_data=None,
         )
         myfreqs_fields = sweep_data.getaxis("indirect")
@@ -140,12 +141,13 @@ with power_control() as p:
                 carrierFreq_MHz=new_carrierFreq_MHz,
                 nPoints=nPoints,
                 deblank_us=config_dict["deblank_us"],
-                plen=config_dict["beta_90_s_sqrtW"],
+                plen=config_dict["p90_us"],
                 nEchoes=config_dict["nEchoes"],
                 repetition_us=config_dict["repetition_us"],
                 tau_us=config_dict["tau_us"],
                 SW_kHz=config_dict["SW_kHz"],
                 amplitude=config_dict["amplitude"],
+                plen_as_beta=False,
                 ret_data=sweep_data,
             )
 sweep_data.set_prop("acq_params", config_dict.asdict())

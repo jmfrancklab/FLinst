@@ -158,11 +158,12 @@ control_thermal = run_spin_echo(
     carrierFreq_MHz=config_dict["carrierFreq_MHz"],
     nPoints=nPoints,
     nEchoes=config_dict["nEchoes"],
-    plen=config_dict["beta_90_s_sqrtW"],
+    plen=config_dict["p90_us"],
     deblank_us=config_dict["deblank_us"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
     SW_kHz=config_dict["SW_kHz"],
+    plen_as_beta=False,
     ret_data=None,
 )
 if config_dict["thermal_nScans"] > 1:
@@ -219,7 +220,7 @@ for vd_idx, vd in enumerate(vd_list_us):
         ph2_cyc=IR_ph2_cyc,
         vd=vd,
         nScans=config_dict["thermal_nScans"],
-        plen=config_dict["beta_90_s_sqrtW"],
+        plen=config_dict["p90_us"],
         deblank_us=config_dict["deblank_us"],
         adcOffset=config_dict["adc_offset"],
         carrierFreq_MHz=config_dict["carrierFreq_MHz"],
@@ -227,6 +228,7 @@ for vd_idx, vd in enumerate(vd_list_us):
         tau_us=config_dict["tau_us"],
         repetition_us=FIR_rep,
         SW_kHz=config_dict["SW_kHz"],
+        plen_as_beta=False,
         ret_data=vd_data,
     )
 vd_data.rename("indirect", "vd")
@@ -303,12 +305,13 @@ with power_control() as p:
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
             amplitude=config_dict["amplitude"],
-            plen=config_dict["beta_90_s_sqrtW"],
+            plen=config_dict["p90_us"],
             deblank_us=config_dict["deblank_us"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
             indirect_fields=("start_times", "stop_times"),
+            plen_as_beta=False,
             ret_data=DNP_data,
         )
         DNP_thermal_done = time.time()
@@ -357,12 +360,13 @@ with power_control() as p:
             nPoints=nPoints,
             nEchoes=config_dict["nEchoes"],
             ph1_cyc=Ep_ph1_cyc,
-            plen=config_dict["beta_90_s_sqrtW"],
+            plen=config_dict["p90_us"],
             deblank_us=config_dict["deblank_us"],
             repetition_us=config_dict["repetition_us"],
             tau_us=config_dict["tau_us"],
             SW_kHz=config_dict["SW_kHz"],
             indirect_fields=("start_times", "stop_times"),
+            plen_as_beta=False,
             ret_data=DNP_data,
         )
         time_axis_coords[j + thermal_scans]["stop_times"] = time.time()
@@ -442,7 +446,7 @@ with power_control() as p:
                 ph2_cyc=IR_ph2_cyc,
                 amplitude=config_dict["amplitude"],
                 vd=vd,
-                plen=config_dict["beta_90_s_sqrtW"],
+                plen=config_dict["p90_us"],
                 deblank_us=config_dict["deblank_us"],
                 nScans=config_dict["nScans"],
                 adcOffset=config_dict["adc_offset"],
@@ -450,6 +454,7 @@ with power_control() as p:
                 tau_us=config_dict["tau_us"],
                 repetition_us=FIR_rep,
                 SW_kHz=config_dict["SW_kHz"],
+                plen_as_beta=False,
                 ret_data=vd_data,
             )
         vd_data.set_prop("start_time", ini_time)

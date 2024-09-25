@@ -78,10 +78,11 @@ data = run_spin_echo(
     carrierFreq_MHz=config_dict["carrierFreq_MHz"],
     nPoints=nPoints,
     nEchoes=1,  # you should never be running a hahn echo with >1 echo
-    plen=config_dict["beta_90_s_sqrtW"],
+    plen=config_dict["p90_us"],
     repetition_us=config_dict["repetition_us"],
     tau_us=config_dict["tau_us"],
     SW_kHz=config_dict["SW_kHz"],
+    plen_as_beta=False,
     ret_data=None,
 )
 # }}}
