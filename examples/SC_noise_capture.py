@@ -10,7 +10,9 @@ assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
 nScans = 100
 # {{{ add file saving parameers to config dict
-config_dict["chemical"] = config_dict["chemical"] + "_" + str(config_dict["SW_kHz"]) + "kHz"
+config_dict["chemical"] = (
+    config_dict["chemical"] + "_" + str(config_dict["SW_kHz"]) + "kHz"
+)
 config_dict["type"] = "noise"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["noise_counter"] += 1
