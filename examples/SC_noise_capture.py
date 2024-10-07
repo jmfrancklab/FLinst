@@ -6,21 +6,14 @@ from datetime import datetime
 
 # {{{ experimental parameters that should be checked
 description = "terminated_RX"
-SW_kHz = 75000 
+SW_kHz = 75000
 carrierFreq_MHz = 20
 adcOffset = 38
 nScans = 100
 # }}}
 # {{{ set filename
 date = datetime.now().strftime("%y%m%d")
-output_name = (
-    date
-    + "_"
-    + description
-    + "_"
-    + str(SW_kHz)
-    + "kHz"
-)
+output_name = date + "_" + description + "_" + str(SW_kHz) + "kHz"
 # }}}
 # {{{ SpinCore settings - these don't change
 tx_phases = r_[0.0, 90.0, 180.0, 270.0]
@@ -58,18 +51,14 @@ for x in range(nScans):
     sc.runBoard()
     # {{{grab data for the single capture as a complex value
     raw_data = (
-        sc.getData(data_length, nPoints, 1, 1)
-        .astype(float)
-        .view(complex)
+        sc.getData(data_length, nPoints, 1, 1).astype(float).view(complex)
     )
     # }}}
     # {{{ if this is the first scan, then allocate an array
     #     to drop the data into, and assign the axis
     #     coordinates, etc.
     if x == 0:
-        time_axis = np.linspace(
-            0.0, acq_time * 1e-3, raw_data.size
-        )
+        time_axis = np.linspace(0.0, acq_time * 1e-3, raw_data.size)
         data = (
             ps.ndshape(
                 [raw_data.size, nScans],
@@ -82,15 +71,11 @@ for x in range(nScans):
             .name("signal")
         )
     # }}}
-    data[
-        "nScans", x
-    ] = raw_data  # drop the data into appropriate index
+    data["nScans", x] = raw_data  # drop the data into appropriate index
     sc.stopBoard()
 # }}}
 data.set_prop("postproc_type", "spincore_general")
 data.hdf5_write(
     output_name + ".h5",
-    directory=ps.getDATADIR(
-        exp_type="ODNP_NMR_comp/noise_tests"
-    ),
+    directory=ps.getDATADIR(exp_type="ODNP_NMR_comp/noise_tests"),
 )  # save data as h5 file
