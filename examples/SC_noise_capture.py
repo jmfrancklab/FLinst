@@ -8,13 +8,9 @@ from datetime import datetime
 my_exp_type = "ODNP_NMR_comp/noise_tests"
 assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
-# {{{ experimental parameters that should be checked
-description = "terminated_RX"
 nScans = 100
-# }}}
 # {{{ add file saving parameers to config dict
-SW_kHz = config_dict["SW_kHz"] * 1e3
-config_dict["chemical"] = description + "_" + str(SW_kHz) + "kHz"
+config_dict["chemical"] = config_dict["chemical"] + "_" + str(config_dict["SW_kHz"]) + "kHz"
 config_dict["type"] = "noise"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["noise_counter"] += 1
@@ -44,7 +40,7 @@ for x in range(nScans):
         nPoints,
     )
     acq_time = sc.configureRX(
-        SW_kHz,
+        config_dict["SW_kHz"],
         nPoints,
         RX_nScans,
         1,  # assume nEchoes = 1
