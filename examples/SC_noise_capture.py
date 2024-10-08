@@ -18,17 +18,19 @@ from datetime import datetime
 # {{{ Function for data acquisition
 def collect(config_dict, my_exp_type):
     """
-    Collects a number of captures (specified by the config file) of the noise
-    as acquired on the SpinCore. Each capture is stored along the "nScans"
-    dimension with a direct "t" axis.
+    Collects `nScans` identical captures (specified by the config file) of the noise
+    as acquired on the SpinCore.
+    The resulting data has a direct dimension called `t` and the
+    acquisitions are repeated along the `nScans` dimension.
     :Note: Some delays (e.g. the repetition
-    and tau are hard set to short values and are not pulled or stored in the
+    and time between phase reset and acquisition
+    are hard set to short values and are not pulled or stored in the
     config file).
 
     Parameters
     ==========
     config_dict: dict-like
-        Contains the following keys.
+        Contains the following keys:
 
         :SW_kHz: float
         :nScans: int
@@ -63,7 +65,7 @@ def collect(config_dict, my_exp_type):
     nScans_length = len(config_dict["nScans"])
     start = timer()
     # {{{ Acquire data
-    for x in range(1, nScans_length + 1):
+    for j in range(1, nScans_length + 1):
         # {{{ configure SpinCore
         sc.configureTX(
             config_dict["adc_offset"],
@@ -86,8 +88,10 @@ def collect(config_dict, my_exp_type):
             [
                 ("marker", "start", 1),
                 ("phase_reset", 1),
+                # TODO ☐: is this 0.5 ms? if so, say it in the comment
                 ("delay", 0.5e3),  # pick short delay for tau
                 ("acquire", acq_time),
+                # TODO ☐: it's not clear what the units are on the following.  I'm assuming this is 10 ms, but I'm not sure?
                 ("delay", 1e4),  # short rep delay
                 ("jumpto", "start"),
             ]
@@ -103,7 +107,7 @@ def collect(config_dict, my_exp_type):
         # {{{ if this is the first scan, then allocate an array
         #     to drop the data into, and assign the axis
         #     coordinates, etc.
-        if x == 1:
+        if j == 1:
             time_axis = np.linspace(0.0, acq_time * 1e-3, raw_data.size)
             data = (
                 ps.ndshape(
@@ -117,12 +121,15 @@ def collect(config_dict, my_exp_type):
                 .name("signal")
             )
         # }}}
-        data["nScans", x] = raw_data  # drop the data into appropriate index
+        data["nScans", j] = raw_data  # drop the data into appropriate index
         sc.stopBoard()
     # }}}
     data.set_prop("postproc_type", "spincore_general")
     data.set_prop("coherence_pathway", None)
     data.set_prop("acq_params", config_dict.as_dict())
+    # TODO ☐: as with the ppgs, you should pass the nddata object out of the function, not write the file.
+    # This will also modify what the arguments of the function are.
+    # As to the timing stuff -- why not just write that as a property of your data?
     config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
     return start
 
