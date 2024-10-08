@@ -1,14 +1,14 @@
 import pyspecdata as ps
 import numpy as np
 import os
-from numpy import r_, linspace
+from numpy import r_
 from timeit import default_timer as timer
 import SpinCore_pp as sc
 from datetime import datetime
 
 
 # {{{ Function for data acquisition
-def collect(config_dict, my_exp_type, captures):
+def collect(config_dict, my_exp_type):
     # {{{ SpinCore settings - these don't change
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     (
@@ -22,10 +22,10 @@ def collect(config_dict, my_exp_type, captures):
     data_length = 2 * nPoints * 1 * 1  # assume nEchoes and nPhaseSteps = 1
     RX_nScans = 1
     # }}}
-    capture_length = len(captures)
+    nScans_length = len(config_dict["nScans"])
     start = timer()
     # {{{ Acquire data
-    for x in range(1, capture_length + 1):
+    for x in range(1, nScans_length + 1):
         # {{{ configure SpinCore
         sc.configureTX(
             config_dict["adc_offset"],
@@ -69,13 +69,13 @@ def collect(config_dict, my_exp_type, captures):
             time_axis = np.linspace(0.0, acq_time * 1e-3, raw_data.size)
             data = (
                 ps.ndshape(
-                    [raw_data.size, capture_length],
+                    [raw_data.size, nScans_length],
                     ["t", "nScans"],
                 )
                 .alloc(dtype=np.complex128)
                 .setaxis("t", time_axis)
                 .set_units("t", "s")
-                .setaxis("nScans", r_[1 : capture_length + 1])
+                .setaxis("nScans", r_[1 : nScans_length + 1])
                 .name("signal")
             )
         # }}}
@@ -94,7 +94,6 @@ def collect(config_dict, my_exp_type, captures):
 my_exp_type = "ODNP_NMR_comp/noise_tests"
 assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
-captures = linspace(1, 100, 100)
 # {{{ add file saving parameters to config dict
 config_dict["chemical"] = (
     config_dict["chemical"] + "_" + str(config_dict["SW_kHz"]) + "kHz"
@@ -105,7 +104,7 @@ config_dict["noise_counter"] += 1
 # }}}
 # }}}
 print("Starting collection...")
-start = collect(config_dict, my_exp_type, captures)
+start = collect(config_dict, my_exp_type)
 end = timer()
 print("Collection time:", (end - start), "s")
 config_dict.write()
