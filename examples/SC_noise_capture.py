@@ -16,10 +16,10 @@ from datetime import datetime
 
 
 # {{{ Function for data acquisition
-def collect(config_dict, my_exp_type):
+def collect(config_dict):
     """
-    Collects `nScans` identical captures (specified by the config file) of the noise
-    as acquired on the SpinCore.
+    Collects `nScans` identical captures (specified by the config file) of the
+    noise as acquired on the SpinCore.
     The resulting data has a direct dimension called `t` and the
     acquisitions are repeated along the `nScans` dimension.
     :Note: Some delays (e.g. the repetition
@@ -41,13 +41,13 @@ def collect(config_dict, my_exp_type):
         :chemical: str
         :type: str
         :noise_counter: int
-    my_exp_type: str
-        Location for the data to be stored as h5 file.
 
     Returns
     =======
     start: float
         Start time of acquisition for calculation of total acquisition time.
+    data: nddata
+        nddata containing captures of noise as acquired on the SpinCore.
     """
     # {{{ SpinCore settings - these don't change
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
@@ -63,7 +63,6 @@ def collect(config_dict, my_exp_type):
     RX_nScans = 1
     # }}}
     nScans_length = len(config_dict["nScans"])
-    start = timer()
     # {{{ Acquire data
     for j in range(1, nScans_length + 1):
         # {{{ configure SpinCore
@@ -88,11 +87,9 @@ def collect(config_dict, my_exp_type):
             [
                 ("marker", "start", 1),
                 ("phase_reset", 1),
-                # TODO ☐: is this 0.5 ms? if so, say it in the comment
-                ("delay", 0.5e3),  # pick short delay for tau
+                ("delay", 0.5e3),  # pick short delay for tau_us (0.5 ms)
                 ("acquire", acq_time),
-                # TODO ☐: it's not clear what the units are on the following.  I'm assuming this is 10 ms, but I'm not sure?
-                ("delay", 1e4),  # short rep delay
+                ("delay", 1e4),  # short rep_delay_us (10 ms)
                 ("jumpto", "start"),
             ]
         )
@@ -127,11 +124,7 @@ def collect(config_dict, my_exp_type):
     data.set_prop("postproc_type", "spincore_general")
     data.set_prop("coherence_pathway", None)
     data.set_prop("acq_params", config_dict.as_dict())
-    # TODO ☐: as with the ppgs, you should pass the nddata object out of the function, not write the file.
-    # This will also modify what the arguments of the function are.
-    # As to the timing stuff -- why not just write that as a property of your data?
-    config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
-    return start
+    return data
 
 
 # }}}
@@ -149,7 +142,10 @@ config_dict["noise_counter"] += 1
 # }}}
 # }}}
 print("Starting collection...")
-start = collect(config_dict, my_exp_type)
+start = timer()
+data = collect(config_dict, my_exp_type)
 end = timer()
+data.set_prop("exp_times", (start, end))
 print("Collection time:", (end - start), "s")
+config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
 config_dict.write()
