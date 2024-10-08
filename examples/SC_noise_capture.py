@@ -73,7 +73,7 @@ def collect(config_dict):
             config_dict["amplitude"],
             nPoints,
         )
-        acq_time = sc.configureRX(
+        acq_time_ms = sc.configureRX(
             config_dict["SW_kHz"],
             nPoints,
             RX_nScans,
@@ -88,7 +88,7 @@ def collect(config_dict):
                 ("marker", "start", 1),
                 ("phase_reset", 1),
                 ("delay", 0.5e3),  # pick short delay (0.5 ms)
-                ("acquire", acq_time),
+                ("acquire", acq_time_ms),
                 ("delay", 1e4),  # short rep_delay_us (10 ms)
                 ("jumpto", "start"),
             ]
@@ -105,7 +105,7 @@ def collect(config_dict):
         #     to drop the data into, and assign the axis
         #     coordinates, etc.
         if j == 1:
-            time_axis = np.linspace(0.0, acq_time * 1e-3, raw_data.size)
+            time_axis = np.linspace(0.0, acq_time_ms * 1e-3, raw_data.size)
             data = (
                 ps.ndshape(
                     [raw_data.size, nScans_length],
