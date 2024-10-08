@@ -87,7 +87,7 @@ def collect(config_dict):
             [
                 ("marker", "start", 1),
                 ("phase_reset", 1),
-                ("delay", 0.5e3),  # pick short delay for tau_us (0.5 ms)
+                ("delay", 0.5e3),  # pick short delay (0.5 ms)
                 ("acquire", acq_time),
                 ("delay", 1e4),  # short rep_delay_us (10 ms)
                 ("jumpto", "start"),
