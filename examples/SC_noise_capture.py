@@ -1,3 +1,11 @@
+"""
+SpinCore Noise Acquisition
+==========================
+
+This script acquires a set number of captures of the noise
+as seen by the SpinCore. Remember to add a terminated attenuator 
+to the output of the SpinCore prior to measurement!
+"""
 import pyspecdata as ps
 import numpy as np
 import os
@@ -9,6 +17,36 @@ from datetime import datetime
 
 # {{{ Function for data acquisition
 def collect(config_dict, my_exp_type):
+    """
+    Collects a number of captures (specified by the config file) of the noise
+    as acquired on the SpinCore. Each capture is stored along the "nScans"
+    dimension with a direct "t" axis.
+    :Note: Some delays (e.g. the repetition
+    and tau are hard set to short values and are not pulled or stored in the
+    config file).
+
+    Parameters
+    ==========
+    config_dict: dict-like
+        Contains the following keys.
+
+        :SW_kHz: float
+        :nScans: int
+        :adc_offset: float
+        :amplitude: float
+        :carrier frequency: float
+        :acq_time_ms: float
+        :chemical: str
+        :type: str
+        :noise_counter: int
+    my_exp_type: str
+        Location for the data to be stored as h5 file.
+
+    Returns
+    =======
+    start: float
+        Start time of acquisition for calculation of total acquisition time.
+    """
     # {{{ SpinCore settings - these don't change
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     (
