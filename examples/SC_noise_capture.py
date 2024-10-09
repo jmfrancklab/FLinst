@@ -121,9 +121,6 @@ def collect(config_dict):
         data["nScans", j] = raw_data  # drop the data into appropriate index
         sc.stopBoard()
     # }}}
-    data.set_prop("postproc_type", "spincore_general")
-    data.set_prop("coherence_pathway", None)
-    data.set_prop("acq_params", config_dict.as_dict())
     return data
 
 
@@ -145,7 +142,10 @@ print("Starting collection...")
 start = timer()
 data = collect(config_dict, my_exp_type)
 end = timer()
-data.set_prop("exp_times", (start, end))
 print("Collection time:", (end - start), "s")
+data.set_prop("exp_times", (start, end))
+data.set_prop("postproc_type", "spincore_general")
+data.set_prop("coherence_pathway", None)
+data.set_prop("acq_params", config_dict.as_dict())
 config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
 config_dict.write()
