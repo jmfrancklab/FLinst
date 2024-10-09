@@ -13,7 +13,9 @@ from numpy import r_
 from timeit import default_timer as timer
 import SpinCore_pp as sc
 from datetime import datetime
+import time
 
+my_exp_type = "ODNP_NMR_comp/noise_tests"
 
 # {{{ Function for data acquisition
 def collect(config_dict):
@@ -44,8 +46,6 @@ def collect(config_dict):
 
     Returns
     =======
-    start: float
-        Start time of acquisition for calculation of total acquisition time.
     data: nddata
         nddata containing captures of noise as acquired on the SpinCore.
     """
@@ -59,12 +59,10 @@ def collect(config_dict):
         SW_kHz=config_dict["SW_kHz"],
         time_per_segment_ms=config_dict["acq_time_ms"],
     )
-    data_length = 2 * nPoints * 1 * 1  # assume nEchoes and nPhaseSteps = 1
     RX_nScans = 1
     # }}}
-    nScans_length = len(config_dict["nScans"])
     # {{{ Acquire data
-    for j in range(1, nScans_length + 1):
+    for j in range(config_dict["nScans"]):
         # {{{ configure SpinCore
         sc.configureTX(
             config_dict["adc_offset"],
@@ -96,15 +94,10 @@ def collect(config_dict):
         # }}}
         sc.stop_ppg()
         sc.runBoard()
-        # {{{grab data for the single capture as a complex value
-        raw_data = (
-            sc.getData(data_length, nPoints, 1, 1).astype(float).view(complex)
-        )  # assume nEchoes and nPhaseSteps = 1
-        # }}}
         # {{{ if this is the first scan, then allocate an array
         #     to drop the data into, and assign the axis
         #     coordinates, etc.
-        if j == 1:
+        if j == 0:
             time_axis = np.linspace(0.0, acq_time_ms * 1e-3, raw_data.size)
             data = (
                 ps.ndshape(
@@ -114,11 +107,16 @@ def collect(config_dict):
                 .alloc(dtype=np.complex128)
                 .setaxis("t", time_axis)
                 .set_units("t", "s")
-                .setaxis("nScans", r_[1 : nScans_length + 1])
+                .setaxis("nScans", zeros(nScans))
                 .name("signal")
             )
         # }}}
-        data["nScans", j] = raw_data  # drop the data into appropriate index
+        # {{{grab data for the single capture as a complex value
+        data["nScans", j] = (
+            sc.getData(2 * nPoints, nPoints, 1, 1).astype(float).view(complex)
+        )  # assume nEchoes and nPhaseSteps = 1
+        data["nScans"][j] = time.time()
+        # }}}
         sc.stopBoard()
     # }}}
     return data
@@ -126,7 +124,6 @@ def collect(config_dict):
 
 # }}}
 # {{{ set up config file and define exp_type
-my_exp_type = "ODNP_NMR_comp/noise_tests"
 assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
@@ -139,13 +136,9 @@ config_dict["noise_counter"] += 1
 # }}}
 # }}}
 print("Starting collection...")
-start = timer()
 data = collect(config_dict, my_exp_type)
-end = timer()
-print("Collection time:", (end - start), "s")
-data.set_prop("exp_times", (start, end))
+print("Collection time:", np.diff(data["nScans"][r_[0, -1]]), "s")
 data.set_prop("postproc_type", "spincore_general")
-data.set_prop("coherence_pathway", None)
 data.set_prop("acq_params", config_dict.as_dict())
 config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
 config_dict.write()
