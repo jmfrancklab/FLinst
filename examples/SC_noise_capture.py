@@ -143,5 +143,9 @@ data = collect(config_dict)
 print("Collection time:", np.diff(data["nScans"][r_[0, -1]]), "s")
 data.set_prop("postproc_type", "spincore_general")
 data.set_prop("acq_params", config_dict.asdict())
+data.set_units("t","s")
 config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
+config_dict["chemical"] = (
+    config_dict["chemical"]
+)
 config_dict.write()
