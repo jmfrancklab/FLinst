@@ -94,6 +94,12 @@ def collect(config_dict):
         # }}}
         sc.stop_ppg()
         sc.runBoard()
+        # {{{grab data for the single capture as a complex value
+        #    - raw data variable needed here to dictate size of time axis
+        raw_data = (
+            sc.getData((2 * nPoints * 1 * 1), nPoints, 1, 1).astype(float).view(complex)
+        )  # assume nEchoes and nPhaseSteps = 1
+        # }}}
         # {{{ if this is the first scan, then allocate an array
         #     to drop the data into, and assign the axis
         #     coordinates, etc.
@@ -101,20 +107,17 @@ def collect(config_dict):
             time_axis = np.linspace(0.0, acq_time_ms * 1e-3, raw_data.size)
             data = (
                 ps.ndshape(
-                    [raw_data.size, nScans_length],
+                    [raw_data.size, config_dict["nScans"]],
                     ["t", "nScans"],
                 )
                 .alloc(dtype=np.complex128)
                 .setaxis("t", time_axis)
                 .set_units("t", "s")
-                .setaxis("nScans", zeros(nScans))
+                .setaxis("nScans", np.zeros(config_dict["nScans"]))
                 .name("signal")
             )
         # }}}
-        # {{{grab data for the single capture as a complex value
-        data["nScans", j] = (
-            sc.getData(2 * nPoints, nPoints, 1, 1).astype(float).view(complex)
-        )  # assume nEchoes and nPhaseSteps = 1
+        data["nScans", j] = (raw_data)
         data["nScans"][j] = time.time()
         # }}}
         sc.stopBoard()
@@ -128,7 +131,7 @@ assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
 config_dict["chemical"] = (
-    config_dict["chemical"] + "_" + str(config_dict["SW_kHz"]) + "kHz"
+    config_dict["chemical"] + "_" + str(round(config_dict["SW_kHz"])) + "kHz"
 )
 config_dict["type"] = "noise"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
@@ -136,9 +139,9 @@ config_dict["noise_counter"] += 1
 # }}}
 # }}}
 print("Starting collection...")
-data = collect(config_dict, my_exp_type)
+data = collect(config_dict)
 print("Collection time:", np.diff(data["nScans"][r_[0, -1]]), "s")
 data.set_prop("postproc_type", "spincore_general")
-data.set_prop("acq_params", config_dict.as_dict())
+data.set_prop("acq_params", config_dict.asdict())
 config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
 config_dict.write()
