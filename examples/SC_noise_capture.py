@@ -10,12 +10,12 @@ import pyspecdata as ps
 import numpy as np
 import os
 from numpy import r_
-from timeit import default_timer as timer
 import SpinCore_pp as sc
 from datetime import datetime
 import time
 
 my_exp_type = "ODNP_NMR_comp/noise_tests"
+
 
 # {{{ Function for data acquisition
 def collect(config_dict):
@@ -97,7 +97,9 @@ def collect(config_dict):
         # {{{grab data for the single capture as a complex value
         #    - raw data variable needed here to dictate size of time axis
         raw_data = (
-            sc.getData((2 * nPoints * 1 * 1), nPoints, 1, 1).astype(float).view(complex)
+            sc.getData((2 * nPoints * 1 * 1), nPoints, 1, 1)
+            .astype(float)
+            .view(complex)
         )  # assume nEchoes and nPhaseSteps = 1
         # }}}
         # {{{ if this is the first scan, then allocate an array
@@ -117,7 +119,7 @@ def collect(config_dict):
                 .name("signal")
             )
         # }}}
-        data["nScans", j] = (raw_data)
+        data["nScans", j] = raw_data
         data["nScans"][j] = time.time()
         # }}}
         sc.stopBoard()
@@ -130,7 +132,7 @@ def collect(config_dict):
 assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
-config_dict["type"] = ("noise" + "_" + str(round(config_dict["SW_kHz"])) + "kHz")
+config_dict["type"] = "noise" + "_" + str(round(config_dict["SW_kHz"])) + "kHz"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["noise_counter"] += 1
 # }}}
@@ -140,6 +142,6 @@ data = collect(config_dict)
 print("Collection time:", np.diff(data["nScans"][r_[0, -1]]), "s")
 data.set_prop("postproc_type", "spincore_general")
 data.set_prop("acq_params", config_dict.asdict())
-data.set_units("t","s")
+data.set_units("t", "s")
 config_dict = sc.save_data(data, my_exp_type, config_dict, "noise")
 config_dict.write()
