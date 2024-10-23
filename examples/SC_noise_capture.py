@@ -125,6 +125,7 @@ def collect(config_dict):
         sc.stopBoard()
     # }}}
     return data
+print("run")
 
 
 # }}}
