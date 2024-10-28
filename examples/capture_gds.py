@@ -21,12 +21,20 @@ generated plot.
 from Instruments import GDS_scope
 from pyspecdata import figlist_var
 from pylab import text, gca
-import numpy as np
 
 calibrating_atten = True
-expected_Vamp = float(input("What is the expected peak voltage (in units of V)?"))
+expected_Vamp = float(
+    input("What is the expected peak voltage (in units of V)?")
+)
+assert expected_Vamp < 500e-3, (
+    "That's way too high of a peak voltage! You either need an attenuator or"
+    " you didn't put the input in units of V"
+)
 if calibrating_atten:
-    print("Make sure the input_Vamp here is accurate so I can calculate the right voltage ratio!")
+    print(
+        "Make sure the input_Vamp here is accurate so I can calculate the"
+        " right voltage ratio!"
+    )
     input_Vamp = 500e-3  # this should be calculated prior to calibrating
     #                      the attenuator assemblies
 else:
@@ -94,7 +102,10 @@ with figlist_var() as fl:
         text(
             0.5,
             0.02,
-            s=r"$V_{amp}$ = %0.6f mV, voltage ratio $\frac{V_{input}}{V_{atten}}$ = %0.8g"
+            s=(
+                r"$V_{amp}$ = %0.6f mV, voltage ratio"
+                r" $\frac{V_{input}}{V_{atten}}$ = %0.8g"
+            )
             % (Vamp / 1e-3, input_Vamp / Vamp),
             transform=gca().transAxes,
         )
