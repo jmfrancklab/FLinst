@@ -76,8 +76,9 @@ with figlist_var() as fl:
     # }}}
     fl.plot(data, label="filtered analytic signal")
     fl.plot(abs(data), label="abs(filtered analytic signal)")
-    # TODO ☐: why is there a time slice?
-    Vamp = abs(data["t":(1e-6, 4e-6)]).mean("t").real.item()
+    # don't include first us since on occasion there is a spike
+    # that doesn't fall in line with the rest of the signal 
+    Vamp = abs(data["t":(1e-6, None)]).mean("t").real.item()
     text(
         0.5,
         0.75,
