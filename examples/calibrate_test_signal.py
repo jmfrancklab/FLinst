@@ -48,10 +48,6 @@ with GDS_scope() as g:
     g.reset()
     # {{{ display settings - use channel 2
     g.CH2.disp = True
-    # g.write(":CHAN1:DISP OFF")
-    # g.write(":CHAN2:DISP ON")
-    # g.write(":CHAN3:DISP OFF")
-    # g.write(":CHAN4:DISP OFF")
     # }}}
     # {{{ voltage scale and acquisition settings
     g.CH2.voltscal = (
