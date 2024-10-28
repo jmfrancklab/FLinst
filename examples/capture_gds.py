@@ -23,11 +23,10 @@ from pyspecdata import figlist_var
 from pylab import text, gca
 import numpy as np
 
-calibrating_atten = False
-expected_Vamp = input("What is the expected peak voltage (in units of V)?"
+calibrating_atten = True
+expected_Vamp = float(input("What is the expected peak voltage (in units of V)?"))
 if calibrating_atten:
-    print("Make sure the input_Vamp here is accurate so I can calculate the
-    right voltage ratio!")
+    print("Make sure the input_Vamp here is accurate so I can calculate the right voltage ratio!")
     input_Vamp = 500e-3  # this should be calculated prior to calibrating
     #                      the attenuator assemblies
 else:
@@ -43,6 +42,8 @@ with GDS_scope() as g:
     # g.write(":CHAN4:DISP OFF")
     # }}}
     # {{{ voltage scale and acquisition settings
+    print(expected_Vamp)
+    print(type(expected_Vamp))
     g.CH2.voltscal = (
         expected_Vamp * 1.1 / 4
     )  # set to a little more than $\frac{V_{amp}}{4}$
@@ -89,12 +90,11 @@ with figlist_var() as fl:
     fl.plot(data, label="filtered analytic signal")
     fl.plot(abs(data), label="abs(filtered analytic signal)")
     Vamp = abs(data["t":(1e-6, 4e-6)]).mean("t").real.item()
-    if calib_atten:
+    if calibrating_atten:
         text(
             0.5,
             0.02,
-            s=r"$V_{amp} = %0.6f$ mV, voltage ratio $\frac{V_{input}}{V_{amp\
-                    w\ atten}}$ = %0.8g"
+            s=r"$V_{amp}$ = %0.6f mV, voltage ratio $\frac{V_{input}}{V_{atten}}$ = %0.8g"
             % (Vamp / 1e-3, input_Vamp / Vamp),
             transform=gca().transAxes,
         )
