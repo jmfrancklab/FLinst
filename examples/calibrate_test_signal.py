@@ -54,8 +54,6 @@ with GDS_scope() as g:
     # g.write(":CHAN4:DISP OFF")
     # }}}
     # {{{ voltage scale and acquisition settings
-    print(expected_Vamp)
-    print(type(expected_Vamp))
     g.CH2.voltscal = (
         expected_Vamp * 1.1 / 4
     )  # set to a little more than $\frac{V_{amp}}{4}$
