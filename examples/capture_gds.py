@@ -49,6 +49,7 @@ with figlist_var() as fl:
         # {{{ grab waveform from oscilloscope
         g.write(":SING")  # capture single acquisition
         data = g.waveform(ch=2)
+        data.set_units("t", "s")
         # }}}
     fl.next("data")
     fl.plot(data, label="original signal")
@@ -75,7 +76,7 @@ with figlist_var() as fl:
     fl.plot(data, label="filtered analytic signal")
     fl.plot(abs(data), label="abs(filtered analytic signal)")
     # don't include first us since on occasion there is a spike
-    # that doesn't fall in line with the rest of the signal 
+    # that doesn't fall in line with the rest of the signal
     Vamp = abs(data["t":(1e-6, None)]).mean("t").real.item()
     text(
         0.5,
