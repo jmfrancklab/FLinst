@@ -37,6 +37,10 @@ if calibrating_atten:
     )
     input_Vamp = 500e-3  # this should be calculated prior to calibrating
     #                      the attenuator assemblies
+    assert input_Vamp < 505e-3, (
+        "That's way too high of an input peak voltage! Make sure it's in units"
+        " of V and not mV!"
+    )
 else:
     input_Vamp = expected_Vamp
 filter_width = 10e6  # 10 MHz filter about the average frequency
