@@ -85,3 +85,4 @@ with figlist_var() as fl:
         s=r"$V_{amp} = %#0.7g\;\mathrm{mV}$" % (Vamp / 1e-3),
         transform=gca().transAxes,
     )
+    # TODO ☐: I've reviewed -- please actually check that this works
