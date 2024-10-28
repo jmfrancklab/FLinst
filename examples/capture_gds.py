@@ -49,7 +49,8 @@ with figlist_var() as fl:
         # {{{ grab waveform from oscilloscope
         datalist = []
         g.write(":SING")  # capture single acquisition
-        data = g.waveform(ch=2)
+        datalist.append(g.waveform(ch=2))
+        data = concat(datalist,'ch').reorder("t")
         data.set_units("t", "s")
         # }}}
     fl.next("data")
@@ -70,7 +71,7 @@ with figlist_var() as fl:
     frq = data.C.phdiff("t", return_error=False).mean("t")
     # {{{ now, filter the signal
     data.ft("t")
-    data["t" : (0, frq - 5e6)] = 0
+    data["t" : (None, frq - 5e6)] = 0
     data["t" : (frq + 5e6, None)] = 0
     data.ift("t")
     # }}}
