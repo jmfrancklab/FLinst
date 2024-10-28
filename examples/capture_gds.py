@@ -64,7 +64,7 @@ with figlist_var() as fl:
     for y in mycursors:
         axhline(y=y, color="k", alpha=0.5)
     # }}}
-    fl.plot(data, label="analytic signal")
+    fl.plot(abs(data), label="abs(analytic signal)")
     # calculate average frequency of signal
     frq = data.C.phdiff("t", return_error=False).mean("t").item()
     # {{{ now, filter the signal
@@ -75,7 +75,7 @@ with figlist_var() as fl:
     # }}}
     fl.plot(data, label="filtered analytic signal")
     fl.plot(abs(data), label="abs(filtered analytic signal)")
-    # don't include first us since on occasion there is a spike
+    # don't include first μs since on occasion there is a spike
     # that doesn't fall in line with the rest of the signal
     Vamp = abs(data["t":(1e-6, None)]).mean("t").real.item()
     text(
