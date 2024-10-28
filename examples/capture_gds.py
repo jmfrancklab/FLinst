@@ -47,11 +47,8 @@ with figlist_var() as fl:
         g.write(":CURS:V2P " + ("%0.2e" % mycursors[1]).replace("e", "E"))
         # }}}
         # {{{ grab waveform from oscilloscope
-        datalist = []
         g.write(":SING")  # capture single acquisition
-        datalist.append(g.waveform(ch=2))
-        data = concat(datalist,'ch').reorder("t")
-        data.set_units("t", "s")
+        data = g.waveform(ch=2)
         # }}}
     fl.next("data")
     fl.plot(data, label="original signal")
@@ -66,12 +63,12 @@ with figlist_var() as fl:
     for y in mycursors:
         axhline(y=y, color="k", alpha=0.5)
     # }}}
-    fl.plot(abs(data), label="analytic signal")
+    fl.plot(data, label="analytic signal")
     # calculate average frequency of signal
-    frq = data.C.phdiff("t", return_error=False).mean("t")
+    frq = data.C.phdiff("t", return_error=False).mean("t").item()
     # {{{ now, filter the signal
     data.ft("t")
-    data["t" : (None, frq - 5e6)] = 0
+    data["t" : (0, frq - 5e6)] = 0
     data["t" : (frq + 5e6, None)] = 0
     data.ift("t")
     # }}}
@@ -82,7 +79,7 @@ with figlist_var() as fl:
     Vamp = abs(data["t":(1e-6, None)]).mean("t").real.item()
     text(
         0.5,
-        0.75,
+        0.9,
         s=r"$V_{amp} = %#0.7g\;\mathrm{mV}$" % (Vamp / 1e-3),
         transform=gca().transAxes,
     )
