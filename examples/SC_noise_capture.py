@@ -116,7 +116,7 @@ def collect(config_dict):
                 .setaxis("t", time_axis)
                 .set_units("t", "s")
                 .setaxis("nScans", np.zeros(config_dict["nScans"]))
-                .name("noise")
+                .name("noise_capture")
             )
         # }}}
         data["nScans", j] = raw_data
