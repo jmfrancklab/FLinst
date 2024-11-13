@@ -95,7 +95,6 @@ def collect(date, id_string, captures):
     print("units should be", s.get_units("t"))
     print("shape of data", s.shape)
     return start
-ignore
 
 
 date = datetime.now().strftime("%y%m%d")
