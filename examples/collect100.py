@@ -57,9 +57,9 @@ def collect(date, id_string, captures):
             print("GOT WAVEFORM")
             data = psd.concat([ch2_waveform], "ch").reorder("t")
             if x == 1:
-                channels = (
-                    (data.shape) + ("capture", capture_length)
-                ).alloc(dtype=np.float64)
+                channels = ((data.shape) + ("capture", capture_length)).alloc(
+                    dtype=np.float64
+                )
                 channels.setaxis("t", data.getaxis("t")).set_units("t", "s")
                 channels.setaxis("ch", data.getaxis("ch"))
             channels["capture", x - 1] = data
@@ -72,11 +72,20 @@ def collect(date, id_string, captures):
                     j += 1
                     if j == len(datalist):
                         raise ValueError(
-                            "None of the time axes returned by the scope are finite, which probably means no traces are active??"
+                            "None of the time axes returned by the scope are"
+                            " finite, which probably means no traces are"
+                            " active??"
                         )
             # }}}
     s = channels
     s.labels("capture", captures)
+    # {{{ convert to analytic
+    s.ft("t", shift=True)
+    s = s["t":(0, None)]
+    s *= 2
+    s["t", 0] *= 0.5
+    s.ift("t")
+    # }}}
     s.name("accumulated_" + date)
     s.hdf5_write(
         date + "_" + id_string + ".h5",
