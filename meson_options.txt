@@ -1,0 +1,3 @@
+option('conda_headers', type: 'string', value: 'C:/ProgramData/Anaconda3/include', description: 'Path to Anaconda headers')
+option('conda_libs', type: 'string', value: 'C:/ProgramData/Anaconda3/libs', description: 'Path to Anaconda libraries')
+option('numpy', type: 'string', value: 'C:/ProgramData/Anaconda3/lib/site-packages/numpy/core/include', description: 'Path to NumPy headers')
