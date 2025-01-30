@@ -13,17 +13,12 @@ Takes one or two command line arguments:
         so the program can use that to determine. 
 2.      If supplied, this overrides the default effective γ value.
 """
-from Instruments import *
+from Instruments import GDS_scope
 from pyspecdata import *
 import time
-from serial.tools.list_ports import comports
-import serial
-from scipy import signal
 import SpinCore_pp
-from SpinCore_pp import process_args
 import sys
 import threading
-from pyspecdata import *
 import numpy as np
 
 parser_dict = SpinCore_pp.configuration("active.ini")
@@ -38,8 +33,6 @@ print("")
 input(
     "Please note I'm going to assume the control is hooked up to CH2 of the GDS and the reflection is hooked up to CH3 of the GDS... (press enter to continue)"
 )
-
-fl = figlist_var()
 
 print("These are the instruments available:")
 SerialInstrument(None)
@@ -67,21 +60,8 @@ def grab_waveforms(g):
     return d
 
 
-def waiting_func():
-    for j in range(3):
-        time.sleep(3)
-        print("counter number %d" % j)
-
-
-def other_func(carrier_frequency):
-    for j in range(3):
-        time.sleep(3)
-        print("second func: counter number %d" % j)
-
-
 def run_tune(carrier_frequency):
     SpinCore_pp.tune(carrier_frequency)
-
 
 with GDS_scope() as g:
     tune_thread = threading.Thread(target=run_tune, args=(carrier_frequency,))
@@ -112,6 +92,7 @@ with GDS_scope() as g:
     flat_slice = d[
         "t":(3.7e-6, 6.5e-6)
     ]  # will always be the same since the scope settings are the same
+
 with figlist_var() as fl:
     # d['ch',1] *= sqrt(2) # I'm only observing 1/2 of the power of the reflection (so 1/sqrt(2) of the voltage)
     d[
