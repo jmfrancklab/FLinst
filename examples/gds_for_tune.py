@@ -17,7 +17,6 @@ Takes one or two command line arguments:
 from Instruments import GDS_scope, SerialInstrument
 from pyspecdata import ndshape, concat, figlist_var
 import SpinCore_pp
-import threading
 import numpy as np
 import time
 
@@ -62,12 +61,9 @@ def grab_waveforms(g):
     return d
 
 
-def run_tune(carrier_frequency):
-    SpinCore_pp.tune(carrier_frequency)
 
 
 with GDS_scope() as g:
-    tune_thread = threading.Thread(target=run_tune, args=(carrier_frequency,))
     g.reset()
     g.CH2.disp = True
     g.CH3.disp = True
@@ -80,12 +76,10 @@ with GDS_scope() as g:
     g.timscal(500e-9, pos=2.325e-6)
     g.write(":CHAN2:IMP 5.0E+1")
     g.write(":CHAN3:IMP 5.0E+1")
-    time.sleep(2)
-    tune_thread.start()
     g.write(":TRIG:SOUR CH2")
     g.write(":TRIG:MOD NORMAL")
     g.write(":TRIG:HLEV 7.5E-2")
-    tune_thread.join()
+    SpinCore_pp.tune(carrier_frequency)
     d = grab_waveforms(g)
     SpinCore_pp.stopBoard()
     print("I just stopped the SpinCore")
