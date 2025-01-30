@@ -1,7 +1,16 @@
-project('FLinst', 'cpp', version: '0.1.0')
+project('FLinst', ['c', 'cpp'], version: '0.1.0')
 
 py = import('python').find_installation()
+fs = import('fs')
 swig = find_program('swig')
+
+spincore_swig = custom_target(
+    'SpinCore_pp_wrap',
+    output: 'SpinCore_pp_wrap.c',
+    input: 'SpinCore_pp/SpinCore_pp.i',
+    command: [swig, '-python', '-o', '@OUTPUT@', '@INPUT@'],
+    build_by_default: true
+)
 
 # Set environment variables correctly
 environment = environment()
@@ -31,13 +40,78 @@ inc_dirs = include_directories('.')
 # Define the SWIG-based extension for SpinCore_pp
 spincore_extension = py.extension_module(
     '_SpinCore_pp',
-    sources: ['SpinCore_pp/SpinCore_pp.i', 'SpinCore_pp/SpinCore_pp.c'],
+    sources: [spincore_swig, 'SpinCore_pp/SpinCore_pp.c'],
     include_directories: [get_option('conda_headers'), inc_dirs, get_option('numpy')],
-    override_options: ['cpp_std=c++11'],
     install: true,
-    dependencies: [declare_dependency(link_args: ['-L' + get_option('conda_libs')])]
+    dependencies: [declare_dependency(link_args: [
+        '-L' + get_option('conda_libs'),
+        '-L' + meson.project_source_root(),
+        '-lmrispinapi64',
+    ])]
 )
 
 # Install the pure Python packages
-py.install_sources('SpinCore_pp', subdir: 'FLinst/SpinCore_pp')
-py.install_sources('Instruments', subdir: 'FLinst/Instruments')
+py.install_sources(files([
+    'SpinCore_pp/calibrate_clock_offset.py',
+    'SpinCore_pp/run_FID_mw.py',
+    'SpinCore_pp/calc_vdlist.py',
+    'SpinCore_pp/field_control.py',
+    'SpinCore_pp/expt.py',
+    'SpinCore_pp/simple_fns.py',
+    'SpinCore_pp/thread_example.py',
+    'SpinCore_pp/see_powers.py',
+    'SpinCore_pp/spincore_capture.py',
+    'SpinCore_pp/proc_IR.py',
+    'SpinCore_pp/SpinCore_pp.py',
+    'SpinCore_pp/save_data.py',
+    'SpinCore_pp/bruker_sender.py',
+    'SpinCore_pp/mplwidget.py',
+    'SpinCore_pp/vary_amp_gds.py',
+    'SpinCore_pp/run_varSTE.py',
+    'SpinCore_pp/run_COSY.py',
+    'SpinCore_pp/__init__.py',
+    'SpinCore_pp/version.py',
+    'SpinCore_pp/echo_experiment_ui.py',
+    'SpinCore_pp/process_first_arg.py',
+    'SpinCore_pp/run_IR_STE.py',
+    'SpinCore_pp/verifyParams.py',
+    'SpinCore_pp/run_nutation_CPMG.py',
+    'SpinCore_pp/test_CPMG_params.py',
+    'SpinCore_pp/run_STE.py',
+    'SpinCore_pp/config_parser_fn.py',
+    'SpinCore_pp/GDS.py',
+    'SpinCore_pp/run_STE_mw.py',
+    'SpinCore_pp/power_helper.py',
+    'SpinCore_pp/ppg/echo.py',
+    'SpinCore_pp/ppg/__init__.py',
+    'SpinCore_pp/ppg/run_IR.py',
+    'SpinCore_pp/ppg/generic.py',
+    'SpinCore_pp/ppg/IR.py',
+    'SpinCore_pp/run_FID.py',
+    'SpinCore_pp/test_nutation.py',
+    'SpinCore_pp/pulse_length_conv.py',
+]), subdir: 'SpinCore_pp')
+py.install_sources(files([
+    'Instruments/XEPR_eth.py',
+    'Instruments/afg.py',
+    'Instruments/power_control_server.py',
+    'Instruments/gigatronics.py',
+    'Instruments/temp.py',
+    'Instruments/serial_instrument.py',
+    'Instruments/HP8672A.py',
+    'Instruments/gds.py',
+    'Instruments/logobj.py',
+    'Instruments/nmr_signal_gui.py',
+    'Instruments/__init__.py',
+    'Instruments/bridge12.py',
+    'Instruments/log_inst.py',
+    'Instruments/version.py',
+    'Instruments/cmd.py',
+    'Instruments/HP6623A.py',
+    'Instruments/gpib_eth.py',
+    'Instruments/power_control_server_dummy.py',
+    'Instruments/gpib_legacy.py',
+    'Instruments/power_control.py',
+    'Instruments/microwave_tuning_gui.py',
+    'Instruments/just_quit.py',
+]), subdir: 'Instruments')
