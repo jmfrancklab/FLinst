@@ -17,10 +17,10 @@ dependencies = [
 ]
 
 [project.scripts]
-calc_tempol_vd = "FLinst.SpinCore_pp.calc_vdlist:print_tempo_vdlist"
-power_control_server = "FLinst.Instruments.power_control_server:main"
-quit_power_control = "FLinst.Instruments.just_quit:main"
-FLInst = "FLinst.Instruments.cmd:cmd"
+calc_tempol_vd = "SpinCore_pp.calc_vdlist:print_tempo_vdlist"
+power_control_server = "Instruments.power_control_server:main"
+quit_power_control = "Instruments.just_quit:main"
+FLInst = "Instruments.cmd:cmd"
 
 [tool.mesonpy]
 setup-kwargs = { native_file = "cross_file.txt" }

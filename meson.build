@@ -92,6 +92,13 @@ py.install_sources(files([
     'SpinCore_pp/pulse_length_conv.py',
 ]), subdir: 'SpinCore_pp')
 py.install_sources(files([
+    'SpinCore_pp/ppg/echo.py',
+    'SpinCore_pp/ppg/__init__.py',
+    'SpinCore_pp/ppg/run_IR.py',
+    'SpinCore_pp/ppg/generic.py',
+    'SpinCore_pp/ppg/IR.py',
+]), subdir: 'SpinCore_pp/ppg')
+py.install_sources(files([
     'Instruments/XEPR_eth.py',
     'Instruments/afg.py',
     'Instruments/power_control_server.py',
