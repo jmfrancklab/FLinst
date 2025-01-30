@@ -65,7 +65,6 @@ def run_tune(carrier_frequency):
 
 with GDS_scope() as g:
     tune_thread = threading.Thread(target=run_tune, args=(carrier_frequency,))
-    tune_thread.start()
     g.reset()
     g.CH2.disp = True
     g.CH3.disp = True
@@ -81,8 +80,11 @@ with GDS_scope() as g:
     g.write(":TRIG:SOUR CH2")
     g.write(":TRIG:MOD NORMAL")
     g.write(":TRIG:HLEV 7.5E-2")
-    tune_thread.join()
+    tune_thread.start()
     d = grab_waveforms(g)
+    tune_thread.join()
+    SpinCore_pp.stopBoard()
+    print("I just stopped the SpinCore")
     d_orig = d.C
     d.ft("t", shift=True)
     d["t" : (carrier_frequency * 2.3e6, None)] = 0
