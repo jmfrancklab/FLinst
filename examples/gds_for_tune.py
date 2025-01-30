@@ -19,6 +19,7 @@ from pyspecdata import ndshape, concat, figlist_var
 import SpinCore_pp
 import threading
 import numpy as np
+import time
 
 parser_dict = SpinCore_pp.configuration("active.ini")
 carrier_frequency = parser_dict["carrierFreq_MHz"]
@@ -79,12 +80,13 @@ with GDS_scope() as g:
     g.timscal(500e-9, pos=2.325e-6)
     g.write(":CHAN2:IMP 5.0E+1")
     g.write(":CHAN3:IMP 5.0E+1")
+    time.sleep(2)
+    tune_thread.start()
     g.write(":TRIG:SOUR CH2")
     g.write(":TRIG:MOD NORMAL")
     g.write(":TRIG:HLEV 7.5E-2")
-    tune_thread.start()
-    d = grab_waveforms(g)
     tune_thread.join()
+    d = grab_waveforms(g)
     SpinCore_pp.stopBoard()
     print("I just stopped the SpinCore")
     d_orig = d.C
