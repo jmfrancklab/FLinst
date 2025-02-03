@@ -122,3 +122,17 @@ py.install_sources(files([
     'Instruments/microwave_tuning_gui.py',
     'Instruments/just_quit.py',
 ]), subdir: 'Instruments')
+
+foreach script : scripts
+    configure_file(
+        output: script[0],
+        input: 'entry_point_template.py',
+        configuration: {
+            'python_executable': py.path(),
+            'module': script[1],
+            'function': script[2],
+        },
+        install: true,
+        install_dir: get_option('bindir'),
+    )
+endforeach
