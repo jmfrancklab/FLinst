@@ -73,8 +73,8 @@ nPhaseSteps = len(ph2) * len(ph_diff)
 # {{{ calibrate pulse lengths
 # NOTE: This is done inside the run_spin_echo rather than in the example
 # but to keep the generic function more robust we do it outside of the ppg
-prog_p90_us = prog_plen(config_dict["beta_s_sqrtW"], config_dict)
-prog_p180_us = prog_plen(2 * config_dict["beta_s_sqrtW"], config_dict)
+prog_p90_us = prog_plen(config_dict["beta_90_s_sqrtW"], config_dict)
+prog_p180_us = prog_plen(2 * config_dict["beta_90_s_sqrtW"], config_dict)
 # }}}
 # Unlike CPMG, here, we are free to choose τ to be
 # whatever we want it to be.  Typically (when not
@@ -121,7 +121,6 @@ data = generic(
     nPoints=nPoints,
     time_per_segment_ms=config_dict["acq_time_ms"],
     SW_kHz=config_dict["SW_kHz"],
-    amplitude=config_dict["amplitude"],
     ret_data=None,
 )
 # }}}
