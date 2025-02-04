@@ -18,7 +18,6 @@ from Instruments import GDS_scope, SerialInstrument
 from pyspecdata import ndshape, concat, figlist_var
 import SpinCore_pp
 import numpy as np
-import time
 
 parser_dict = SpinCore_pp.configuration("active.ini")
 carrier_frequency = parser_dict["carrierFreq_MHz"]
@@ -59,9 +58,6 @@ def grab_waveforms(g):
     d = concat([ch1, ch2], "ch")
     d.reorder("ch")
     return d
-
-
-
 
 with GDS_scope() as g:
     g.reset()

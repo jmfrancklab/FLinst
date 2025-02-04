@@ -10,4 +10,7 @@ if should_compile_spincore():
     subprocess.run(["meson", "compile", "-C", "builddir"], check=True)
     subprocess.run(["meson", "install", "-C", "builddir"], check=True)
 else:
-    print("Skipping SpinCore_pp compilation due to missing environment variables.")
+    print(
+        "Skipping SpinCore_pp compilation "
+        + "due to missing environment variables."
+    )
