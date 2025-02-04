@@ -333,7 +333,7 @@ class TuningWindow(qt5w.QMainWindow):
             [self.slider_min, self.slider_max],
         ):
             self.on_textchange()
-            w.setValue(ini_val)
+            w.setValue(int(ini_val))
             w.setTracking(True)
             w.setTickPosition(qt5w.QSlider.TicksBothSides)
             w.valueChanged.connect(self.regen_plots)

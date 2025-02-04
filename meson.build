@@ -123,6 +123,11 @@ py.install_sources(files([
     'Instruments/just_quit.py',
 ]), subdir: 'Instruments')
 
+scripts = [['calc_tempol_vd', 'SpinCore_pp.calc_vdlist', 'print_tempo_vdlist'], 
+        ['power_control_server', 'Instruments.power_control_server', 'main'], 
+        ['quit_power_control', 'Instruments.just_quit', 'main'], 
+        ['FLInst', 'Instruments.cmd', 'cmd']]
+
 foreach script : scripts
     configure_file(
         output: script[0],
