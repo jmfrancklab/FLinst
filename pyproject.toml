@@ -1,3 +1,5 @@
+# run like this to install without building spincore:
+# pip install -e . --no-build-isolation --config-settings=setup-args="-Denable_spincore_pp=false"
 [build-system]
 requires = ["meson-python", "numpy", "setuptools", "swig"]
 build-backend = "mesonpy"

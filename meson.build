@@ -2,15 +2,19 @@ project('FLinst', ['c', 'cpp'], version: '0.1.0')
 
 py = import('python').find_installation()
 fs = import('fs')
-swig = find_program('swig')
+message('Enable SpinCore_pp set to: ' + get_option('enable_spincore_pp').to_string())
+if get_option('enable_spincore_pp')
+  message('SpinCore_pp build enabled!')
+  swig = find_program('swig')
 
-spincore_swig = custom_target(
-    'SpinCore_pp_wrap',
-    output: 'SpinCore_pp_wrap.c',
-    input: 'SpinCore_pp/SpinCore_pp.i',
-    command: [swig, '-python', '-o', '@OUTPUT@', '@INPUT@'],
-    build_by_default: true
-)
+  spincore_swig = custom_target(
+      'SpinCore_pp_wrap',
+      output: 'SpinCore_pp_wrap.c',
+      input: 'SpinCore_pp/SpinCore_pp.i',
+      command: [swig, '-python', '-o', '@OUTPUT@', '@INPUT@'],
+      build_by_default: true
+  )
+endif
 
 # Set environment variables correctly
 environment = environment()
@@ -38,17 +42,19 @@ env.set('CXXFLAGS', '-shared -DMS_WIN64')
 inc_dirs = include_directories('.')
 
 # Define the SWIG-based extension for SpinCore_pp
-spincore_extension = py.extension_module(
-    '_SpinCore_pp',
-    sources: [spincore_swig, 'SpinCore_pp/SpinCore_pp.c'],
-    include_directories: [get_option('conda_headers'), inc_dirs, get_option('numpy')],
-    install: true,
-    dependencies: [declare_dependency(link_args: [
-        '-L' + get_option('conda_libs'),
-        '-L' + meson.project_source_root(),
-        '-lmrispinapi64',
-    ])]
-)
+if get_option('enable_spincore_pp')
+  spincore_extension = py.extension_module(
+      '_SpinCore_pp',
+      sources: [spincore_swig, 'SpinCore_pp/SpinCore_pp.c'],
+      include_directories: [get_option('conda_headers'), inc_dirs, get_option('numpy')],
+      install: true,
+      dependencies: [declare_dependency(link_args: [
+          '-L' + get_option('conda_libs'),
+          '-L' + meson.project_source_root(),
+          '-lmrispinapi64',
+      ])]
+  )
+endif
 
 # Install the pure Python packages
 py.install_sources(files([
@@ -131,7 +137,7 @@ scripts = [['calc_tempol_vd', 'SpinCore_pp.calc_vdlist', 'print_tempo_vdlist'],
 foreach script : scripts
     configure_file(
         output: script[0],
-        input: 'entry_point_template.py',
+        input: 'entry_point.template',
         configuration: {
             'python_executable': py.path(),
             'module': script[1],
