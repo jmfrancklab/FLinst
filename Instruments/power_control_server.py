@@ -86,11 +86,11 @@ def main():
                             nsecs += time.time()
                             print("took", j, "tries and", nsecs, "seconds")
                         if args[0] == b"SET_FREQ":
-                            freq_setting = float(args[1])
                             last_power = b.power_float()
                             if last_power > 10:
                                 raise ValueError(
-                                    "to manually set the power, you must be at 10 dBm or less!"
+                                    "to manually set the power, you must be at"
+                                    " 10 dBm or less!"
                                 )
                             b.set_power(float(args[1]))
                         else:
@@ -119,7 +119,9 @@ def main():
                             this_logobj.currently_logging = True
                         elif args[0] == b"STOP_LOG":
                             this_logobj.currently_logging = False
-                            retval = pickle.dumps(this_logobj) + b"ENDTCPIPBLOCK"
+                            retval = (
+                                pickle.dumps(this_logobj) + b"ENDTCPIPBLOCK"
+                            )
                             conn.send(retval)
                             this_logobj.reset()
                         elif args[0] == b"MW_OFF":
