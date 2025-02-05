@@ -1,3 +1,12 @@
+"""
+Capture signal as a function of frequency on the GDS
+====================================================
+Signal is output at an array of frequencies (defined by the user) from a
+source. The resulting signal is then captured on the GDS, frequency filtered
+and stored as analytic signal. The nodename that contains the data corresponds
+to the output frequency in kHz.
+"""
+
 from Instruments import AFG, GDS_scope
 import numpy as np
 import pyspecdata as psd

@@ -1,3 +1,11 @@
+"""
+Capture signal as a function of frequency on the SpinCore
+=========================================================
+Signal is outpupt at an array of frequencies (defined by the user) from a
+source. The SpinCore then captures a user defined number of scans of the
+resulting signal. The nodename that contains the data corresponds to the output
+frequency in kHz.
+"""
 from Instruments import AFG
 from pyspecdata import r_, ndshape
 import time
