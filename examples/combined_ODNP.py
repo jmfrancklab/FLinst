@@ -325,7 +325,7 @@ with power_control() as p:
             "W)",
         )
         if j == 0:
-            # Again, not dip lock because we assume the microwave tuning
+            # Again, no dip lock because we assume the microwave tuning
             # GUI handled finding the cavity frequency.
             #
             # This is not only faster, but it ensures that the
