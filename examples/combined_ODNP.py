@@ -15,6 +15,7 @@ This needs to be run in sync with the power control server. To do so:
     progressive power saturation dataset, and a log of the power over time
     saved as nodes in an h5 file.
 """
+
 from numpy import r_, zeros_like
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
@@ -70,7 +71,9 @@ vd_kwargs = {
     if j in config_dict.keys()
 }
 vd_list_us = (
-    SpinCore_pp.vdlist_from_relaxivities(config_dict["concentration"], **vd_kwargs)
+    SpinCore_pp.vdlist_from_relaxivities(
+        config_dict["concentration"], **vd_kwargs
+    )
     * 1e6
 )  # convert to microseconds
 FIR_rep = (
@@ -135,7 +138,8 @@ assert total_pts < 2**14, (
 # {{{ check for file
 if os.path.exists(filename):
     raise ValueError(
-        "the file %s already exists, so I'm not going to let you proceed!" % filename
+        "the file %s already exists, so I'm not going to let you proceed!"
+        % filename
     )
 input(
     "B12 needs to be unplugged and turned off for the thermal! Don't have the "
@@ -192,7 +196,9 @@ except Exception:
         target_directory = os.path.getcwd()
         filename = "temp_ctrl.h5"
         control_thermal.hdf5_write(filename, directory=target_directory)
-        final_log.append("change the name accordingly once this is done running!")
+        final_log.append(
+            "change the name accordingly once this is done running!"
+        )
 # }}}
 logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 logger.debug(psd.strm("Name of saved data", control_thermal.name()))
@@ -227,7 +233,9 @@ for vd_idx, vd in enumerate(vd_list_us):
 vd_data.rename("indirect", "vd")
 vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
 if phase_cycling:
-    vd_data.chunk("t", ["ph2", "ph1", "t2"], [len(IR_ph1_cyc), len(IR_ph2_cyc), -1])
+    vd_data.chunk(
+        "t", ["ph2", "ph1", "t2"], [len(IR_ph1_cyc), len(IR_ph2_cyc), -1]
+    )
     vd_data.setaxis("ph1", IR_ph1_cyc / 4)
     vd_data.setaxis("ph2", IR_ph2_cyc / 4)
 else:
@@ -242,9 +250,13 @@ vd_data.set_prop("acq_params", config_dict.asdict())
 vd_data.set_prop("postproc_type", IR_postproc)
 nodename = vd_data.name()
 # {{{ again, implement a file fallback
-with h5py.File(os.path.normpath(os.path.join(target_directory, f"{filename}"))) as fp:
+with h5py.File(
+    os.path.normpath(os.path.join(target_directory, f"{filename}"))
+) as fp:
     if nodename in fp.keys():
-        final_log.append("this nodename already exists, so I will call it temp")
+        final_log.append(
+            "this nodename already exists, so I will call it temp"
+        )
         nodename = "temp_noPower"
         final_log.append(
             f"I had problems writing to the correct file {filename} so I'm    "
@@ -378,7 +390,9 @@ with power_control() as p:
         target_directory = os.path.getcwd()
         filename = "temp_ctrl.h5"
         if os.path.exists("temp_ODNP.h5"):
-            final_log.append("there is a temp_ODNP.h5 already! -- I'm removing it")
+            final_log.append(
+                "there is a temp_ODNP.h5 already! -- I'm removing it"
+            )
             os.remove("temp_ODNP.h5")
             DNP_data.hdf5_write(filename, directory=target_directory)
             final_log.append(
@@ -479,7 +493,9 @@ with power_control() as p:
     this_log = p.stop_log()
 # }}}
 config_dict.write()
-with h5py.File(os.path.normpath(os.path.join(target_directory, filename)), "a") as f:
+with h5py.File(
+    os.path.normpath(os.path.join(target_directory, filename)), "a"
+) as f:
     log_grp = f.create_group("log")
     hdf_save_dict_to_group(log_grp, this_log.__getstate__())
 print("*" * 30 + "\n" + "\n".join(final_log))
