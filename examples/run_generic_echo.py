@@ -38,20 +38,24 @@ config_dict["type"] = "echo"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["echo_counter"] += 1
 # }}}
-# {{{ command-line option to leave the field untouched (if you set it once, why set it again)
+# {{{ command-line option to leave the field untouched
+# (if you set it once, why set it again)
 adjust_field = True
 if len(sys.argv) == 2 and sys.argv[1] == "stayput":
     adjust_field = False
 # }}}
 input(
-    "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
+    "I'm assuming that you've tuned your probe to %f "
+    + "since that's what's in your .ini file."
+    + " Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
 # {{{ let computer set field
 if adjust_field:
     field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
     print(
-        "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
+        "Based on that, and the gamma_eff_MHz_G you have in your"
+        + " .ini file, I'm setting the field to %f"
         % field_G
     )
     with xepr() as x:
@@ -73,8 +77,8 @@ nPhaseSteps = len(ph2) * len(ph_diff)
 # {{{ calibrate pulse lengths
 # NOTE: This is done inside the run_spin_echo rather than in the example
 # but to keep the generic function more robust we do it outside of the ppg
-prog_p90_us = prog_plen(config_dict["beta_s_sqrtW"], config_dict)
-prog_p180_us = prog_plen(2 * config_dict["beta_s_sqrtW"], config_dict)
+prog_p90_us = prog_plen(config_dict["beta_90_s_sqrtW"], config_dict)
+prog_p180_us = prog_plen(2 * config_dict["beta_90_s_sqrtW"], config_dict)
 # }}}
 # Unlike CPMG, here, we are free to choose τ to be
 # whatever we want it to be.  Typically (when not
@@ -86,7 +90,9 @@ assert config_dict["tau_us"] > 2 * prog_p90_us / pi + config_dict["deblank_us"]
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
-    "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384"
+    "You are trying to acquire %d points (too many points)"
+    + " -- either change SW or acq time so nPoints x"
+    + " nPhaseSteps is less than 16384"
     % total_pts
 )
 # }}}
@@ -121,7 +127,6 @@ data = generic(
     nPoints=nPoints,
     time_per_segment_ms=config_dict["acq_time_ms"],
     SW_kHz=config_dict["SW_kHz"],
-    amplitude=config_dict["amplitude"],
     ret_data=None,
 )
 # }}}

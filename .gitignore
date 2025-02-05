@@ -21,3 +21,9 @@ ipynb/auto_figures/
 ipynb/auto_figures/noiseexample_noise_1.pdf
 ipynb/auto_figures/noiseexample_noise_1.svg
 Instruments/environment.py
+SpinCore_pp/_SpinCore_pp.cp37-win_amd64.pyd
+build/
+build/src.win-amd64-3.7/
+build/temp.win-amd64-3.7/
+examples/active.ini.bak
+examples/data_files.csv

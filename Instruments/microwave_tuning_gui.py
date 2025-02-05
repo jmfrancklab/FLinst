@@ -84,7 +84,8 @@ class TuningWindow(qt5w.QMainWindow):
         # about 0.003 GHz and a minimum of -1.2 dBm. These limits produce
         # a plot with the dip centered
         #
-        # dip shown on slack (https://jmfrancklab.slack.com/archivec/CLMMYDD98/p1705090019740609)
+        # dip shown on slack
+        # (https://jmfrancklab.slack.com/archivec/CLMMYDD98/p1705090019740609)
         for ini_val, w in zip(
             [
                 str(int((myconfig["uw_dip_center_ghz"] + j) * 1e6))
@@ -243,7 +244,8 @@ class TuningWindow(qt5w.QMainWindow):
             self.myconfig.write()
             self.B12.set_freq(
                 self.dip_frq_GHz * 1e9
-            )  # always do this, so that it should be safe to slightly turn up the power
+            )  # always do this, so that it should be 
+            # safe to slightly turn up the power
             self.axes.set_xlim(
                 self.slider_min.value() / 1e6, self.slider_max.value() / 1e6
             )
@@ -279,7 +281,10 @@ class TuningWindow(qt5w.QMainWindow):
 
         # Create the navigation toolbar, tied to the canvas
         #
-        self.mpl_toolbar = mqt5ag.NavigationToolbar2QT(self.canvas, self.main_frame)
+        self.mpl_toolbar = mqt5ag.NavigationToolbar2QT(
+            self.canvas,
+            self.main_frame
+        )
 
         # Other GUI controls
         #
@@ -333,7 +338,7 @@ class TuningWindow(qt5w.QMainWindow):
             [self.slider_min, self.slider_max],
         ):
             self.on_textchange()
-            w.setValue(ini_val)
+            w.setValue(int(ini_val))
             w.setTracking(True)
             w.setTickPosition(qt5w.QSlider.TicksBothSides)
             w.valueChanged.connect(self.regen_plots)
