@@ -92,7 +92,7 @@ def main():
                                     "to manually set the power, you must be at"
                                     " 10 dBm or less!"
                                 )
-                            b.set_power(float(args[1]))
+                            b.set_freq(float(args[1]))
                         else:
                             raise ValueError(
                                 "I don't understand this 2 component command:"
