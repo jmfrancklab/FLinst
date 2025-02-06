@@ -24,5 +24,10 @@ power_control_server = "Instruments.power_control_server:main"
 quit_power_control = "Instruments.just_quit:main"
 FLInst = "Instruments.cmd:cmd"
 
+[tool.black]
+line-length = 79
+target-version = ['py36', 'py37', 'py38', 'py39']
+preview = true
+
 [tool.mesonpy]
 setup-kwargs = { native_file = "cross_file.txt" }

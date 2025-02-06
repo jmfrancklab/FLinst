@@ -85,6 +85,14 @@ def main():
                                     break
                             nsecs += time.time()
                             print("took", j, "tries and", nsecs, "seconds")
+                        if args[0] == b"SET_FREQ":
+                            current_power = b.power_float()
+                            if current_power > 10:
+                                raise ValueError(
+                                    "to manually set the power, you must be at"
+                                    " 10 dBm or less!"
+                                )
+                            b.set_freq(float(args[1]))
                         else:
                             raise ValueError(
                                 "I don't understand this 2 component command:"

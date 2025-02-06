@@ -96,6 +96,18 @@ class power_control(object):
         self.sock.send(msg.encode("ASCII") + b"\n")
         return
 
+    def set_freq(self, freq):
+        """Sets the frequency of the Bridge12
+        To use this, you must be at 10 dBm or less!
+
+        Parameters
+        ==========
+        freq : float
+            Frequency in Hz
+        """
+        self.send("SET_FREQ %f" % freq)
+        return
+
     def set_power(self, dBm):
         "Sets the power of the Bridge12"
         self.send("SET_POWER %0.2f" % dBm)
