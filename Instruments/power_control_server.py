@@ -86,8 +86,8 @@ def main():
                             nsecs += time.time()
                             print("took", j, "tries and", nsecs, "seconds")
                         if args[0] == b"SET_FREQ":
-                            last_power = b.power_float()
-                            if last_power > 10:
+                            current_power = b.power_float()
+                            if current_power > 10:
                                 raise ValueError(
                                     "to manually set the power, you must be at"
                                     " 10 dBm or less!"
