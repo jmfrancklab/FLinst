@@ -122,7 +122,7 @@ with power_control() as p:
         )
         myfreqs_fields = sweep_data.getaxis("indirect")
         myfreqs_fields[0]["Field"] = first_B0
-        myfreqs_fields[0]["carrierFreq"] = config_dict["carrierFreq_MHz"]
+        myfreqs_fields[0]["carrierFreq"] = carrierFreq_MHz
         for B0_index, desired_B0 in enumerate(field_axis[1:]):
             true_B0 = x_server.set_field(desired_B0)
             logging.info("My field in G is %f" % true_B0)
