@@ -141,7 +141,6 @@ def gen_powerlist(max_power, steps, min_dBm_step=0.5, three_down=False):
 
     def det_allowed(lin_steps):
         powers = r_[0 : max_power : 1j * lin_steps][1:]
-        np.vectorize(powers)
         rdB_settings = np.ones_like(powers)
         for x in range(len(powers)):
             rdB_settings[x] = (

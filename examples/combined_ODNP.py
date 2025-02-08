@@ -21,6 +21,7 @@ from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
 import pyspecdata as psd
+from pyspecdata import strm
 import os
 import time
 import h5py
@@ -104,10 +105,10 @@ T1_powers_dB = gen_powerlist(
     three_down=False,
 )
 T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
-logger.info("dB_settings", dB_settings)
-logger.info("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
-logger.info("T1_powers_dB", T1_powers_dB)
-logger.info("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
+logger.info(strm("dB_settings", dB_settings))
+logger.info(strm("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3)))
+logger.info(strm("T1_powers_dB", T1_powers_dB))
+logger.info(strm("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3)))
 myinput = input("Look ok?")
 if myinput.lower().startswith("n"):
     raise ValueError("you said no!!!")
