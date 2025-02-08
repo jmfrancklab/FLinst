@@ -105,10 +105,10 @@ T1_powers_dB = gen_powerlist(
     three_down=False,
 )
 T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
-logger.info(strm("dB_settings", dB_settings))
-logger.info(strm("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3)))
-logger.info(strm("T1_powers_dB", T1_powers_dB))
-logger.info(strm("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3)))
+print("dB_settings", dB_settings)
+print("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
+print("T1_powers_dB", T1_powers_dB)
+print("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
 myinput = input("Look ok?")
 if myinput.lower().startswith("n"):
     raise ValueError("you said no!!!")
@@ -210,8 +210,10 @@ logger.debug(psd.strm("Name of saved data", control_thermal.name()))
 #   the time axis, or smaller than the first)
 ini_time = time.time()
 vd_data = None
+logger.debug('starting T1s')
 for vd_idx, vd in enumerate(vd_list_us):
     # call A to run_IR
+    logger.debug(f'T1 #{vd_idx}')
     vd_data = run_IR(
         nPoints=nPoints,
         nEchoes=config_dict["nEchoes"],
@@ -268,7 +270,7 @@ with h5py.File(
 # file itself
 vd_data.hdf5_write(filename, directory=target_directory)
 # }}}
-logger.debug("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
+logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 logger.debug(psd.strm("Name of saved data", vd_data.name()))
 # }}}
 # {{{run enhancement
@@ -288,7 +290,9 @@ with power_control() as p:
     # Run the actual thermal where the power log is recording. This will be
     # your thermal for enhancement and can be compared to previous thermals if
     # issues arise
+    logger.debug('about to start thermal')
     for j in range(thermal_scans):
+        logger.debug(f'thermal {j}')
         DNP_ini_time = time.time()
         # call B/C to run spin echo
         DNP_data = run_spin_echo(
@@ -317,14 +321,14 @@ with power_control() as p:
     power_settings_dBm = zeros_like(dB_settings)
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
-        logger.debug(
-            "SETTING THIS POWER",
+        logger.debug(strm(
+            "setting this power for E(p)",
             this_dB,
             "(",
             dB_settings[j - 1],
             powers[j],
             "W)",
-        )
+        ))
         if j == 0:
             # Again, no dip lock because we assume the microwave tuning
             # GUI handled finding the cavity frequency.
@@ -404,17 +408,12 @@ with power_control() as p:
     logger.debug(psd.strm("Name of saved data", DNP_data.name()))
     # }}}
     # {{{run IR
-    last_dB_setting = 10
     for j, this_dB in enumerate(T1_powers_dB):
-        # {{{ make small steps in power if needed
-        if this_dB - last_dB_setting > 3:
-            smallstep_dB = last_dB_setting + 2
-            while smallstep_dB + 2 < this_dB:
-                p.set_power(smallstep_dB)
-                smallstep_dB += 2
+        logger.debug(strm(
+            "setting this power for T1(p)",
+            this_dB,
+        ))
         p.set_power(this_dB)
-        last_dB_setting = this_dB
-        # }}}
         for k in range(10):
             time.sleep(0.5)
             # JF notes that the following works for powers going up, but not
