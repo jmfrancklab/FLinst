@@ -7,7 +7,7 @@ from serial.tools.list_ports import comports
 from serial import Serial
 from numpy import r_
 import numpy as np
-import time, winsound
+import time, winsound, msvcrt
 from .log_inst import logger
 
 
@@ -110,15 +110,18 @@ class Bridge12(Serial):
         for j in range(10):
             result = self.wgstatus_int()
             if result == setting:
-            print("Press a key to indicate that you have set the waveguide switch to the "
-                    ("ODNP" if setting else "ESR")
-                    "position")
-            while True:
-                winsound.Beep(260, 0.5)
-                # Check if a key is pressed
-                if msvcrt.kbhit():
-                    msvcrt.getch()  # This consumes the key press, so the loop ends
-        break
+                print("Press a key to indicate that you have set the waveguide switch to the \n>>>>> " +
+                        ("ODNP" if setting else "ESR")
+                        +
+                        " <<<<< position")
+                while True:
+                    winsound.Beep(
+                            560 if setting else 130
+                            , 800)
+                    # Check if a key is pressed
+                    if msvcrt.kbhit():
+                        msvcrt.getch()  # This consumes the key press, so the loop ends
+                        break
                 return
         raise RuntimeError(
             "After checking status 10 times, I can't get the waveguide to change"
