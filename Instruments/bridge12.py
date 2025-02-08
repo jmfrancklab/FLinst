@@ -21,7 +21,9 @@ class Bridge12(Serial):
         # Grab the port labeled as Arduino (since the Bridge12 microcontroller is an Arduino)
         cport = comports()
         if type(cport) is list and hasattr(cport[0], "device"):
-            portlist = [j.device for j in comports() if "Arduino Due" in j.description]
+            portlist = [
+                j.device for j in comports() if "Arduino Due" in j.description
+            ]
         elif type(next(cport)) is tuple:
             logger.debug("using fallback comport method")
             portlist = [j[0] for j in comports() if "Arduino Due" in j[1]]
@@ -46,7 +48,9 @@ class Bridge12(Serial):
         # time.sleep(5)
         def look_for(this_str):
             for j in range(1000):
-                a = self.read_until((this_str + "\r\n").encode("utf-8")).decode("utf-8")
+                a = self.read_until(
+                    (this_str + "\r\n").encode("utf-8")
+                ).decode("utf-8")
                 time.sleep(0.1)
                 logger.debug("look for " + this_str + " try" + str(j + 1))
                 if this_str in a:
@@ -273,7 +277,8 @@ class Bridge12(Serial):
         """read the integer value for the Rx power -- loops three times to
         check a consistent Rx is being read.
 
-        If all three tries are above safe_rx_level_int, triggers a safety interlock."""
+        If all three tries are above safe_rx_level_int, triggers a safety interlock.
+        """
         self.reset_input_buffer()
 
         def grab_consist_value():
@@ -347,7 +352,8 @@ class Bridge12(Serial):
                     return
             raise RuntimeError(
                 "After checking status 10 times, I can't get the "
-                "frequency to change -- result is %d setting is %d" % (result, setting)
+                "frequency to change -- result is %d setting is %d"
+                % (result, setting)
             )
 
     def get_freq(self):
@@ -399,7 +405,9 @@ class Bridge12(Serial):
                     print(
                         "WARNING (robust try",
                         j,
-                        '): B12 is spewing garbage!!: "' + retval.decode() + '"',
+                        '): B12 is spewing garbage!!: "'
+                        + retval.decode()
+                        + '"',
                     )
             if success:
                 return retval
@@ -409,7 +417,9 @@ class Bridge12(Serial):
                 #                           NOTE: I can check for stuff by looking at in_waiting,
                 #                                 but I need to remember that it takes time after a write
                 #                                 command for stuff to move into the buffer
-        raise ValueError("I tried running 10 times and couldn't get an integer!!!")
+        raise ValueError(
+            "I tried running 10 times and couldn't get an integer!!!"
+        )
 
     def freq_sweep(self, freq, dummy_readings=1, fast_run=False):
         """Sweep over an array of frequencies.
@@ -432,7 +442,9 @@ class Bridge12(Serial):
         txvalues: array
             An array of floats, same length as freq, containing the transmitted power in dBm at each frequency.
         """
-        self.write(b"screen 2\r")  # change to the screen that shows the reflection
+        self.write(
+            b"screen 2\r"
+        )  # change to the screen that shows the reflection
         rxvalues = np.zeros(len(freq))
         txvalues = np.zeros(len(freq))
         if not self.frq_sweep_10dBm_has_been_run:
@@ -499,13 +511,17 @@ class Bridge12(Serial):
                 self.set_amp(True)
                 freq = r_[ini_range[0] : ini_range[1] : ini_step]
                 logger.info(
-                    "ini range: " + str(ini_range) + "ini step: " + str(ini_step)
+                    "ini range: "
+                    + str(ini_range)
+                    + "ini step: "
+                    + str(ini_step)
                 )
                 logger.info("Did not find previous 10 dBm run, running now")
                 self.set_power(10.0)
                 rx, tx = self.freq_sweep(freq)
             rx_dBm, freq = [
-                self.tuning_curve_data["%gdBm_%s" % (10.0, j)] for j in ["rx", "freq"]
+                self.tuning_curve_data["%gdBm_%s" % (10.0, j)]
+                for j in ["rx", "freq"]
             ]
             rx_midpoint = (max(rx_dBm) + min(rx_dBm)) / 2.0
             # is the first rx_dBm higher than the midpoint (rx_dBm of
@@ -526,7 +542,9 @@ class Bridge12(Serial):
                 )
                 if result.lower().startswith("y"):
                     wg_engaged = False
-                    self.frq_sweep_10dBm_has_been_run = False # we don't trust the 10dBm guy that was run
+                    self.frq_sweep_10dBm_has_been_run = (
+                        False  # we don't trust the 10dBm guy that was run
+                    )
                 else:
                     self.set_rf(False)
                     self.set_wg(False)
@@ -555,12 +573,16 @@ class Bridge12(Serial):
                 "the dip starts and stops don't line up, and I'm not sure why!!"
             )
         largest_dip_idx = (stop_dip - start_dip).argmax()
-        if (largest_dip_idx == len(start_dip) - 1) and (stop_dip[-1] == over_idx[-1]):
+        if (largest_dip_idx == len(start_dip) - 1) and (
+            stop_dip[-1] == over_idx[-1]
+        ):
             raise ValueError(
                 "The trace ends in the largest dip -- this is not allowed -- check %gdBm_%s"
                 % (10.0, "rx")
             )
-        self.set_power(11.0)  # move to 11 dBm, just to distinguish the trace name
+        self.set_power(
+            11.0
+        )  # move to 11 dBm, just to distinguish the trace name
         self.freq_bounds = freq[
             r_[start_dip[largest_dip_idx], stop_dip[largest_dip_idx]]
         ]
@@ -609,7 +631,9 @@ class Bridge12(Serial):
         p = np.polyfit(freq, rx, 2)
         c, b, a = p
         # polynomial of form a+bx+cx^2
-        self.fit_data[self.last_sweep_name + "_func"] = lambda x: a + b * x + c * x**2
+        self.fit_data[self.last_sweep_name + "_func"] = (
+            lambda x: a + b * x + c * x**2
+        )
         self.fit_data[self.last_sweep_name + "_range"] = freq[r_[0, -1]]
         # the following should be decided from doing algebra (I haven't double-checked them)
         center = -b / 2 / c
@@ -625,13 +649,23 @@ class Bridge12(Serial):
         #                                     rx before stepping
         #                                     up in power
         safe_crossing = (
-            (-b + r_[-np.sqrt(b**2 - 4 * a_new * c), np.sqrt(b**2 - 4 * a_new * c)])
+            (
+                -b
+                + r_[
+                    -np.sqrt(b**2 - 4 * a_new * c),
+                    np.sqrt(b**2 - 4 * a_new * c),
+                ]
+            )
             / 2
             / c
         )
         safe_crossing.sort()
         start_f, stop_f = safe_crossing
-        info_str = "dB value should be %g at %g and %g" % (safe_rx, start_f, stop_f)
+        info_str = "dB value should be %g at %g and %g" % (
+            safe_rx,
+            start_f,
+            stop_f,
+        )
         if start_f < self.freq_bounds[0]:
             start_f = self.freq_bounds[0]
             info_str += ", leaving start_f at %g" % start_f
