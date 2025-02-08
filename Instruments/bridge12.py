@@ -704,7 +704,8 @@ class Bridge12(Serial):
         self.set_amp(False)
         self.set_wg(False)
         self.frq_sweep_10dBm_has_been_run = False
-        del self.freq_bounds
+        if hasattr(self, "freq_bounds"):
+            del self.freq_bounds
         return
 
     def safe_shutdown(self):
