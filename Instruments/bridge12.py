@@ -110,14 +110,13 @@ class Bridge12(Serial):
         for j in range(10):
             result = self.wgstatus_int()
             if result == setting:
-                print("Press a key to indicate that you have set the waveguide switch to the \n>>>>> " +
-                        ("ODNP" if setting else "ESR")
-                        +
-                        " <<<<< position")
+                print(
+                    "Press a key to indicate that you have set the waveguide switch to the \n>>>>> "
+                    + ("ODNP" if setting else "ESR")
+                    + " <<<<< position"
+                )
                 while True:
-                    winsound.Beep(
-                            560 if setting else 130
-                            , 800)
+                    winsound.Beep(560 if setting else 130, 800)
                     # Check if a key is pressed
                     if msvcrt.kbhit():
                         msvcrt.getch()  # This consumes the key press, so the loop ends
