@@ -77,7 +77,6 @@ def collect(file_string, N_capture):
     )
     return start
 
-write
 def raise_arg_error():
     raise ValueError(
         """Call like this: 
