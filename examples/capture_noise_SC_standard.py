@@ -136,7 +136,7 @@ assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
 # since this is typically the first time interacting with the SC board, go
 # ahead and run adc offset
-myconfig["adc_offset"] = SpinCore_pp.adc_offset()
+config_dict["adc_offset"] = sc.adc_offset()
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "noise_200kHz"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
