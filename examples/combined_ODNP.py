@@ -210,10 +210,10 @@ logger.debug(psd.strm("Name of saved data", control_thermal.name()))
 #   the time axis, or smaller than the first)
 ini_time = time.time()
 vd_data = None
-logger.debug('starting T1s')
+logger.debug("starting T1s")
 for vd_idx, vd in enumerate(vd_list_us):
     # call A to run_IR
-    logger.debug(f'T1 #{vd_idx}')
+    logger.debug(f"T1 #{vd_idx}")
     vd_data = run_IR(
         nPoints=nPoints,
         nEchoes=config_dict["nEchoes"],
@@ -276,7 +276,7 @@ logger.debug(psd.strm("Name of saved data", vd_data.name()))
 # {{{run enhancement
 input(
     "Now plug the B12 back in and start up the FLInst power control server so "
-    "   we can continue!"
+    "we can continue!"
 )
 with power_control() as p:
     # we do not dip lock or anything here, because we assume
@@ -290,9 +290,9 @@ with power_control() as p:
     # Run the actual thermal where the power log is recording. This will be
     # your thermal for enhancement and can be compared to previous thermals if
     # issues arise
-    logger.debug('about to start thermal')
+    logger.debug("about to start thermal")
     for j in range(thermal_scans):
-        logger.debug(f'thermal {j}')
+        logger.debug(f"thermal {j}")
         DNP_ini_time = time.time()
         # call B/C to run spin echo
         DNP_data = run_spin_echo(
