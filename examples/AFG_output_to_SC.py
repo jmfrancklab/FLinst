@@ -21,7 +21,7 @@ output_name = date + "_" + description
 carrierFreq_MHz = 14.9  # ν_{RX,LO}
 # }}}
 # {{{ Source settings
-freq_list_Hz = linspace(14.8766e6, 14.9234e6, 300)
+freq_array = linspace(14.8766e6, 14.9234e6, 300)
 Vpp = 0.01  # Desired Vₚₚ
 # }}}
 # {{{ Spincore settings
@@ -34,13 +34,13 @@ with AFG() as a:  # Context block that automatically handles routines to
     #               initiate communication with source, perform checks, and to
     #               close the (USB serial) connection at the end of the block
     a.reset()
-    for j, frq in enumerate(freq_list_Hz):
+    for j, frq in enumerate(freq_array):
         a[0].output = True
         a.sin(ch=1, V=Vpp, f=frq)  # Set a sine wave output with the desired
         #                            Vₚₚ and frequency
         time.sleep(2)
         # {{{ Acquire data
-        for x in range(nScans):
+        for k in range(nScans):
             # {{{ Configure SpinCore receiver
             sc.configureTX(
                 adcOffset,
@@ -81,27 +81,31 @@ with AFG() as a:  # Context block that automatically handles routines to
             # {{{ Allocate an array that's shaped like a single capture, but
             #     with an additional "nScans" dimension to drop data into and
             #     assign the axis coordinates, etc.
-            if x == 0:
+            if k == 0:
                 time_axis = linspace(0.0, acq_time_ms * 1e-3, raw_data.size)
+                # note that earlier versions of this code stored the data in
+                # separate nodes, but that's a silly strategy -- especially
+                # since OneDrive will see each new node write as a new
+                # "version" of the file.  So, we use a new dimension instead.
                 data = (
                     ndshape(
-                        [raw_data.size, nScans],
-                        ["t", "nScans"],
+                        [raw_data.size, nScans, len(freq_array)],
+                        ["t", "nScans", "afg_frq"],
                     )
                     .alloc(dtype=complex128)
                     .setaxis("t", time_axis)
+                    .setaxis("afg_frq", freq_array)
                     .set_units("t", "s")
+                    .set_units("afg_frq", "Hz")
                     .setaxis("nScans", r_[0:nScans])
-                    .name("signal %f kHz" % frq / 1e3)
+                    .name("afg_data")
                 )
             # }}}
             # Store data for capture in appropriate index
-            data["nScans", x] = raw_data
+            data["nScans", k, "afg_frq", j] = raw_data
             sc.stopBoard()
-        data.set_prop("afg_frq", frq / 1e3)  # Store the output frequency in
-        #                                     units of kHz
-        data.name("afg_%d" % frq / 1e3)  # Nodename for HDF5 file with output
-        #                                   frequency in kHz
+        data.set_prop("afg_frq_kHz", frq / 1e3)  # Store the output frequency
+        #                                          in units of kHz
         nodename = data.name()
         data.hdf5_write(
             output_name + ".h5",

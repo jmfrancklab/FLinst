@@ -39,7 +39,7 @@ with AFG() as a:  # Context block that automatically handles routines to
             #                            desired Vₚₚ and frequency
             time.sleep(2)
             for k in range(N_capture):
-                data = g.waveform(ch=2)  # Capture waveform
+                data = g.waveform(ch=2).squeeze()  # Capture waveform
                 # {{{ Allocate an array that's shaped like a single capture,
                 #     but with an additional "capture" dimension
                 if k == 0:
@@ -56,7 +56,6 @@ with AFG() as a:  # Context block that automatically handles routines to
             s.name("afg_%d" % frq / 1e3)  # Nodename for HDF5 file with output
             #                               frequency in kHz
             s.set_units("t", "s")
-            s = s["ch", 0]
             # {{{ Convert to analytic signal (Eq. 20)
             s.ft("t", shift=True)
             s = s["t":(0, 40e6)]  # Frequency filter to save disk
@@ -65,7 +64,7 @@ with AFG() as a:  # Context block that automatically handles routines to
             s["t":0] *= 0.5
             s.ift("t")
             # }}}
-            nodename = s.name()
+            temp_idx = 0
             if os.path.exists(target_directory):
                 with h5py.File(
                     os.path.normpath(
@@ -74,9 +73,7 @@ with AFG() as a:  # Context block that automatically handles routines to
                         )
                     )
                 ) as fp:
-                    if nodename in fp.keys():
-                        s.name("temp_%d" % j)
-                        nodename = "temp_%d" % j
-                s.hdf5_write(filename, directory=target_directory)
-            else:
-                s.hdf5_write(filename, directory=target_directory)
+                    if s.name() in fp.keys():
+                        s.name("temp_%d" % temp_idx)
+                        temp_idx += 1
+            s.hdf5_write(filename, directory=target_directory)
