@@ -23,7 +23,7 @@ target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/Echoes")
 # }}}
 # {{{ Source settings
 freq_list_Hz = np.linspace(0.1e3, 50e6, 50)
-Vpp = 0.005  # Desired $V_{pp}$
+Vpp = 0.005  # Desired Vₚₚ
 # }}}
 # {{{ GDS settings
 N_capture = 3
@@ -36,7 +36,7 @@ with AFG() as a:  # Context block that automatically handles routines to
         for j, frq in enumerate(freq_list_Hz):
             a[0].output = True
             a.sin(ch=1, V=Vpp, f=frq)  # Set a sine wave output with the
-            #                            desired $V_{pp}$ and frequency
+            #                            desired Vₚₚ and frequency
             time.sleep(2)
             for x in range(N_capture):
                 data = g.waveform(ch=2)  # Capture waveform
@@ -54,7 +54,7 @@ with AFG() as a:  # Context block that automatically handles routines to
                 time.sleep(1)
             s.setaxis("capture", "#")  # Just set to a series of integers
             s.name("afg_%d" % frq / 1e3)  # Nodename for HDF5 file with output
-            #                                frequency in kHz
+            #                               frequency in kHz
             s.set_units("t", "s")
             s = s["ch", 0]
             # {{{ Convert to analytic signal (Eq. 20)

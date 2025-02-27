@@ -13,16 +13,16 @@ from numpy import linspace, complex128
 import SpinCore_pp as sc
 from datetime import datetime
 
-# {{{ Set filename, SW and $\nu_{RX,LO}$
+# {{{ Set filename, SW and ν_{RX,LO}
 date = datetime.now().strftime("%y%m%d")
 description = "3p9kHz_filter"
 SW_kHz = 3.9
 output_name = date + "_" + description
-carrierFreq_MHz = 14.9  # $\nu_{RX,LO}$
+carrierFreq_MHz = 14.9  # ν_{RX,LO}
 # }}}
 # {{{ Source settings
 freq_list_Hz = linspace(14.8766e6, 14.9234e6, 300)
-Vpp = 0.01  # Desired $V_{pp}$
+Vpp = 0.01  # Desired Vₚₚ
 # }}}
 # {{{ Spincore settings
 adcOffset = 42
@@ -37,7 +37,7 @@ with AFG() as a:  # Context block that automatically handles routines to
     for j, frq in enumerate(freq_list_Hz):
         a[0].output = True
         a.sin(ch=1, V=Vpp, f=frq)  # Set a sine wave output with the desired
-        #                            $V_{pp}$ and frequency
+        #                            Vₚₚ and frequency
         time.sleep(2)
         # {{{ Acquire data
         for x in range(nScans):
