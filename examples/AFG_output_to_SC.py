@@ -5,6 +5,12 @@ Signal is outpupt at an array of frequencies (defined by the user) from a
 source. The SpinCore then captures a user defined number of scans of the
 resulting signal. The nodename that contains the data corresponds to the output
 frequency in kHz.
+
+Note that this does not use the configuration dictionary, since it employs
+standard settings.
+Also note that it stores the frequency source variation along a dimension,
+not separate nodes -- this may require modification (simplification!) of the
+associated code in the `proc_scripts` repo.
 """
 from Instruments import AFG
 from pyspecdata import r_, ndshape
