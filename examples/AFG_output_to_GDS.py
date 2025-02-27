@@ -23,7 +23,7 @@ target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/Echoes")
 # }}}
 # {{{ Source settings
 freq_list_Hz = np.linspace(0.1e3, 50e6, 50)
-Vpp = 0.005  # Desired $V_{pp}$
+Vpp = 0.005  # Desired Vₚₚ
 # }}}
 # {{{ GDS settings
 N_capture = 3
@@ -36,13 +36,13 @@ with AFG() as a:  # Context block that automatically handles routines to
         for j, frq in enumerate(freq_list_Hz):
             a[0].output = True
             a.sin(ch=1, V=Vpp, f=frq)  # Set a sine wave output with the
-            #                            desired $V_{pp}$ and frequency
+            #                            desired Vₚₚ and frequency
             time.sleep(2)
-            for x in range(N_capture):
-                data = g.waveform(ch=2)  # Capture waveform
+            for k in range(N_capture):
+                data = g.waveform(ch=2).squeeze()  # Capture waveform
                 # {{{ Allocate an array that's shaped like a single capture,
                 #     but with an additional "capture" dimension
-                if x == 0:
+                if k == 0:
                     s = (
                         data.shape + ("capture", N_capture)
                     ).alloc(dtype=np.float64)
@@ -50,13 +50,12 @@ with AFG() as a:  # Context block that automatically handles routines to
                     s.set_units("t", data.getunits("t"))
                 # }}}
                 # Store data in appropriate index
-                s["capture", x] = data
+                s["capture", k] = data
                 time.sleep(1)
             s.setaxis("capture", "#")  # Just set to a series of integers
             s.name("afg_%d" % frq / 1e3)  # Nodename for HDF5 file with output
-            #                                frequency in kHz
+            #                               frequency in kHz
             s.set_units("t", "s")
-            s = s["ch", 0]
             # {{{ Convert to analytic signal (Eq. 20)
             s.ft("t", shift=True)
             s = s["t":(0, 40e6)]  # Frequency filter to save disk
@@ -65,7 +64,7 @@ with AFG() as a:  # Context block that automatically handles routines to
             s["t":0] *= 0.5
             s.ift("t")
             # }}}
-            nodename = s.name()
+            temp_idx = 0
             if os.path.exists(target_directory):
                 with h5py.File(
                     os.path.normpath(
@@ -74,9 +73,7 @@ with AFG() as a:  # Context block that automatically handles routines to
                         )
                     )
                 ) as fp:
-                    if nodename in fp.keys():
-                        s.name("temp_%d" % j)
-                        nodename = "temp_%d" % j
-                s.hdf5_write(filename, directory=target_directory)
-            else:
-                s.hdf5_write(filename, directory=target_directory)
+                    if s.name() in fp.keys():
+                        s.name("temp_%d" % temp_idx)
+                        temp_idx += 1
+            s.hdf5_write(filename, directory=target_directory)

@@ -5,6 +5,12 @@ Signal is outpupt at an array of frequencies (defined by the user) from a
 source. The SpinCore then captures a user defined number of scans of the
 resulting signal. The nodename that contains the data corresponds to the output
 frequency in kHz.
+
+Note that this does not use the configuration dictionary, since it employs
+standard settings.
+Also note that it stores the frequency source variation along a dimension,
+not separate nodes -- this may require modification (simplification!) of the
+associated code in the `proc_scripts` repo.
 """
 from Instruments import AFG
 from pyspecdata import r_, ndshape
@@ -13,16 +19,16 @@ from numpy import linspace, complex128
 import SpinCore_pp as sc
 from datetime import datetime
 
-# {{{ Set filename, SW and $\nu_{RX,LO}$
+# {{{ Set filename, SW and ν_{RX,LO}
 date = datetime.now().strftime("%y%m%d")
 description = "3p9kHz_filter"
 SW_kHz = 3.9
 output_name = date + "_" + description
-carrierFreq_MHz = 14.9  # $\nu_{RX,LO}$
+carrierFreq_MHz = 14.9  # ν_{RX,LO}
 # }}}
 # {{{ Source settings
-freq_list_Hz = linspace(14.8766e6, 14.9234e6, 300)
-Vpp = 0.01  # Desired $V_{pp}$
+freq_array = linspace(14.8766e6, 14.9234e6, 300)
+Vpp = 0.01  # Desired Vₚₚ
 # }}}
 # {{{ Spincore settings
 adcOffset = 42
@@ -34,13 +40,13 @@ with AFG() as a:  # Context block that automatically handles routines to
     #               initiate communication with source, perform checks, and to
     #               close the (USB serial) connection at the end of the block
     a.reset()
-    for j, frq in enumerate(freq_list_Hz):
+    for j, frq in enumerate(freq_array):
         a[0].output = True
         a.sin(ch=1, V=Vpp, f=frq)  # Set a sine wave output with the desired
-        #                            $V_{pp}$ and frequency
+        #                            Vₚₚ and frequency
         time.sleep(2)
         # {{{ Acquire data
-        for x in range(nScans):
+        for k in range(nScans):
             # {{{ Configure SpinCore receiver
             sc.configureTX(
                 adcOffset,
@@ -81,27 +87,31 @@ with AFG() as a:  # Context block that automatically handles routines to
             # {{{ Allocate an array that's shaped like a single capture, but
             #     with an additional "nScans" dimension to drop data into and
             #     assign the axis coordinates, etc.
-            if x == 0:
+            if k == 0:
                 time_axis = linspace(0.0, acq_time_ms * 1e-3, raw_data.size)
+                # note that earlier versions of this code stored the data in
+                # separate nodes, but that's a silly strategy -- especially
+                # since OneDrive will see each new node write as a new
+                # "version" of the file.  So, we use a new dimension instead.
                 data = (
                     ndshape(
-                        [raw_data.size, nScans],
-                        ["t", "nScans"],
+                        [raw_data.size, nScans, len(freq_array)],
+                        ["t", "nScans", "afg_frq"],
                     )
                     .alloc(dtype=complex128)
                     .setaxis("t", time_axis)
+                    .setaxis("afg_frq", freq_array)
                     .set_units("t", "s")
+                    .set_units("afg_frq", "Hz")
                     .setaxis("nScans", r_[0:nScans])
-                    .name("signal %f kHz" % frq / 1e3)
+                    .name("afg_data")
                 )
             # }}}
             # Store data for capture in appropriate index
-            data["nScans", x] = raw_data
+            data["nScans", k, "afg_frq", j] = raw_data
             sc.stopBoard()
-        data.set_prop("afg_frq", frq / 1e3)  # Store the output frequency in
-        #                                     units of kHz
-        data.name("afg_%d" % frq / 1e3)  # Nodename for HDF5 file with output
-        #                                   frequency in kHz
+        data.set_prop("afg_frq_kHz", frq / 1e3)  # Store the output frequency
+        #                                          in units of kHz
         nodename = data.name()
         data.hdf5_write(
             output_name + ".h5",
