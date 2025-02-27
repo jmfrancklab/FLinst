@@ -38,11 +38,11 @@ with AFG() as a:  # Context block that automatically handles routines to
             a.sin(ch=1, V=Vpp, f=frq)  # Set a sine wave output with the
             #                            desired Vₚₚ and frequency
             time.sleep(2)
-            for x in range(N_capture):
+            for k in range(N_capture):
                 data = g.waveform(ch=2)  # Capture waveform
                 # {{{ Allocate an array that's shaped like a single capture,
                 #     but with an additional "capture" dimension
-                if x == 0:
+                if k == 0:
                     s = (
                         data.shape + ("capture", N_capture)
                     ).alloc(dtype=np.float64)
@@ -50,7 +50,7 @@ with AFG() as a:  # Context block that automatically handles routines to
                     s.set_units("t", data.getunits("t"))
                 # }}}
                 # Store data in appropriate index
-                s["capture", x] = data
+                s["capture", k] = data
                 time.sleep(1)
             s.setaxis("capture", "#")  # Just set to a series of integers
             s.name("afg_%d" % frq / 1e3)  # Nodename for HDF5 file with output
