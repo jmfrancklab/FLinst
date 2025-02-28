@@ -85,7 +85,7 @@ def main():
                                     break
                             nsecs += time.time()
                             print("took", j, "tries and", nsecs, "seconds")
-                        if args[0] == b"SET_FREQ":
+                        elif args[0] == b"SET_FREQ":
                             current_power = b.power_float()
                             if current_power > 10:
                                 raise ValueError(
