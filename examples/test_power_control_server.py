@@ -16,7 +16,7 @@ from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
 
-init_logging(level="debug")
+logger = init_logging(level="debug")
 config_dict = configuration("active.ini")
 
 time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
@@ -26,25 +26,29 @@ assert not os.path.exists(
 with power_control() as p:
     p.set_power(10)
     p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
+    input("press enter once the waveguide has switched")
     # {{{ run a loop that should take about 50s + execution time.  Step through
     #     3 powers -- unmodified (0 dB?), 10.5 dBm and 12 dBm
     for j in range(100):
-        print(j)
+        logger.info(j)
         time.sleep(0.5)
         if j == 0:
+            logger.info("starting the log")
             p.start_log()
         elif j == 30:
+            logger.info("set first power")
             p.set_power(10.5)
         elif j == 60:
+            logger.info("set second power")
             p.set_power(12)
     this_log = p.stop_log()
     # }}}
     # p.arrange_quit()
 log_array = this_log.total_log
-print("log array", repr(log_array))
-print("log array shape", log_array.shape)
+logger.debug("log array:\n" + repr(log_array))
+logger.debug(f"log array shape {log_array.shape}")
 log_dict = this_log.log_dict
-print("log dict", repr(log_dict))
+logger.debug(f"log dict:\n" + repr(log_dict))
 with h5py.File("output.h5", "a") as f:
     log_grp = f.create_group(
         "log"
