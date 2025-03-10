@@ -321,14 +321,16 @@ with power_control() as p:
     power_settings_dBm = zeros_like(dB_settings)
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
-        logger.debug(strm(
-            "setting this power for E(p)",
-            this_dB,
-            "(",
-            dB_settings[j - 1],
-            powers[j],
-            "W)",
-        ))
+        logger.debug(
+            strm(
+                "setting this power for E(p)",
+                this_dB,
+                "(",
+                dB_settings[j - 1],
+                powers[j],
+                "W)",
+            )
+        )
         if j == 0:
             # Again, no dip lock because we assume the microwave tuning
             # GUI handled finding the cavity frequency.
@@ -409,10 +411,12 @@ with power_control() as p:
     # }}}
     # {{{run IR
     for j, this_dB in enumerate(T1_powers_dB):
-        logger.debug(strm(
-            "setting this power for T1(p)",
-            this_dB,
-        ))
+        logger.debug(
+            strm(
+                "setting this power for T1(p)",
+                this_dB,
+            )
+        )
         p.set_power(this_dB)
         for k in range(10):
             time.sleep(0.5)
