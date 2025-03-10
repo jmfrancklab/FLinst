@@ -328,12 +328,14 @@ with power_control() as p:
             "W)",
         )
         if j == 0:
-            retval = p.dip_lock(
-                config_dict["uw_dip_center_GHz"]
-                - config_dict["uw_dip_width_GHz"] / 2,
-                config_dict["uw_dip_center_GHz"]
-                + config_dict["uw_dip_width_GHz"] / 2,
-            )
+            # Again, no dip lock because we assume the microwave tuning
+            # GUI handled finding the cavity frequency.
+            #
+            # This is not only faster, but it ensures that the
+            # uw_dip_center_GHz stores the ACTUAL B12 frequency that we
+            # use
+            p.set_power(10)  # set to 10 dBm
+            p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
         p.set_power(this_dB)
         for k in range(10):
             time.sleep(0.5)
