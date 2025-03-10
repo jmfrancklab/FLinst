@@ -30,7 +30,7 @@ with power_control() as p:
     # {{{ run a loop that should take about 50s + execution time.  Step through
     #     3 powers -- unmodified (0 dB?), 10.5 dBm and 12 dBm
     for j in range(100):
-        logger.info(j)
+        print(j)
         time.sleep(0.5)
         if j == 0:
             logger.info("starting the log")
