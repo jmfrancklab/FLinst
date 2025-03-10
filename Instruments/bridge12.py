@@ -8,6 +8,7 @@ from serial import Serial
 from numpy import r_
 import numpy as np
 import time
+import logging
 from .log_inst import logger
 
 
@@ -220,6 +221,7 @@ class Bridge12(Serial):
         dBm: float
             power values -- give a dBm (not 10*dBm) as a floating point number
         """
+        logging.debug("entered set power")
         if not self._inside_with_block:
             raise ValueError(
                 "you MUST use a with block so the error handling works well"
@@ -234,10 +236,6 @@ class Bridge12(Serial):
         elif setting < 0:
             raise ValueError("Negative dBm -- not supported")
         elif setting > 100:
-            if not self.frq_sweep_10dBm_has_been_run:
-                raise RuntimeError(
-                    "Before you try to set the power above 10 dBm, you must first run a tuning curve at 10 dBm!!!"
-                )
             if not hasattr(self, "cur_pwr_int"):
                 raise RuntimeError(
                     "Before you try to set the power above 10 dBm, you must first set a lower power!!!"
@@ -247,16 +245,22 @@ class Bridge12(Serial):
                     "Once you are above 10 dBm, you must raise the power in MAX 3 dB increments.  The power is currently %g, and you tried to set it to %g -- this is not allowed!\nNote that if you are running from the power control server, you shouldn't encounter this error!"
                     % (self.cur_pwr_int / 10.0, setting / 10.0)
                 )
+        logging.debug("about to write power")
         self.write(b"power %d\r" % setting)
+        logging.debug("about to read power")
         self.read_until(b"Power updated\r\n")
         if setting > 0:
             self.rxpowerdbm_float()  # doing this just for safety interlock
+        logging.debug("about to enter loop to check 10 times")
         for j in range(10):
             result = self.power_int()
+            logging.debug("power check evaluated to "+str(result))
             if setting > 0:
                 self.rxpowerdbm_float()  # doing this just for safety interlock
+            logging.debug("passed safety interlock")
             if result == setting:
                 self.cur_pwr_int = result
+                logging.debug("about to return")
                 return
             time.sleep(10e-3)
         raise RuntimeError(
