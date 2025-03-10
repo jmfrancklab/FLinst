@@ -15,11 +15,13 @@ This needs to be run in sync with the power control server. To do so:
     progressive power saturation dataset, and a log of the power over time
     saved as nodes in an h5 file.
 """
+
 from numpy import r_, zeros_like
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
 import pyspecdata as psd
+from pyspecdata import strm
 import os
 import time
 import h5py
@@ -103,10 +105,10 @@ T1_powers_dB = gen_powerlist(
     three_down=False,
 )
 T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
-logger.info("dB_settings", dB_settings)
-logger.info("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
-logger.info("T1_powers_dB", T1_powers_dB)
-logger.info("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
+print("dB_settings", dB_settings)
+print("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
+print("T1_powers_dB", T1_powers_dB)
+print("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
 myinput = input("Look ok?")
 if myinput.lower().startswith("n"):
     raise ValueError("you said no!!!")
@@ -208,8 +210,10 @@ logger.debug(psd.strm("Name of saved data", control_thermal.name()))
 #   the time axis, or smaller than the first)
 ini_time = time.time()
 vd_data = None
+logger.debug("starting T1s")
 for vd_idx, vd in enumerate(vd_list_us):
     # call A to run_IR
+    logger.debug(f"T1 #{vd_idx}")
     vd_data = run_IR(
         nPoints=nPoints,
         nEchoes=config_dict["nEchoes"],
@@ -266,22 +270,18 @@ with h5py.File(
 # file itself
 vd_data.hdf5_write(filename, directory=target_directory)
 # }}}
-logger.debug("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
+logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 logger.debug(psd.strm("Name of saved data", vd_data.name()))
 # }}}
 # {{{run enhancement
 input(
     "Now plug the B12 back in and start up the FLInst power control server so "
-    "   we can continue!"
+    "we can continue!"
 )
 with power_control() as p:
-    # JF points out it should be possible to save time by removing this (b/c we
-    # shut off microwave right away), but AG notes that doing so causes an
-    # error.  Therefore, debug the root cause of the error and remove it!
-    retval_thermal = p.dip_lock(
-        config_dict["uw_dip_center_GHz"] - config_dict["uw_dip_width_GHz"] / 2,
-        config_dict["uw_dip_center_GHz"] + config_dict["uw_dip_width_GHz"] / 2,
-    )
+    # we do not dip lock or anything here, because we assume
+    # uw_dip_center_GHz stores the frequency of the center of the cavity
+    # resonance, which was set from the microwave tuning gui
     p.mw_off()
     time.sleep(16.0)  # give some time for the power source to "settle"
     p.start_log()
@@ -290,7 +290,9 @@ with power_control() as p:
     # Run the actual thermal where the power log is recording. This will be
     # your thermal for enhancement and can be compared to previous thermals if
     # issues arise
+    logger.debug("about to start thermal")
     for j in range(thermal_scans):
+        logger.debug(f"thermal {j}")
         DNP_ini_time = time.time()
         # call B/C to run spin echo
         DNP_data = run_spin_echo(
@@ -320,20 +322,24 @@ with power_control() as p:
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
-            "SETTING THIS POWER",
-            this_dB,
-            "(",
-            dB_settings[j - 1],
-            powers[j],
-            "W)",
+            strm(
+                "setting this power for E(p)",
+                this_dB,
+                "(",
+                dB_settings[j - 1],
+                powers[j],
+                "W)",
+            )
         )
         if j == 0:
-            retval = p.dip_lock(
-                config_dict["uw_dip_center_GHz"]
-                - config_dict["uw_dip_width_GHz"] / 2,
-                config_dict["uw_dip_center_GHz"]
-                + config_dict["uw_dip_width_GHz"] / 2,
-            )
+            # Again, no dip lock because we assume the microwave tuning
+            # GUI handled finding the cavity frequency.
+            #
+            # This is not only faster, but it ensures that the
+            # uw_dip_center_GHz stores the ACTUAL B12 frequency that we
+            # use
+            p.set_power(10)  # set to 10 dBm
+            p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
         p.set_power(this_dB)
         for k in range(10):
             time.sleep(0.5)
@@ -404,17 +410,14 @@ with power_control() as p:
     logger.debug(psd.strm("Name of saved data", DNP_data.name()))
     # }}}
     # {{{run IR
-    last_dB_setting = 10
     for j, this_dB in enumerate(T1_powers_dB):
-        # {{{ make small steps in power if needed
-        if this_dB - last_dB_setting > 3:
-            smallstep_dB = last_dB_setting + 2
-            while smallstep_dB + 2 < this_dB:
-                p.set_power(smallstep_dB)
-                smallstep_dB += 2
+        logger.debug(
+            strm(
+                "setting this power for T1(p)",
+                this_dB,
+            )
+        )
         p.set_power(this_dB)
-        last_dB_setting = this_dB
-        # }}}
         for k in range(10):
             time.sleep(0.5)
             # JF notes that the following works for powers going up, but not

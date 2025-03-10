@@ -13,6 +13,7 @@ class logobj(object):
         self.currently_logging = False
         self.log_pos = 0
         self.array_len = array_len
+        self.wg_has_been_flipped = False
         return
     @classmethod
     def from_group(cls,h5group):
