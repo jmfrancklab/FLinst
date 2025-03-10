@@ -320,12 +320,14 @@ with power_control() as p:
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
-            "SETTING THIS POWER",
-            this_dB,
-            "(",
-            dB_settings[j - 1],
-            powers[j],
-            "W)",
+            strm(
+                "setting this power for E(p)",
+                this_dB,
+                "(",
+                dB_settings[j - 1],
+                powers[j],
+                "W)",
+            )
         )
         if j == 0:
             # Again, no dip lock because we assume the microwave tuning
@@ -408,12 +410,12 @@ with power_control() as p:
     # {{{run IR
     last_dB_setting = 10
     for j, this_dB in enumerate(T1_powers_dB):
-        # {{{ make small steps in power if needed
-        if this_dB - last_dB_setting > 3:
-            smallstep_dB = last_dB_setting + 2
-            while smallstep_dB + 2 < this_dB:
-                p.set_power(smallstep_dB)
-                smallstep_dB += 2
+        logger.debug(
+            strm(
+                "setting this power for T1(p)",
+                this_dB,
+            )
+        )
         p.set_power(this_dB)
         last_dB_setting = this_dB
         # }}}
