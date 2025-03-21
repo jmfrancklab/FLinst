@@ -13,7 +13,7 @@ echo -e "is it clean?:\n$(git status -s)"
 git pull
 cp examples/get_ready.sh $orig_dir
 cp examples/gds_for_tune.py $orig_dir
-cp examples/collect_SC.py $orig_dir
+cp examples/capture_noise_SC_standard.py $orig_dir
 cp examples/run_generic_echo.py $orig_dir
 cp examples/run_nutation.py $orig_dir
 cp examples/run_field_dep_justMW.py $orig_dir
