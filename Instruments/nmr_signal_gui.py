@@ -86,16 +86,28 @@ class NMRWindow(QMainWindow):
 
     def set_default_choices(self):
         self.textbox_apo.setText("10 ms")
+        self.textbox_plen.setText("%g"%self.myconfig['beta_90_s_sqrtW'])
         self.textbox_apo.setMinimumWidth(10)
-        self.myconfig["SW_kHz"] = 200
+        self.textbox_plen.setMinimumWidth(10)
+        self.sw = 200
 
-    def on_textchange(self):
+    def on_apo_edit(self):
         print(
             "you changed your apodization to",
             self.textbox_apo.text(),
             "but I'm not yet programmed to do anything about that!",
         )
         self.apo_time_const = 10e-3
+        return
+
+    def on_plen_edit(self):
+        thetext = self.textbox_plen.text()
+        print(
+            "you changed your pulse length to",
+            thetext,
+            's sqrt(W)'
+        )
+        self.myconfig['beta_90_s_sqrtW'] = float(thetext)
         return
 
     def on_pick(self, event):
@@ -130,6 +142,7 @@ class NMRWindow(QMainWindow):
         else:
             Field = self.xepr.set_coarse_field(Field)
             self.prev_field = Field
+            print("about to return from set_field_conditional")
 
     def generate_data(self):
         # {{{let computer set field
@@ -148,8 +161,10 @@ class NMRWindow(QMainWindow):
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
         self.set_field_conditional(Field)
+        print("returned from set_field_conditional")
         # }}}
         # {{{acquire echo
+        print("about to run_spin_echo")
         self.echo_data = run_spin_echo(
             nScans=self.myconfig["nScans"],
             indirect_idx=0,
@@ -163,7 +178,7 @@ class NMRWindow(QMainWindow):
             repetition_us=self.myconfig["repetition_us"],
             amplitude=self.myconfig["amplitude"],
             tau_us=self.myconfig["tau_us"],
-            SW_kHz=self.myconfig["SW_kHz"],
+            SW_kHz=self.sw,
             ret_data=None,
         )
         # }}}
@@ -326,6 +341,7 @@ class NMRWindow(QMainWindow):
         #     button
         self.bottomleft_vbox = QVBoxLayout()
         self.textbox_apo = QLineEdit()
+        self.textbox_plen = QLineEdit()
         self.combo_sw = QComboBox()
         self.combo_sw.addItem("200")
         self.combo_sw.addItem("24")
@@ -333,8 +349,10 @@ class NMRWindow(QMainWindow):
         self.combo_sw.activated[str].connect(self.SW_changed)
         self.set_default_choices()
         self.bottomleft_vbox.addWidget(self.combo_sw)
-        self.textbox_apo.editingFinished.connect(self.on_textchange)
+        self.textbox_apo.editingFinished.connect(self.on_apo_edit)
+        self.textbox_plen.editingFinished.connect(self.on_plen_edit)
         self.bottomleft_vbox.addWidget(self.textbox_apo)
+        self.bottomleft_vbox.addWidget(self.textbox_plen)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -364,7 +382,7 @@ class NMRWindow(QMainWindow):
             (9819000, self.slider_min),
             (9825000, self.slider_max),
         ]:
-            self.on_textchange()
+            self.on_apo_edit()
             w.setValue(ini_val)
             w.setTracking(True)
             w.setTickPosition(QSlider.TicksBothSides)
@@ -390,8 +408,8 @@ class NMRWindow(QMainWindow):
 
     def SW_changed(self, arg):
         my_sw = {"200": 200.0, "24": 24.0, "3.9": 3.9}
-        self.myconfig["SW_kHz"] = my_sw[arg]
-        print("changing SW to", self.myconfig["SW_kHz"])
+        self.sw = my_sw[arg]
+        print("changing SW to", self.sw)
 
     def create_status_bar(self):
         self.status_text = QLabel("This is a demo")
