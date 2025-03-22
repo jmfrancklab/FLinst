@@ -175,6 +175,7 @@ class configuration(object):
             "SpinCore-specific ADC offset correction\nwe believe this is a DC offset, but are not positive",
         ),
         "nScans": (int, "acq_params", 1, "number of scans"),
+        "indirect_pts": (int, "acq_params", 5, "generic parameter for number of indirect points (for nutation, field sweep, etc.)"),
         "thermal_nScans": (
             int,
             "acq_params",
