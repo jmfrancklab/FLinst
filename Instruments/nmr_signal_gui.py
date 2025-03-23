@@ -9,6 +9,7 @@ which is a good layout reference
 
 JF updated to plot a sine wave
 """
+
 from numpy import r_
 import numpy as np
 from .XEPR_eth import xepr as xepr_from_module
@@ -86,7 +87,7 @@ class NMRWindow(QMainWindow):
 
     def set_default_choices(self):
         self.textbox_apo.setText("10 ms")
-        self.textbox_plen.setText("%g"%self.myconfig['beta_90_s_sqrtW'])
+        self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
         self.textbox_apo.setMinimumWidth(10)
         self.textbox_plen.setMinimumWidth(10)
         self.sw = 200
@@ -102,12 +103,8 @@ class NMRWindow(QMainWindow):
 
     def on_plen_edit(self):
         thetext = self.textbox_plen.text()
-        print(
-            "you changed your pulse length to",
-            thetext,
-            's sqrt(W)'
-        )
-        self.myconfig['beta_90_s_sqrtW'] = float(thetext)
+        print("you changed your pulse length to", thetext, "s sqrt(W)")
+        self.myconfig["beta_90_s_sqrtW"] = float(thetext)
         return
 
     def on_pick(self, event):
@@ -229,12 +226,9 @@ class NMRWindow(QMainWindow):
         self.echo_data.ift("t2")
         filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
-            -abs(
-                (
-                    self.echo_data.fromaxis("t2")
-                    - self.myconfig["tau_us"] * 1e-6
-                )
-            )
+            -abs((
+                self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
+            ))
             / filter_timeconst
         )
         self.echo_data.ft("t2")
@@ -246,9 +240,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set(
-                    (longest_dim,)
-                )
+                all_but_longest = set(range(len(myy.data.shape))) ^ set((
+                    longest_dim,
+                ))
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
