@@ -16,7 +16,10 @@ class configuration(object):
             float,
             "acq_params",
             None,
-            "extra delay added between 90° and 180° pulse -- note this is not the same as τ_echo!\nsee eq 6 of coherence paper",
+            (
+                "extra delay added between 90° and 180° pulse -- note this is"
+                " not the same as τ_echo!\nsee eq 6 of coherence paper"
+            ),
         ),
         "deblank_us": (
             float,
@@ -34,13 +37,21 @@ class configuration(object):
             float,
             "acq_params",
             None,
-            "acquisition time in milliseconds - we've found 1024.0 to work well",
+            (
+                "acquisition time in milliseconds - we've found 1024.0 to work"
+                " well"
+            ),
         ),
         "echo_acq_ms": (
             float,
             "acq_params",
             None,
-            "Length of acquisition during stroboscopic echo acquisition, in milliseconds.  Keep this separate from acq_time_ms to avoid confusion, because there are many echo_acq_ms per transient, but only one acq_time_ms per transient.",
+            (
+                "Length of acquisition during stroboscopic echo acquisition,"
+                " in milliseconds.  Keep this separate from acq_time_ms to"
+                " avoid confusion, because there are many echo_acq_ms per"
+                " transient, but only one acq_time_ms per transient."
+            ),
         ),
         "carrierFreq_MHz": (
             float,
@@ -52,25 +63,41 @@ class configuration(object):
             float,
             "acq_params",
             None,
-            "Fraction of T₁ min bounds to start vdlist at (0.15 recommended).\n(from Weiss, where T₁ determination problem is treated as determining the T₁,\nwhich is known to be between some min and max bounds)",
+            (
+                "Fraction of T₁ min bounds to start vdlist at (0.15"
+                " recommended).\n(from Weiss, where T₁ determination problem"
+                " is treated as determining the T₁,\nwhich is known to be"
+                " between some min and max bounds)"
+            ),
         ),
         "stopconstant": (
             float,
             "acq_params",
             None,
-            "Fraction of max T₁ bounds to stop vdlist at.\n \n Weiss recommends 0.75, which only gives 5% recovery -- we choose 2.0,\n since it gives 73% recovery, and that makes us feel better",
+            (
+                "Fraction of max T₁ bounds to stop vdlist at.\n \n Weiss"
+                " recommends 0.75, which only gives 5% recovery -- we choose"
+                " 2.0,\n since it gives 73% recovery, and that makes us feel"
+                " better"
+            ),
         ),
         "p90_us": (
             float,
             "acq_params",
             None,
-            "90 time of the probe in microseconds.\nUsed to determine 90° 180°, etc pulses",
+            (
+                "90 time of the probe in microseconds.\nUsed to determine 90°"
+                " 180°, etc pulses"
+            ),
         ),
         "beta_90_s_sqrtW": (
             float,
             "acq_params",
             20.0e-6,
-            "Beta value of the probe in seconds * sqrt(W).\nUsed to determine 90° 180°, etc pulses",
+            (
+                "Beta value of the probe in seconds * sqrt(W).\nUsed to"
+                " determine 90° 180°, etc pulses"
+            ),
         ),
         "gamma_eff_MHz_G": (
             float,
@@ -82,13 +109,19 @@ class configuration(object):
             float,
             "acq_params",
             6,
-            "number of points collected in a field sweep, for a finer data acquisition increase this number",
+            (
+                "number of points collected in a field sweep, for a finer data"
+                " acquisition increase this number"
+            ),
         ),
         "tau_extra_us": (
             float,
             "acq_params",
             1000.0,
-            "amount of extra time both before and after the acquisition during a symmetric echo sequence",
+            (
+                "amount of extra time both before and after the acquisition"
+                " during a symmetric echo sequence"
+            ),
         ),
         "concentration": (
             float,
@@ -100,31 +133,46 @@ class configuration(object):
             float,
             "odnp_params",
             None,
-            "Repetition delay for fast inversion recovery as defined by Weiss-this is calculated in the combined ODNP ppg",
+            (
+                "Repetition delay for fast inversion recovery as defined by"
+                " Weiss-this is calculated in the combined ODNP ppg"
+            ),
         ),
         "krho_cold": (
             float,
             "sample_params",
             None,
-            "the self relaxivity constant of the specific sample with the power off (i.e. when it is coldest)",
+            (
+                "the self relaxivity constant of the specific sample with the"
+                " power off (i.e. when it is coldest)"
+            ),
         ),
         "krho_hot": (
             float,
             "sample_params",
             None,
-            "the self relaxivity constant of the specific sample at the highest temperature/power",
+            (
+                "the self relaxivity constant of the specific sample at the"
+                " highest temperature/power"
+            ),
         ),
         "T1water_hot": (
             float,
             "sample_params",
             None,
-            "T₁ of ultra pure water at the highest power - this really should not change unless a new measurement is made",
+            (
+                "T₁ of ultra pure water at the highest power - this really"
+                " should not change unless a new measurement is made"
+            ),
         ),
         "T1water_cold": (
             float,
             "sample_params",
             None,
-            "T₁ of ultra pure water with the microwave power off - this really should not change unless a new measurement is made",
+            (
+                "T₁ of ultra pure water with the microwave power off - this"
+                " really should not change unless a new measurement is made"
+            ),
         ),
         "repetition_us": (
             float,
@@ -136,7 +184,10 @@ class configuration(object):
             float,
             "sample_params",
             1.51671,
-            "the ppt value we use to determine our rf carrier frequency based on our microwave",
+            (
+                "the ppt value we use to determine our rf carrier frequency"
+                " based on our microwave"
+            ),
         ),
         "max_power": (
             float,
@@ -148,7 +199,10 @@ class configuration(object):
             float,
             "odnp_params",
             None,
-            "ESR resonance frequency found by minimizing the B12 dip at increasing powers",
+            (
+                "ESR resonance frequency found by minimizing the B12 dip at"
+                " increasing powers"
+            ),
         ),
         "uw_dip_width_GHz": (
             float,
@@ -160,7 +214,11 @@ class configuration(object):
             float,
             "odnp_params",
             1.0,
-            "dBm increment for making the power list in ODNP and for T1(p). Depending on the power source this can be 0.1, 0.5, or 1.0",
+            (
+                "dBm increment for making the power list in ODNP and for"
+                " T1(p). Depending on the power source this can be 0.1, 0.5,"
+                " or 1.0"
+            ),
         ),
         "guessed_phalf": (
             float,
@@ -172,26 +230,47 @@ class configuration(object):
             int,
             "acq_params",
             None,
-            "SpinCore-specific ADC offset correction\nwe believe this is a DC offset, but are not positive",
+            (
+                "SpinCore-specific ADC offset correction\nwe believe this is a"
+                " DC offset, but are not positive"
+            ),
         ),
         "nScans": (int, "acq_params", 1, "number of scans"),
+        "indirect_pts": (
+            int,
+            "acq_params",
+            5,
+            (
+                "generic parameter for number of indirect points (for"
+                " nutation, field sweep, etc.)"
+            ),
+        ),
         "thermal_nScans": (
             int,
             "acq_params",
             1,
-            "number of thermal scans - useful for no power datasets with low signal",
+            (
+                "number of thermal scans - useful for no power datasets with"
+                " low signal"
+            ),
         ),
         "nEchoes": (
             int,
             "acq_params",
             None,
-            "number of echoes - 1, aside from CPMG, where it can be any desired number",
+            (
+                "number of echoes - 1, aside from CPMG, where it can be any"
+                " desired number"
+            ),
         ),
         "IR_steps": (
             int,
             "acq_params",
             None,
-            "number of points collected in an IR experiment between the min and max time points",
+            (
+                "number of points collected in an IR experiment between the"
+                " min and max time points"
+            ),
         ),
         "power_steps": (
             int,
@@ -210,7 +289,10 @@ class configuration(object):
             str,
             "file_names",
             None,
-            "name specific to the sample - your data set will be named: date_chemical_type",
+            (
+                "name specific to the sample - your data set will be named:"
+                " date_chemical_type"
+            ),
         ),
         "type": (
             str,
@@ -275,7 +357,13 @@ class configuration(object):
             converter, section, default, _ = self.registered_params[key]
             if default is None:
                 raise KeyError(
-                    f"You're asking for the '{key}' parameter, and it's not set in the .ini file!\nFirst, ask yourself if you should have run some type of set-up program (tuning, adc offset, resonance finder, etc.) that would set this parameter.\nThen, try setting the parameter in the appropriate section of your .ini file by editing the file with gvim or notepad++!"
+                    f"You're asking for the '{key}' parameter, and it's not"
+                    " set in the .ini file!\nFirst, ask yourself if you"
+                    " should have run some type of set-up program (tuning,"
+                    " adc offset, resonance finder, etc.) that would set this"
+                    " parameter.\nThen, try setting the parameter in the"
+                    " appropriate section of your .ini file by editing the"
+                    " file with gvim or notepad++!"
                 )
             else:
                 return default
@@ -284,7 +372,10 @@ class configuration(object):
     def __setitem__(self, key, value):
         if key.lower() not in self._case_insensitive_keys.keys():
             raise ValueError(
-                f"I don't know what section to put the {key} setting in, or what type it's supposed to be!!  You should register it's existence in the config_parser_fn subpackage before trying to use it!! (Also -- do you really need another setting??)"
+                f"I don't know what section to put the {key} setting in, or"
+                " what type it's supposed to be!!  You should register it's"
+                " existence in the config_parser_fn subpackage before trying"
+                " to use it!! (Also -- do you really need another setting??)"
             )
         else:
             key = self._case_insensitive_keys[key.lower()]

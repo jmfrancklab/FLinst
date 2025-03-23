@@ -14,14 +14,19 @@ from SpinCore_pp import get_integer_sampling_intervals, save_data, prog_plen
 from Instruments.XEPR_eth import xepr
 from SpinCore_pp.ppg import run_spin_echo
 from datetime import datetime
-import numpy as np
 from numpy import r_
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
-beta_range_s_sqrtW = np.linspace(0.5e-6, 100e-6, 20)
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
+# cover 2 lobes based on expected beta_range_s_sqrtW in active.ini
+beta_range_s_sqrtW = (
+    r_[1 : 1 + config_dict["indirect_pts"]]
+    / config_dict["indirect_pts"]
+    * 3.5
+    * config_dict["beta_90_s_sqrtW"]
+)
 prog_p90_us = prog_plen(beta_range_s_sqrtW, config_dict)
 (
     nPoints,
