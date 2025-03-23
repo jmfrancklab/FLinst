@@ -9,6 +9,7 @@ the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print
 "I am listening..."
 """
+
 import pyspecdata as psd
 from pyspecdata import strm
 import time
@@ -38,8 +39,8 @@ right = (
 right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
-print("I see",config_dict['indirect_pts'],"indirect points setting")
-field_axis = np.linspace(left,right,config_dict['indirect_pts'])
+print("I see", config_dict["indirect_pts"], "indirect points setting")
+field_axis = np.linspace(left, right, config_dict["indirect_pts"])
 myinput = input(
     strm("Your field axis is:", field_axis, "\nDoes this look okay?")
 )
