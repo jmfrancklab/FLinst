@@ -9,6 +9,7 @@ which is a good layout reference
 
 JF updated to plot a sine wave
 """
+
 from Instruments import Bridge12
 from scipy.interpolate import interp1d
 import time
@@ -26,6 +27,7 @@ class TuningWindow(qt5w.QMainWindow):
     def __init__(self, B12, config, parent=None):
         self.B12 = B12
         self.myconfig = config
+        self.initial_carrier = self.myconfig["carrierFreq_MHz"]
         qt5w.QMainWindow.__init__(self, parent)
         self.setWindowTitle("B12 tuning!")
         self.setGeometry(20, 20, 1500, 800)
@@ -241,10 +243,15 @@ class TuningWindow(qt5w.QMainWindow):
             self.myconfig["carrierfreq_mhz"] = (
                 self.dip_frq_GHz * self.myconfig["guessed_mhz_to_ghz"]
             )
+            print(
+                f"You changed the carrier from {self.initial_carrier} to "
+                f"{self.myconfig['carrierFreq_MHz']}, which is a difference of "
+                f"{((self.myconfig['carrierFreq_MHz']-self.initial_carrier)/1e-3)} kHz"
+            )
             self.myconfig.write()
             self.B12.set_freq(
                 self.dip_frq_GHz * 1e9
-            )  # always do this, so that it should be 
+            )  # always do this, so that it should be
             # safe to slightly turn up the power
             self.axes.set_xlim(
                 self.slider_min.value() / 1e6, self.slider_max.value() / 1e6
@@ -282,8 +289,7 @@ class TuningWindow(qt5w.QMainWindow):
         # Create the navigation toolbar, tied to the canvas
         #
         self.mpl_toolbar = mqt5ag.NavigationToolbar2QT(
-            self.canvas,
-            self.main_frame
+            self.canvas, self.main_frame
         )
 
         # Other GUI controls
