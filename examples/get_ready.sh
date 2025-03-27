@@ -18,6 +18,7 @@ cp examples/run_generic_echo.py $orig_dir
 cp examples/run_nutation.py $orig_dir
 cp examples/run_field_dep_justMW.py $orig_dir
 cp examples/combined_ODNP.py $orig_dir
+cp examples/set_carrier_based_on_ppt.py $orig_dir
 echo "==========================================================================="
 cd /c/git/pyspecdata
 echo -e "I'm in this branch of pyspecdata:\n$(git rev-parse --abbrev-ref @)"
@@ -32,7 +33,6 @@ cp examples/generate_SC_PSD.py $orig_dir
 cp examples/proc_raw.py $orig_dir
 cp examples/proc_nutation.py $orig_dir
 cp examples/proc_fieldSweep.py $orig_dir
-cp examples/set_carrier_based_on_ppt.py $orig_dir
 echo "==========================================================================="
 echo -e "back to your user directory!"
 cd $orig_dir
