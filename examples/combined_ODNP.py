@@ -104,6 +104,18 @@ T1_powers_dB = gen_powerlist(
     three_down=False,
 )
 T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
+single_T1_minutes = (
+    len(IR_ph1_cyc)
+    * len(IR_ph2_cyc)
+    * config_dict["nScans"]
+    * len(vd_list_us)
+    * (
+        FIR_rep * 1e-6
+        + config_dict["acq_time_ms"] * 1e-3
+        + mean(vd_list_us) * 1e-6
+    )
+    / 60
+)
 thermal_echo_minutes = (
     config_dict["thermal_nScans"]
     * (config_dict["repetition_us"] * 1e-6 + config_dict["acq_time_ms"] * 1e-3)
@@ -121,18 +133,6 @@ print(
     "min of echos",
 )
 print("dB_settings", dB_settings)
-single_T1_minutes = (
-    len(IR_ph1_cyc)
-    * len(IR_ph2_cyc)
-    * config_dict["nScans"]
-    * len(vd_list_us)
-    * (
-        FIR_rep * 1e-6
-        + config_dict["acq_time_ms"] * 1e-3
-        + mean(vd_list_us) * 1e-6
-    )
-    / 60
-)
 enhancement_minutes = (
     len(dB_settings)
     * len(Ep_ph1_cyc)
