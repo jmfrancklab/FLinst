@@ -16,7 +16,7 @@ This needs to be run in sync with the power control server. To do so:
     saved as nodes in an h5 file.
 """
 
-from numpy import r_, zeros_like
+from numpy import r_, zeros_like, mean
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
@@ -106,9 +106,44 @@ T1_powers_dB = gen_powerlist(
 )
 T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
 print("dB_settings", dB_settings)
+enhancement_minutes = (
+    len(dB_settings)
+    * len(Ep_ph1_cyc)
+    * config_dict["nScans"]
+    * (config_dict["repetition_us"] * 1e-6 + config_dict["acq_time_ms"] * 1e-3)
+    / 60
+)
+print(
+    "there are",
+    len(dB_settings),
+    "for a total of",
+    enhancement_minutes,
+    "minutes",
+)
 print("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
 print("T1_powers_dB", T1_powers_dB)
 print("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
+T1_minutes = (
+    len(T1_powers_dB)
+    * len(IR_ph1_cyc)
+    * len(IR_ph2_cyc)
+    * config_dict["nScans"]
+    * len(vd_list_us)
+    * (
+        FIR_rep * 1e-6
+        + config_dict["acq_time_ms"] * 1e-3
+        + mean(vd_list_us) * 1e-6
+    )
+    / 60
+)
+print(
+    "there are",
+    len(T1_powers_dB),
+    "for a total of",
+    T1_minutes,
+    "minutes, and a grand total of ",
+    T1_minutes + enhancement_minutes,
+)
 myinput = input("Look ok?")
 if myinput.lower().startswith("n"):
     raise ValueError("you said no!!!")

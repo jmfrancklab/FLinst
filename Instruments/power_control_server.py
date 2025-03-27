@@ -3,7 +3,7 @@ import time, socket, pickle, os, logging, sys
 from Instruments import Bridge12, prologix_connection, gigatronics, logobj
 
 
-IP = "0.0.0.0"
+IP = "127.0.0.1" # only accepts from localhost
 PORT = 6002
 
 def main():
@@ -171,6 +171,10 @@ def main():
                     sock.listen(1)
                     print("I am listening")
                     conn, addr = sock.accept()
+                    if addr[0] != "127.0.0.1":
+                        print("I rejected a request from", addr)
+                        conn.close()
+                        continue
                     print("I have accepted from", addr)
                     leave_open = True
                     oldtimeout = conn.gettimeout()
