@@ -39,7 +39,6 @@ fl = psd.figlist_var()
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
-thermal_scans = config_dict["thermal_nscans"]
 # }}}
 # {{{create filename and save to config file
 date = datetime.now().strftime("%y%m%d")
@@ -106,6 +105,30 @@ T1_powers_dB = gen_powerlist(
 )
 T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
 print("dB_settings", dB_settings)
+single_T1_minutes = (
+    len(IR_ph1_cyc)
+    * len(IR_ph2_cyc)
+    * config_dict["nScans"]
+    * len(vd_list_us)
+    * (
+        FIR_rep * 1e-6
+        + config_dict["acq_time_ms"] * 1e-3
+        + mean(vd_list_us) * 1e-6
+    )
+    / 60
+)
+thermal_echo_minutes = (
+    config_dict["thermal_nScans"]
+    * (config_dict["repetition_us"] * 1e-6 + config_dict["acq_time_ms"] * 1e-3)
+    / 60
+)
+print(
+    "before turning on the B12, I'm going to run",
+    thermal_echo_minutes + single_T1_minutes,
+    "min worth of stuff: ",
+    single_T1_minutes,
+    "min of that is a T1",
+)
 enhancement_minutes = (
     len(dB_settings)
     * len(Ep_ph1_cyc)
@@ -123,19 +146,7 @@ print(
 print("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
 print("T1_powers_dB", T1_powers_dB)
 print("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
-T1_minutes = (
-    len(T1_powers_dB)
-    * len(IR_ph1_cyc)
-    * len(IR_ph2_cyc)
-    * config_dict["nScans"]
-    * len(vd_list_us)
-    * (
-        FIR_rep * 1e-6
-        + config_dict["acq_time_ms"] * 1e-3
-        + mean(vd_list_us) * 1e-6
-    )
-    / 60
-)
+T1_minutes = len(T1_powers_dB) * single_T1_minutes
 print(
     "there are",
     len(T1_powers_dB),
@@ -203,7 +214,7 @@ control_thermal = run_spin_echo(
     ret_data=None,
 )
 if config_dict["thermal_nScans"] > 1:
-    control_thermal.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
+    control_thermal.setaxis("nScans", "#")
 if phase_cycling:
     control_thermal.chunk("t", ["ph1", "t2"], [len(Ep_ph1_cyc), -1])
     control_thermal.setaxis("ph1", Ep_ph1_cyc / 4)
@@ -236,8 +247,7 @@ except Exception:
             "change the name accordingly once this is done running!"
         )
 # }}}
-logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-logger.debug(psd.strm("Name of saved data", control_thermal.name()))
+logger.info(psd.strm("Name of saved data", control_thermal.name()))
 # }}}
 # {{{IR at no power
 #   this is outside the log, so to deal with this during processing, just check
@@ -257,7 +267,7 @@ for vd_idx, vd in enumerate(vd_list_us):
         ph1_cyc=IR_ph1_cyc,
         ph2_cyc=IR_ph2_cyc,
         vd=vd,
-        nScans=config_dict["thermal_nScans"],
+        nScans=config_dict["nScans"],
         plen=config_dict["beta_90_s_sqrtW"],
         deblank_us=config_dict["deblank_us"],
         adcOffset=config_dict["adc_offset"],
@@ -279,7 +289,7 @@ if phase_cycling:
 else:
     vd_data.rename("t", "t2")
 vd_data.set_units("t2", "s")
-vd_data.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
+vd_data.setaxis("nScans", "#")
 vd_data.name("FIR_noPower")
 vd_data.set_prop("stop_time", time.time())
 vd_data.set_prop("coherence_pathway", {"ph1": 0, "ph2": +1})
@@ -305,8 +315,7 @@ with h5py.File(
 # file itself
 vd_data.hdf5_write(filename, directory=target_directory)
 # }}}
-logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-logger.debug(psd.strm("Name of saved data", vd_data.name()))
+logger.info(psd.strm("Name of saved data", vd_data.name()))
 # }}}
 # {{{run enhancement
 input(
@@ -326,7 +335,7 @@ with power_control() as p:
     # your thermal for enhancement and can be compared to previous thermals if
     # issues arise
     logger.debug("about to start thermal")
-    for j in range(thermal_scans):
+    for j in range(config_dict["thermal_nScans"]):
         logger.debug(f"thermal {j}")
         DNP_ini_time = time.time()
         # call B/C to run spin echo
@@ -384,14 +393,16 @@ with power_control() as p:
             raise ValueError("After 10 tries, the power has still not settled")
         time.sleep(5)
         power_settings_dBm[j] = p.get_power_setting()
-        time_axis_coords[j + thermal_scans]["start_times"] = time.time()
+        time_axis_coords[j + config_dict["thermal_nScans"]][
+            "start_times"
+        ] = time.time()
         # call D to run spin echo
         # Now that the thermal is collected we increment our powers and collect
         # our data at each power
         run_spin_echo(
             nScans=config_dict["nScans"],
-            indirect_idx=j + thermal_scans,
-            indirect_len=len(powers) + thermal_scans,
+            indirect_idx=j + config_dict["thermal_nScans"],
+            indirect_len=len(powers) + config_dict["thermal_nScans"],
             amplitude=config_dict["amplitude"],
             adcOffset=config_dict["adc_offset"],
             carrierFreq_MHz=config_dict["carrierFreq_MHz"],
@@ -406,7 +417,9 @@ with power_control() as p:
             indirect_fields=("start_times", "stop_times"),
             ret_data=DNP_data,
         )
-        time_axis_coords[j + thermal_scans]["stop_times"] = time.time()
+        time_axis_coords[j + config_dict["thermal_nScans"]][
+            "stop_times"
+        ] = time.time()
     DNP_data.set_prop("stop_time", time.time())
     DNP_data.set_prop("postproc_type", Ep_postproc)
     DNP_data.set_prop("acq_params", config_dict.asdict())
