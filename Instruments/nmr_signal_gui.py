@@ -275,8 +275,12 @@ class NMRWindow(QMainWindow):
         signal = abs(self.echo_data["ph1", 1])
         signal -= noise
         for j in self.echo_data.getaxis("ph1"):
+            thislabel = f"Δp={j}"
+            if j==1:
+                thislabel += r" ∫$_{\pm 100\ Hz}$"
+                thislabel += f"={abs(self.echo_data['ph1':j]['t2':(-100,100)]).integrate('t2').item():g}"
             pyspec_plot(
-                abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5
+                abs(self.echo_data["ph1":j]), label=thislabel, alpha=0.5
             )
             if many_scans and j == 1:
                 for k in range(psp.ndshape(multiscan_copy)["nScans"]):

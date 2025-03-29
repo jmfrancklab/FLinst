@@ -137,12 +137,14 @@ def main():
                             print("closing connection")
                             leave_open = False
                             b.soft_shutdown()
+                            this_logobj.wg_has_been_flipped = False
                             conn.close()
                         elif args[0] == b"GET_POWER":
                             result = b.power_float()
                             conn.send(("%0.1f" % result).encode("ASCII"))
                         elif args[0] == b"MW_OFF":
                             b.soft_shutdown()
+                            this_logobj.wg_has_been_flipped = False
 
                         elif args[0] == b"QUIT":
                             print("closing connection")
@@ -160,6 +162,7 @@ def main():
                             this_logobj.reset()
                         elif args[0] == b"MW_OFF":
                             b.soft_shutdown()
+                            this_logobj.wg_has_been_flipped = False
                         else:
                             raise ValueError(
                                 "I don't understand this 1 component command"
