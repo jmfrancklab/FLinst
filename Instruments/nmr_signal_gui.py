@@ -277,8 +277,8 @@ class NMRWindow(QMainWindow):
         for j in self.echo_data.getaxis("ph1"):
             thislabel = f"Δp={j}"
             if j==1:
-                thislabel += r" ∫$_{\pm 100\ Hz}$"
-                thislabel += f"={abs(self.echo_data['ph1':j]['t2':(-100,100)]).integrate('t2').item():g}"
+                thislabel += r" ∫$_{\pm 700\ Hz}$"
+                thislabel += f"={abs(self.echo_data['ph1':j]['t2':(-700,700)]).integrate('t2').item():g}"
             pyspec_plot(
                 abs(self.echo_data["ph1":j]), label=thislabel, alpha=0.5
             )
