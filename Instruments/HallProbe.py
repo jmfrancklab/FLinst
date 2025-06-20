@@ -1,6 +1,7 @@
 import socket
 import time
 from .gpib_eth import gpib_eth
+from .log_inst import logger
 
 """
 Class for controlling LakeShore 475 Gaussmeter written by AG using ChatGPT and inferring
@@ -17,16 +18,23 @@ class LakeShore475 (gpib_eth):
         with LakeShore475(prologix, gpib_addr) as gauss:
             ...
     """
-    def __init__(self, prologix_instance=None, address=None):
-        super().__init__(prologix_instance,address)
-        self.write("MODE 1") # Put the device in remote mode
-        idstring = self.respond("*IDN?")
-        if idstring[0:4] == 'LSCI':
+    def __init__(self, prologix_instance=None, address=12,eos=0):
+        """ınıtıalıze ınstance of connectıon to hall probe
+        
+        parameters
+        ==========
+        eos : ınt
+            2 -- set ınstrument to IEEE Terms = LF
+            0 -- set ınstrument to IEEE Terms = CR LF
+        """
+        super().__init__(prologix_instance,address,eos=eos)
+        idstring = self.respond("*IDN?") 
+        if idstring.startswith('LSCI,MODEL475'):
             logger.debug("Detected LakeShore Gaussmeter with ID string %s"%idstring)
         else:
-            raise ValueError("Not detecting identity as Lakeshore Gaussmeter, returned ID string as %s"%idstring)
+            raise ValueError("Not detecting identity as Lakeshore Gaussmeter 475, returned ID string as %s"%idstring)
         return
-
+        
     def identify(self):
         """Return the *IDN? string (manufacturer, model, serial, date)."""
         return self.respond("*IDN?")
@@ -40,7 +48,7 @@ class LakeShore475 (gpib_eth):
 
     def read_field(self):
         """Return the present magnetic field reading in gauss."""
-        return float(self.plx.gpib_query("READ?"))
+        return float(self.respond("READ?"))
     
     def get_field_units(self) -> int:
         """Query the current field‐unit setting (returns the code)."""
@@ -56,11 +64,13 @@ class LakeShore475 (gpib_eth):
             response = float(resp)  # field reading query :contentReference[oaicite:3]{index=3}
             return response
 
-        except:
+        except: #For error messages, refer Sec. 8.6 at page 8-3 in the manual.
             if resp == 'NO PROBE':
                 raise ValueError('No Hall Probe is attached!')
             elif resp == 'OL':
-                raise ValueError('Measured field is above the present range!')
+                raise ValueError('The measured field is larger than the range. Increase the measurement range or check probe zero.')
+            else: 
+                raise ValueError('Other type of error: %s'%resp)
             
     def set_range(self, range_code: int):
         """
@@ -93,19 +103,3 @@ class LakeShore475 (gpib_eth):
         self.write("ZPROBE")
 
 
-# Example usage with context managers
-if __name__ == "__main__":
-    PROLOGIX_IP = "192.168.0.162"  # replace with your Prologix IP
-    GPIB_ADDR = 12                  # Lake Shore 475 address
-
-    with LakeShore475(PROLOGIX_IP, GPIB_ADDR) as gauss:
-        print(gauss.identify())
-
-        """
-        gauss.set_field_units(1) #Sets units to G. Use 2 to set units in T.
-        if not gauss.is_auto(): #Makes sure that the auto range is enabled
-            gauss.enable_auto_range(1)
-        time.sleep(1)
-        field = gauss.read_field()  #Reading the field
-        print(f"Magnetic field: {field:.3f} G")
-        """

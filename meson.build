@@ -127,6 +127,7 @@ py.install_sources(files([
     'Instruments/power_control.py',
     'Instruments/microwave_tuning_gui.py',
     'Instruments/just_quit.py',
+    'Instruments/HallProbe.py',
 ]), subdir: 'Instruments')
 
 scripts = [['calc_tempol_vd', 'SpinCore_pp.calc_vdlist', 'print_tempo_vdlist'], 

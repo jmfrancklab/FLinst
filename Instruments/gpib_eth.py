@@ -10,8 +10,17 @@ class prologix_connection (object):
     Contains both the TCP connection to the prologix device and a record
     of which instrument we are "facing".
     """
-    def __init__(self, ip="jmfrancklab-prologix.syr.edu", port=1234):
+    def __init__(self, ip="192.168.0.162", port=1234):
+        """
+        Parameters
+        ==============
+        ip : string
+            the ip adress of the prologix adapter
+        port : int
+            the socket of the prologix ip adapter
+        """
         self.current_address = None
+        self.current_eos = None
         self.opened_port = None
         self.opened_ip = None
         self.socket = None
@@ -34,13 +43,15 @@ class prologix_connection (object):
         self.socket.send(('++ifc'+"\r").encode('utf-8'))
         self.socket.send(('++auto 0'+"\r").encode('utf-8'))
         self.socket.send(('++eoi 0'+"\r").encode('utf-8'))
+        # self.socket.send(("++eos\r").encode('ascii'))
+        # eos = self.socket.recv(1000).decode('ascii')
+        # print("current eos",eos)
         self.socket.send(("++ver\r").encode('utf-8'))
         versionstring = self.socket.recv(1000).decode('utf-8')
         if versionstring[0:8]=='Prologix':
-            pass #print 'connected to: ',versionstring
+            print('connected to',versionstring)
         else:
-            print('Error! can\'t find prologix on %s:%d'%(ip,port))
-            raise
+            raise RuntimeError('Error! can\'t find prologix on %s:%d'%(ip,port))
         self.opened_port = port
         self.opened_ip = ip
         return self
@@ -50,7 +61,7 @@ class gpib_eth (object):
     """WARNING: I modified the names of this file and the classes to make it
     less ambiguous -- this probably breaks a lot of stuff -- see the
     appropriate git commit"""
-    def __init__(self, prologix_instance, address):
+    def __init__(self, prologix_instance, address, eos=0):
         """Initialize a GPIB instrument
         
         Parameters
@@ -65,6 +76,7 @@ class gpib_eth (object):
             raise ValueError("you must specify a prologix_instance instance")
         # Switch for OS X
         self.flags = {}
+        self.eos = eos
         self.address = address # the GPIB address of the instrument for which I have generated this instance of gpib_eth
         if address is None:
             raise ValueError("you need to set the GPIB address (address=xxx)!!!!")
@@ -82,6 +94,9 @@ class gpib_eth (object):
         if(self.prologix_instance.current_address != self.address):
             self.socket.send(('++addr '+str(self.address)+"\r").encode('utf-8'))
             self.prologix_instance.current_address = self.address
+        if(self.prologix_instance.current_eos != self.eos):
+            self.socket.send(('++eos '+str(self.eos)+"\r").encode('utf-8'))
+            self.prologix_instance.current_eos = self.eos
     def readandchop(self): # unique to the ethernet one
         self.setaddr()
         self.socket.settimeout(5)
@@ -99,7 +114,7 @@ class gpib_eth (object):
         return self.readandchop()
     def write(self,gpibstr):
         self.setaddr()
-        self.socket.send((gpibstr+"\r").encode('utf-8'))
+        self.socket.send((gpibstr+"\r").encode('ASCII'))
     def respond(self,gpibstr,printstr='%s',lines=1):
         self.write(gpibstr)
         #print printstr % self.readline()
