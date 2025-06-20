@@ -1,56 +1,6 @@
 import socket
 import time
 
-class PrologixEthernet:
-    """
-    Context-managed Prologix GPIB-Ethernet controller.
-    Usage:
-        with PrologixEthernet(ip, port) as plx:
-            ...
-    """
-    def __init__(self, ip, port=1234, timeout=1):
-        self.ip = ip
-        self.port = port
-        self.timeout = timeout
-        self.sock = None
-
-    def __enter__(self):
-        self.sock = socket.create_connection((self.ip, self.port), timeout=self.timeout)
-        # Ensure proper EOS and auto-read settings
-        self.send("++eos 3")
-        self.send("++auto 1")
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.sock:
-            self.sock.close()
-        # Propagate exceptions if any
-        return False
-
-    def send(self, cmd):
-        """Send a command to the Prologix box and return its response."""
-        self.sock.sendall((cmd + "\n").encode())
-        return self._read_response()
-
-    def _read_response(self):
-        """Read one line terminated by LF."""
-        data = b""
-        while not data.endswith(b"\n"):
-            chunk = self.sock.recv(4096)
-            if not chunk:
-                break
-            data += chunk
-        return data.decode().strip()
-
-    def gpib_write(self, cmd):
-        """Write a GPIB command without expecting a return value."""
-        return self.send(cmd)
-
-    def gpib_query(self, cmd):
-        """Write a GPIB query and return its result."""
-        return self.send(cmd)
-
-
 class LakeShore475:
     """
     Context-managed Lake Shore 475 Gaussmeter via PrologixEthernet.
