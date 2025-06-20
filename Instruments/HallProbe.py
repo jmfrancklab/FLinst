@@ -1,7 +1,14 @@
 import socket
 import time
 from .gpib_eth import gpib_eth
-from .log_inst import logger
+
+"""
+Class for controlling LakeShore 475 Gaussmeter written by AG using ChatGPT and inferring
+from HP6623A.py, HP8672A.py and gigatronics.py.
+ChatGPT Conversation: https://chatgpt.com/share/6851b044-3030-800d-ae80-7943105f6a59
+Refer to the user manual for the detailed explanations of the commands starting from
+the page 6-28.
+"""
 
 class LakeShore475 (gpib_eth):
     """
@@ -83,7 +90,7 @@ class LakeShore475 (gpib_eth):
 
     def zero_probe(self):
         """Re-zero the probe before measurements."""
-        self.plx.gpib_write("ZPROBE")
+        self.write("ZPROBE")
 
 
 # Example usage with context managers
@@ -92,9 +99,13 @@ if __name__ == "__main__":
     GPIB_ADDR = 12                  # Lake Shore 475 address
 
     with LakeShore475(PROLOGIX_IP, GPIB_ADDR) as gauss:
+        print(gauss.identify())
+
+        """
         gauss.set_field_units(1) #Sets units to G. Use 2 to set units in T.
         if not gauss.is_auto(): #Makes sure that the auto range is enabled
             gauss.enable_auto_range(1)
         time.sleep(1)
         field = gauss.read_field()  #Reading the field
         print(f"Magnetic field: {field:.3f} G")
+        """
