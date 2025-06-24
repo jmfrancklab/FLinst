@@ -14,5 +14,6 @@ from .gigatronics import gigatronics
 from .gpib_eth import prologix_connection
 from .logobj import logobj
 from .HallProbe import LakeShore475
-__all__ += ['HP8672A','HP6623A','gigatronics','prologix_connection','power_control','LakeShore475']
+from .genesys import genesys
+__all__ += ['HP8672A','HP6623A','gigatronics','prologix_connection','power_control','LakeShore475','genesys']
 

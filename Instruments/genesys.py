@@ -1,7 +1,7 @@
 import socket
 import time
 
-class PowerSupply(socket.socket):
+class genesys(socket.socket):
     """
     Context-managed SCPI/TCP client for a Genesys power supply,
     using a read-and-chop helper that strips the terminating CR only,
@@ -11,13 +11,15 @@ class PowerSupply(socket.socket):
     and any LF (ASCII 10) is ignored by the supply fileciteturn9file12.
     """
 
-    def __init__(self, host, port=5025, timeout_s=5, delay_s=0.1):
+    def __init__(self, host, port=8003, timeout_s=5, delay_s=0.1):
         super().__init__(socket.AF_INET, socket.SOCK_STREAM)
         self.host = host
         self.port = port
         self.delay = delay_s
+        self.connect((self.host, self.port))
         # settimeout expects milliseconds per user requirement
         self.settimeout(timeout_s)
+        print(self.respond('*IDN?'))
 
     def __enter__(self):
         # Open TCP connection
@@ -65,7 +67,7 @@ class PowerSupply(socket.socket):
         if delay is None:
             delay = self.delay
         # Send command + CR using ASCII
-        self.sendall((cmd + "\r").encode("ascii"))
+        self.sendall((cmd + "\n").encode("ascii"))
         # Give the supply time to process
         time.sleep(delay)
         # Read and strip terminator, retrying if needed
