@@ -1,15 +1,18 @@
 import vxi11
+import logging
 
-class Genesys(vxi11.Instrument):
+class genesys(vxi11.Instrument):
     """
     Context-managed SCPI/VXI-11 client for a Genesys power supply.
     Inherits from python-vxi11's Instrument to leverage the built-in ask() method.
     """
     def __init__(self, host: str):
         super().__init__(host)
-        print(self.ask('*IDN?'))
+        retval = self.ask('*IDN?')
+        assert retval.startswith('LAMBDA,GEN80')
+        logging.debug(strm("connected to ",retval))
 
-    def __enter__(self) -> 'Genesys':
+    def __enter__(self) -> 'genesys':
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
