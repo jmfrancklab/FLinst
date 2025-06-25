@@ -22,14 +22,15 @@ class genesys(vxi11.Instrument):
                 raise IOError("Unknown error")
         assert retval.startswith("LAMBDA,GEN80"), (
             f"{host} appears to be hooked up to {retval}, not the Genesys"
-            " supply!!"
-        )
-        logging.debug(strm("connected to ", retval))
+            " supply!!")
+        logging.debug(f"connected to {retval}")
 
     def __enter__(self) -> "genesys":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.write(f"OUT 0") # turn off the output
+        self.write(f"RMT 0")
         # Propagate any exceptions from close to notify of disconnect issues
         self.close()
 
@@ -75,3 +76,21 @@ class genesys(vxi11.Instrument):
     @output.setter
     def output(self, on: bool) -> None:
         self.write(f"OUT {1 if on else 0}")
+
+    @property
+    def V_over(self) -> float:
+        """Over-voltage protection threshold in V."""
+        return float(self.respond("OVP?"))
+
+    @V_over.setter
+    def V_over(self, volts: float) -> None:
+        self.write(f"OVP {volts:.3f}")
+
+    @property
+    def V_under(self) -> float:
+        """Under-voltage protection threshold in V."""
+        return float(self.respond("UVL?"))
+
+    @V_under.setter
+    def V_under(self, volts: float) -> None:
+        self.write(f"UVL {volts:.3f}")
