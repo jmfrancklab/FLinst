@@ -8,8 +8,14 @@ class genesys(vxi11.Instrument):
     """
     def __init__(self, host: str):
         super().__init__(host)
-        retval = self.ask('*IDN?')
-        assert retval.startswith('LAMBDA,GEN80')
+        try:
+            retval = self.ask('*IDN?')
+        except vxi11.vxi11.Vxi11Exception as e:
+            if 'another link' in str(e):
+                raise IOError("Make sure you are not logged into the web interface on the power supply!")
+            else:
+                raise IOError("Unknown error")
+        assert retval.startswith('LAMBDA,GEN80'), f"{host} appears to be hooked up to {retval}, not the Genesys supply!!"
         logging.debug(strm("connected to ",retval))
 
     def __enter__(self) -> 'genesys':
