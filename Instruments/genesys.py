@@ -1,24 +1,32 @@
 import vxi11
 import logging
 
+
 class genesys(vxi11.Instrument):
     """
     Context-managed SCPI/VXI-11 client for a Genesys power supply.
     Inherits from python-vxi11's Instrument to leverage the built-in ask() method.
     """
+
     def __init__(self, host: str):
         super().__init__(host)
         try:
-            retval = self.ask('*IDN?')
+            retval = self.ask("*IDN?")
         except vxi11.vxi11.Vxi11Exception as e:
-            if 'another link' in str(e):
-                raise IOError("Make sure you are not logged into the web interface on the power supply!")
+            if "another link" in str(e):
+                raise IOError(
+                    "Make sure you are not logged into the web interface on"
+                    " the power supply!"
+                )
             else:
                 raise IOError("Unknown error")
-        assert retval.startswith('LAMBDA,GEN80'), f"{host} appears to be hooked up to {retval}, not the Genesys supply!!"
-        logging.debug(strm("connected to ",retval))
+        assert retval.startswith("LAMBDA,GEN80"), (
+            f"{host} appears to be hooked up to {retval}, not the Genesys"
+            " supply!!"
+        )
+        logging.debug(strm("connected to ", retval))
 
-    def __enter__(self) -> 'genesys':
+    def __enter__(self) -> "genesys":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -53,8 +61,17 @@ class genesys(vxi11.Instrument):
     @property
     def remote(self) -> bool:
         """Remote mode: True if supply accepts SCPI commands."""
-        return self.respond("RMT?") == '1'
+        return self.respond("RMT?") == "1"
 
     @remote.setter
     def remote(self, on: bool) -> None:
         self.write(f"RMT {1 if on else 0}")
+
+    @property
+    def output(self) -> bool:
+        """Output state: True if output is ON, False if OFF."""
+        return self.respond("OUT?") == "1"
+
+    @output.setter
+    def output(self, on: bool) -> None:
+        self.write(f"OUT {1 if on else 0}")
