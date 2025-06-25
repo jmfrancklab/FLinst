@@ -1,99 +1,216 @@
-# Manual: scanned manual (Genesys IEEE User Manual)
-# SCPI Command Reference: see Appendix commands (IDN p.6; RMT p.8; OUTP p.19; PV/PC p.21-22; OVP/UVL & Protection p.52-54)
 import vxi11
 import logging
 
+
 class genesys(vxi11.Instrument):
     """
-    Context-managed SCPI/VXI-11 client for a Genesys power supply.
-    Implements all page 52–54 protection & limit commands.
+    Full SCPI/VXI-11 interface for Genesys power supply.
+    Includes all commands from SCPI Reference section.
     """
 
     def __init__(self, host: str):
         super().__init__(host)
-        # *IDN? query (p.6)
-        retval = self.ask("*IDN?")  # SCPI: *IDN? (p.6)
-        assert retval.startswith("LAMBDA,GEN80"), (
-            f"{host} responded {retval}, expected Genesys model"
-        )
+        retval = self.ask("*IDN?")
+        assert retval.startswith("LAMBDA,GEN"), f"{host} responded {retval}"
         logging.debug(f"Connected: {retval}")
 
-    def __enter__(self) -> "genesys":
+    def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def respond(self, cmd: str) -> str:
-        """SCPI query via ask()"""
+    def respond(self, cmd):
         return self.ask(cmd).strip()
 
     @property
-    def I_limit(self) -> float:
-        return float(self.respond("PC?"))  # SCPI: PC? (p.22)
-    @I_limit.setter
-    def I_limit(self, amps: float) -> None:
-        self.write(f"PC {amps:.3f}")  # SCPI: PC <level> (p.22)
+    def IDN(self):
+        return self.respond("*IDN?")
 
+    def reset(self):
+        self.write("*RST")
+
+    def save(self):
+        self.write("*SAV 0")
+
+    def recall(self):
+        self.write("*RCL 0")
+
+    def self_test(self):
+        return self.respond("*TST?") == "0"
+
+    def clear_status(self):
+        self.write("*CLS")
+
+    # Voltage and current limits
     @property
-    def V_limit(self) -> float:
-        return float(self.respond("PV?"))  # SCPI: PV? (p.21)
+    def V_limit(self):
+        return float(self.respond("VOLT?"))
+
     @V_limit.setter
-    def V_limit(self, volts: float) -> None:
-        self.write(f"PV {volts:.3f}")  # SCPI: PV <level> (p.21)
+    def V_limit(self, V):
+        self.write(f"VOLT {V:.3f}")
 
     @property
-    def remote(self) -> bool:
-        """Remote mode: True if supply accepts SCPI commands."""
-        return self.respond("RMT?") == "1"  # SCPI: RMT? (p.8)
-    @remote.setter
-    def remote(self, on: bool) -> None:
-        self.write(f"RMT {1 if on else 0}")  # SCPI: RMT <0|1> (p.8)
+    def I_limit(self):
+        return float(self.respond("CURR?"))
 
+    @I_limit.setter
+    def I_limit(self, A):
+        self.write(f"CURR {A:.3f}")
+
+    # Output enable
     @property
-    def output(self) -> bool:
-        return self.respond("OUTP?") == "1"  # SCPI: OUTP? (p.19)
+    def output(self):
+        return self.respond("OUTP:STAT?") == "ON"
+
     @output.setter
-    def output(self, on: bool) -> None:
-        self.write(f"OUTP {1 if on else 0}")  # SCPI: OUTP <0|1> (p.19)
+    def output(self, on):
+        self.write(f"OUTP:STAT {'ON' if on else 'OFF'}")
 
-    # Over-Voltage Protection (OVP?) p.52
+    # Measured values
     @property
-    def V_over(self) -> float:
-        return float(self.respond("OVP?"))  # SCPI: OVP? (p.52)
+    def V_meas(self):
+        return float(self.respond("MEAS:VOLT?"))
+
+    @property
+    def I_meas(self):
+        return float(self.respond("MEAS:CURR?"))
+
+    # Operating mode
+    @property
+    def mode(self):
+        return self.respond("SOUR:MODE?")
+
+    # Local/remote control
+    @property
+    def remote(self):
+        return self.respond("SYST:SET?")
+
+    @remote.setter
+    def remote(self, mode):
+        val = {0: "LOC", 1: "REM", 2: "LLO"}.get(mode, mode)
+        self.write(f"SYST:SET {val}")
+
+    # Auto-restart
+    @property
+    def auto_restart(self):
+        return self.respond("OUTP:PON?") == "ON"
+
+    @auto_restart.setter
+    def auto_restart(self, on):
+        self.write(f"OUTP:PON {'ON' if on else 'OFF'}")
+
+    # Foldback protection
+    @property
+    def foldback(self):
+        return self.respond("CURR:PROT:STAT?") == "ON"
+
+    @foldback.setter
+    def foldback(self, on):
+        self.write(f"CURR:PROT:STAT {'ON' if on else 'OFF'}")
+
+    @property
+    def foldback_tripped(self):
+        return self.respond("CURR:PROT:TRIP?") == "1"
+
+    # OVP
+    @property
+    def V_over(self):
+        return float(self.respond("VOLT:PROT:LEV?"))
+
     @V_over.setter
-    def V_over(self, volts: float) -> None:
-        self.write(f"OVP {volts:.3f}")  # SCPI: OVP <level> (p.52)
-    def set_V_over_max(self) -> None:
-        """Set OVP to maximum trip level (OVM)"""
-        self.write("OVM")  # SCPI: OVM (p.53)
+    def V_over(self, volts):
+        if volts == "MAX":
+            self.write("VOLT:PROT:LEV MAX")
+        else:
+            self.write(f"VOLT:PROT:LEV {volts:.3f}")
 
-    # Under-Voltage Limit (UVL?) p.52
     @property
-    def V_under(self) -> float:
-        return float(self.respond("UVL?"))  # SCPI: UVL? (p.52)
+    def V_over_tripped(self):
+        return self.respond("VOLT:PROT:TRIP?") == "1"
+
+    # UVL
+    @property
+    def V_under(self):
+        return float(self.respond("VOLT:LIM:LOW?"))
+
     @V_under.setter
-    def V_under(self, volts: float) -> None:
-        self.write(f"UVL {volts:.3f}")  # SCPI: UVL <level> (p.52)
-    def set_V_under_min(self) -> None:
-        """Set UVL to minimum trip level (UVM)"""
-        self.write("UVM")  # SCPI: UVM (p.53)
+    def V_under(self, volts):
+        self.write(f"VOLT:LIM:LOW {volts:.3f}")
 
-    # Over-Current Protection (OCP?) p.54
-    @property
-    def I_over(self) -> float:
-        return float(self.respond("OCP?"))  # SCPI: OCP? (p.54)
-    @I_over.setter
-    def I_over(self, amps: float) -> None:
-        self.write(f"OCP {amps:.3f}")  # SCPI: OCP <level> (p.54)
-    def set_I_over_max(self) -> None:
-        """Set OCP to maximum trip level (OCM)"""
-        self.write("OCM")  # SCPI: OCM (p.54)
+    # LAN blink
+    def blink_led(self, on=True):
+        self.write(f"SYST:COMM:LAN:IDLED {'ON' if on else 'OFF'}")
 
-    # Output Inhibit (OHM?) p.54
+    # Network identity
     @property
-    def inhibit(self) -> bool:
-        return self.respond("OHM?") == "1"  # SCPI: OHM? (p.54)
-    @inhibit.setter
-    def inhibit(self, on: bool) -> None:
-        self.write(f"OHM {1 if on else 0}")  # SCPI: OHM <0|1> (p.54)
+    def hostname(self):
+        return self.respond("SYST:COMM:LAN:HOST?")
+
+    @property
+    def ip(self):
+        return self.respond("SYST:COMM:LAN:IP?")
+
+    @property
+    def mac(self):
+        return self.respond("SYST:COMM:LAN:MAC?")
+
+    def reset_lan(self):
+        self.write("SYST:COMM:LAN:RES")
+
+    # Diagnostic serial pass-through
+    def pass_through(self, cmd):
+        return self.respond(f"DIAG:COMM:PASS {cmd}")
+
+    # Errors
+    def read_error(self):
+        return self.respond("SYST:ERR?")
+
+    def clear_errors(self):
+        self.write("SYST:ERR:ENAB")
+
+    # SCPI version
+    @property
+    def scpi_version(self):
+        return self.respond("SYST:VERS?")
+
+    # Status byte
+    @property
+    def status_byte(self):
+        return int(self.respond("*STB?"))
+
+    @property
+    def event_status(self):
+        return int(self.respond("*ESR?"))
+
+    def enable_event_status(self, val):
+        self.write(f"*ESE {val}")
+
+    def read_op_complete(self):
+        return int(self.respond("*OPC?"))
+
+    def set_op_complete(self):
+        self.write("*OPC")
+
+    # Condition/event registers
+    def read_oper_cond(self):
+        return int(self.respond("STAT:OPER:COND?"))
+
+    def read_oper_event(self):
+        return int(self.respond("STAT:OPER:EVEN?"))
+
+    def set_oper_enable(self, val):
+        self.write(f"STAT:OPER:ENAB {val}")
+
+    def read_ques_cond(self):
+        return int(self.respond("STAT:QUES:COND?"))
+
+    def read_ques_event(self):
+        return int(self.respond("STAT:QUES:EVEN?"))
+
+    def set_ques_enable(self, val):
+        self.write(f"STAT:QUES:ENAB {val}")
+
+    def enable_all_events(self):
+        self.write("STAT:PRES")
