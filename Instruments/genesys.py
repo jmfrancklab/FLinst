@@ -8,11 +8,43 @@ class genesys(vxi11.Instrument):
     Includes all commands from SCPI Reference section.
     """
 
+    _status_flags_map = {
+        # :STAT:OPER:COND? bits
+        "CV": ("oper", 0),
+        "CC": ("oper", 1),
+        "OV": ("oper", 2),
+        "OT": ("oper", 3),
+        # :STAT:QUES:COND? bits
+        "V_fault": ("ques", 0),
+        "I_fault": ("ques", 1),
+        "fan": ("ques", 2),
+        "sense": ("ques", 3),
+    }
+
+    _status_byte_flags = {
+        "QUES_summary": 0,
+        "MAV": 4,
+        "ESB": 5,
+        "RQS": 6,
+    }
+
+    _event_status_flags = {
+        "Operation Complete": 0,
+        "Request Control": 1,
+        "Query Error": 2,
+        "Device Dependent Error": 3,
+        "Execution Error": 4,
+        "Command Error": 5,
+        "User Request": 6,
+        "Power On": 7,
+    }
+
     def __init__(self, host: str):
         super().__init__(host)
         retval = self.ask("*IDN?")
         assert retval.startswith("LAMBDA,GEN"), f"{host} responded {retval}"
         logging.debug(f"Connected: {retval}")
+        self.status_flags = {"CV": True}  # ignore CC, alert on CV mode only
 
     def __enter__(self):
         return self
@@ -176,14 +208,46 @@ class genesys(vxi11.Instrument):
     def scpi_version(self):
         return self.respond(":SYST:VERS?")
 
-    # Status byte
     @property
-    def status_byte(self):
-        return int(self.respond("*STB?"))
+    def check_status(self):
+        val = int(self.respond("*STB?"))
+        flags = {
+            k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
+        }
+        if flags.get("QUES_summary") and any(
+            self.status_flags.get(k)
+            for k in ["V_fault", "I_fault", "fan", "sense"]
+        ):
+            raise RuntimeError(
+                "Questionable condition"
+                + "|".join(
+                    k
+                    for k in self.status_flags.keys()
+                    if self.status_flags.get(k)
+                )
+                + "detected"
+            )
+        elif flags.get("QUES_summary"):
+            raise RuntimeError("unknown questionalbe status!")
+        if flags.get("ESB") and any(self.event_status_flags.values()):
+            raise RuntimeError(
+                "Event status flag"
+                + "|".join(
+                    k
+                    for k in self.event_status_flags.keys()
+                    if self.status_flags.get(k)
+                )
+                + "active"
+            )
+        return flags
 
     @property
-    def event_status(self):
-        return int(self.respond("*ESR?"))
+    def event_status_flags(self):
+        val = int(self.respond("*ESR?"))
+        return {
+            k: bool(val & (1 << b))
+            for k, b in self._event_status_flags.items()
+        }
 
     def enable_event_status(self, val):
         self.write(f"*ESE {val}")
@@ -194,24 +258,30 @@ class genesys(vxi11.Instrument):
     def set_op_complete(self):
         self.write("*OPC")
 
-    # Condition/event registers
-    def read_oper_cond(self):
-        return int(self.respond(":STAT:OPER:COND?"))
+    @property
+    def status_flags(self):
+        result = {}
+        oper = int(self.respond(":STAT:OPER:COND?"))
+        ques = int(self.respond(":STAT:QUES:COND?"))
+        for name, (group, bit) in self._status_flags_map.items():
+            if group == "oper":
+                result[name] = bool(oper & (1 << bit))
+            elif group == "ques":
+                result[name] = bool(ques & (1 << bit))
+        return result
 
-    def read_oper_event(self):
-        return int(self.respond(":STAT:OPER:EVEN?"))
-
-    def set_oper_enable(self, val):
-        self.write(f":STAT:OPER:ENAB {val}")
-
-    def read_ques_cond(self):
-        return int(self.respond(":STAT:QUES:COND?"))
-
-    def read_ques_event(self):
-        return int(self.respond(":STAT:QUES:EVEN?"))
-
-    def set_ques_enable(self, val):
-        self.write(f":STAT:QUES:ENAB {val}")
-
-    def enable_all_events(self):
-        self.write(":STAT:PRES")
+    @status_flags.setter
+    def status_flags(self, flags):
+        self.write(":STAT:PRES")  # start by clearing all
+        oper_mask = sum(
+            (1 << bit)
+            for name, (g, bit) in self._status_flags_map.items()
+            if g == "oper" and flags.get(name, False)
+        )
+        ques_mask = sum(
+            (1 << bit)
+            for name, (g, bit) in self._status_flags_map.items()
+            if g == "ques" and flags.get(name, False)
+        )
+        self.write(f":STAT:OPER:ENAB {oper_mask}")
+        self.write(f":STAT:QUES:ENAB {ques_mask}")
