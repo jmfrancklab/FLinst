@@ -67,6 +67,10 @@ class genesys(vxi11.Instrument):
         self.write(f"OUTP:STAT OFF")
         self.close()
 
+    def write(self, message):
+        self.check_status()
+        return super().write(message)
+
     def respond(self, cmd):
         """
         Wrapper around ask() with strip() for clean responses.
@@ -296,7 +300,6 @@ class genesys(vxi11.Instrument):
     def scpi_version(self):
         return self.respond(":SYST:VERS?")
 
-    @property
     def check_status(self):
         val = int(self.respond("*STB?"))
         flags = {
