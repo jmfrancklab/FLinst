@@ -515,10 +515,38 @@ class genesys(vxi11.Instrument):
 
     @property
     def ip(self):
+        """
+        Returns the IP address assigned to the LAN interface.
+
+        Returns
+        -------
+        retval : str
+            IP address in dotted quad format.
+
+        Notes
+        -----
+        - **Reading**: Returns the current IP configuration.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":SYST:COMM:LAN:IP?")
 
     @property
     def mac(self):
+        """
+        Returns the MAC address of the LAN interface.
+
+        Returns
+        -------
+        retval : str
+            MAC address in standard colon-separated format.
+
+        Notes
+        -----
+        - **Reading**: Returns the unique hardware address.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":SYST:COMM:LAN:MAC?")
 
     def reset_lan(self):
@@ -566,12 +594,26 @@ class genesys(vxi11.Instrument):
         self.write("*CLS")
         self.write("SYST:ERR:CLE")
 
-    # SCPI version
     @property
     def scpi_version(self):
+        """
+        Returns the SCPI version supported by the instrument.
+
+        Returns
+        -------
+        retval : str
+            Version number string.
+
+        Notes
+        -----
+        - **Reading**: Indicates firmware SCPI compliance version.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":SYST:VERS?")
 
     def check_status(self):
+        # needs a docstring!! be sure to include a reference to the appropriate section of the manual!!
         val = int(self.respond("*STB?"))
         flags = {
             k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
@@ -605,6 +647,7 @@ class genesys(vxi11.Instrument):
 
     @property
     def event_status(self):
+        # needs a docstring!! be sure to include a reference to the appropriate section of the manual!!
         val = int(self.respond("*ESR?"))
         return {
             k: bool(val & (1 << b))
