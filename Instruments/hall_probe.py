@@ -506,3 +506,116 @@ class LakeShore475(gpib_eth):
     @field_limits.deleter
     def field_limits(self):
         self.write("HRESET")
+
+    @property
+    def alarm_thresholds(self):
+        # Deletion should turn off the alarm.
+        """
+        Alarm high/low threshold field values.
+
+        Returns
+        -------
+        tuple of pint.Quantity or None
+            (high, low) field thresholds. Either may be None if not set.
+
+        Notes
+        -----
+        - **Reading**: Queries ALHI? and ALLO? (manual §6.3.4.3, p. 111).
+        - **Assignment**: Provide a tuple of (high, low) as pint Quantities or None.
+        - **Deletion**: Not supported.
+        """
+        units = self._get_field_units()
+        hi = self.respond("ALHI?")
+        lo = self.respond("ALLO?")
+        hi_val = float(hi) * units if hi.strip() else None
+        lo_val = float(lo) * units if lo.strip() else None
+        return (hi_val, lo_val)
+
+    @alarm_thresholds.setter
+    def alarm_thresholds(self, limits):
+        if not isinstance(limits, tuple) or len(limits) != 2:
+            raise TypeError("alarm_thresholds must be a (hi, lo) tuple")
+        hi, lo = limits
+        if hi is not None:
+            if not isinstance(hi, Quantity):
+                raise TypeError("High threshold must be a pint.Quantity or None")
+            self.write(f"ALHI {hi.to(self._get_field_units()).magnitude:.6f}")
+        if lo is not None:
+            if not isinstance(lo, Quantity):
+                raise TypeError("Low threshold must be a pint.Quantity or None")
+            self.write(f"ALLO {lo.to(self._get_field_units()).magnitude:.6f}")
+
+    @property
+    def beep_on_alarm(self):
+        # If thresholds are set above, this should be automatically turned on.
+        """
+        Indicates whether the audible alarm beep is enabled.
+
+        Returns
+        -------
+        bool
+            True if beeping is enabled.
+
+        Notes
+        -----
+        - **Reading**: Queries BEEP? (manual §6.3.4.5, p. 111).
+        - **Assignment**: Set to True/False.
+        - **Deletion**: Not supported.
+        """
+        return bool(int(self.respond("BEEP?")))
+
+    @beep_on_alarm.setter
+    def beep_on_alarm(self, value: bool):
+        self.write(f"BEEP {1 if value else 0}")
+
+    @property
+    def integration_time(self):
+        # Why are you including this, if there is not SCPI command? I'm confused.
+        """
+        Integration time for measurement, if supported.
+
+        Returns
+        -------
+        pint.Quantity
+            Integration time in seconds.
+
+        Notes
+        -----
+        - **Reading**: Returns a locally stored value.
+        - **Assignment**: Sets the internal integration time.
+        - **Deletion**: Not supported.
+        """
+        return getattr(self, "_integration_time", None)
+
+    @integration_time.setter
+    def integration_time(self, value):
+        if not isinstance(value, Quantity):
+            raise TypeError("integration_time must be a pint.Quantity")
+        self._integration_time = value.to(ureg.second)
+
+    @property
+    def calibration(self):
+        # Remember not to include SCPI commands (CAL?) in docs!!!
+        # Is it also possible to set or run the calibration?  If so, that should be part of this.
+        """
+        Read calibration data if accessible via SCPI.
+
+        Returns
+        -------
+        dict
+            Dictionary of calibration parameters.
+
+        Notes
+        -----
+        - **Reading**: Queries CAL? (manual §6.3.3.6, p. 108).
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
+        resp = self.respond("CAL?")
+        entries = resp.split(",")
+        return {
+            "probe_type": entries[0].strip(),
+            "serial_number": entries[1].strip(),
+            "calibration_date": entries[2].strip(),
+            "calibration_by": entries[3].strip(),
+        }
