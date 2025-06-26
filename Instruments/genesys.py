@@ -6,6 +6,9 @@ class genesys(vxi11.Instrument):
     """
     Full SCPI/VXI-11 interface for Genesys power supply.
     Includes all commands from SCPI Reference section.
+
+    This class was built with extensive GPT help so that we could supply all
+    the functionality available over SCPI!!
     """
 
     _status_flags_map = {
@@ -235,7 +238,7 @@ class genesys(vxi11.Instrument):
                 + "|".join(
                     k
                     for k in self.event_status_flags.keys()
-                    if self.status_flags.get(k)
+                    if self.event_status_flags.get(k)
                 )
                 + "active"
             )
