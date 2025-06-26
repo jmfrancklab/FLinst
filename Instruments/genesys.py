@@ -613,7 +613,23 @@ class genesys(vxi11.Instrument):
         return self.respond(":SYST:VERS?")
 
     def check_status(self):
-        # needs a docstring!! be sure to include a reference to the appropriate section of the manual!!
+        """
+        Check for summary or fault conditions.
+
+        Returns
+        -------
+        retval : dict of bool
+            Dictionary of bits from *STB? for QUES, MAV, etc.
+
+        Notes
+        -----
+        - **Reading**: Queries the status byte (*STB?) and
+          raises RuntimeError if any summary bits indicate
+          error or warning states.
+          See §6.3.1.1, p. 92 and §6.3.8.1–2, pp. 111–112.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         val = int(self.respond("*STB?"))
         flags = {
             k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
@@ -647,7 +663,23 @@ class genesys(vxi11.Instrument):
 
     @property
     def event_status(self):
-        # needs a docstring!! be sure to include a reference to the appropriate section of the manual!!
+        """
+        Event status summary bits.
+
+        Returns
+        -------
+        retval : dict of bool
+            Dictionary indicating which event bits are set.
+
+        Notes
+        -----
+        - **Reading**: Queries event register using *ESR?
+          and returns a dict of named flags.
+          See §6.3.1.2, p. 93.
+        - **Assignment**: Use the setter to write a bitmask
+          with, specifying which events to monitor.
+        - **Deletion**: Not supported.
+        """
         val = int(self.respond("*ESR?"))
         return {
             k: bool(val & (1 << b))
