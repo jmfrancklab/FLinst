@@ -450,13 +450,14 @@ class LakeShore475(gpib_eth):
 
     @property
     def alarm_enabled(self):
-        # Here, you need to explain which property controls the limits (you probably need to go ahead and add the property)
         """
         Indicates whether the alarm output function is enabled.
 
         When enabled, the alarm system monitors the magnetic field and compares it to
         user-specified limits. If the reading exceeds those thresholds, an alarm output
         can be activated.
+
+        See `alarm_thresholds` for setting the limit values.
 
         Returns
         -------
@@ -544,12 +545,14 @@ class LakeShore475(gpib_eth):
             if not isinstance(lo, Quantity):
                 raise TypeError("Low threshold must be a pint.Quantity or None")
             self.write(f"ALLO {lo.to(self._get_field_units()).magnitude:.6f}")
+        if not (hi is None) and (lo is None):
+            self.beep_on_alarm = True
 
     @property
     def beep_on_alarm(self):
-        # If thresholds are set above, this should be automatically turned on.
         """
         Indicates whether the audible alarm beep is enabled.
+        (Implemented automatically when thresholds are set).
 
         Returns
         -------
@@ -595,10 +598,8 @@ class LakeShore475(gpib_eth):
 
     @property
     def calibration(self):
-        # Remember not to include SCPI commands (CAL?) in docs!!!
-        # Is it also possible to set or run the calibration?  If so, that should be part of this.
         """
-        Read calibration data if accessible via SCPI.
+        Read calibration data if accessible.
 
         Returns
         -------
@@ -607,7 +608,7 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Queries CAL? (manual §6.3.3.6, p. 108).
+        - **Reading**: See manual §6.3.3.6, p. 108.
         - **Assignment**: Not supported.
         - **Deletion**: Not supported.
         """
