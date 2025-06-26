@@ -426,6 +426,7 @@ class genesys(vxi11.Instrument):
 
     @property
     def hostname(self):
+        # this needs a docstring
         return self.respond(":SYST:COMM:LAN:HOST?")
 
     @property
@@ -449,7 +450,8 @@ class genesys(vxi11.Instrument):
 
     def pass_through(self, cmd):
         """
-        Send arbitrary SCPI command.
+        Send arbitrary SCPI command using
+        diagnostic pass-through.
 
         Parameters
         ----------
