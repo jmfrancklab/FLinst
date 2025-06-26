@@ -127,7 +127,7 @@ py.install_sources(files([
     'Instruments/power_control.py',
     'Instruments/microwave_tuning_gui.py',
     'Instruments/just_quit.py',
-    'Instruments/HallProbe.py',
+    'Instruments/hall_probe.py',
     'Instruments/genesys.py',
 ]), subdir: 'Instruments')
 

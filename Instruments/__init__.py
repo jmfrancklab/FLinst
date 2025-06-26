@@ -14,7 +14,7 @@ from .HP6623A import HP6623A
 from .gigatronics import gigatronics
 from .gpib_eth import prologix_connection
 from .logobj import logobj
-from .HallProbe import LakeShore475
+from .hall_probe import LakeShore475
 from .genesys import genesys
 
 __all__ += [
