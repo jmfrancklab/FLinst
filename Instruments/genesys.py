@@ -445,6 +445,23 @@ class genesys(vxi11.Instrument):
 
     @property
     def operation_complete(self):
+        """
+        Returns the operation complete bit.
+
+        Returns
+        -------
+        retval : bool
+            True if the instrument has finished
+            all pending operations.
+
+        Notes
+        -----
+        - **Reading**: Queries whether all operations
+          are complete (see §6.3.1.2, p. 93).
+        - **Assignment**: Setting to True inserts a
+          synchronization point into the command
+          queue. False has no effect.
+        """
         return self.respond("*OPC?") == "1"
 
     @operation_complete.setter
