@@ -431,6 +431,7 @@ class LakeShore475(gpib_eth):
 
     @property
     def alarm_enabled(self):
+        # Here, you need to explain which property controls the limits (you probably need to go ahead and add the property)
         """
         Indicates whether the alarm output function is enabled.
 
@@ -456,23 +457,34 @@ class LakeShore475(gpib_eth):
         self.write(f"ALARM {1 if enable else 0}")
 
     @property
-    def max_hold(self):
+    def field_limits(self):
+        # Clarify -- if HRESET has not been called, will this
+        # return a value?  Also, remember not to have raw SCPI in
+        # the docstring!!
         """
-        Highest magnetic field value recorded since the last hold reset.
+        Maximum and minimum magnetic field values recorded since
+        the last time this property was deleted.
 
-        The instrument continuously monitors the measured field and stores the
-        maximum value seen until `HRESET` is called. This is useful for peak detection
-        and signal bounding.
+        The instrument continuously tracks the extremal field
+        values and stores them until cleared. This is useful for
+        monitoring field stability and bounds.
 
         Returns
         -------
-        float
-            Highest field value recorded since last hold reset.
+        tuple of pint.Quantity
+            (max, min) field values with units of magnetic field.
 
         Notes
         -----
-        - **Reading**: Uses `MAXHOLD?` (manual §6.3.3.12, p. 110).
+        - **Reading**: Uses `MAXHOLD?` and `MINHOLD?` (manual §6.3.3.12–13, pp. 110–111).
         - **Assignment**: Not supported.
-        - **Deletion**: Use `HRESET` to clear held max/min.
+        - **Deletion**: Calls `HRESET` to clear the stored limits.
         """
-        return float(self.respond("MAXHOLD?"))
+        # are you sure this is in Gauss? Do we need to call a different scpi to get the units??
+        max_val = float(self.respond("MAXHOLD?")) * ureg.gauss
+        min_val = float(self.respond("MINHOLD?")) * ureg.gauss
+        return (max_val, min_val)
+
+    @field_limits.deleter
+    def field_limits(self):
+        self.write("HRESET")
