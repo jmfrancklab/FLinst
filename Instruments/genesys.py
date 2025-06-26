@@ -219,6 +219,20 @@ class genesys(vxi11.Instrument):
     # Voltage and current limits
     @property
     def V_limit(self):
+        """
+        Configured voltage limit.
+
+        Returns
+        -------
+        retval : float
+            Voltage limit in volts.
+
+        Notes
+        -----
+        - **Reading**: Retrieves the current voltage limit.
+        - **Assignment**: Sets the voltage limit for the device.
+        - **Deletion**: Not supported.
+        """
         return float(self.respond(":VOLT?"))
 
     @V_limit.setter
@@ -227,6 +241,20 @@ class genesys(vxi11.Instrument):
 
     @property
     def I_limit(self):
+        """
+        Configured current limit.
+
+        Returns
+        -------
+        retval : float
+            Current limit in amperes.
+
+        Notes
+        -----
+        - **Reading**: Retrieves the current limit.
+        - **Assignment**: Sets the current limit for the device.
+        - **Deletion**: Not supported.
+        """
         return float(self.respond(":CURR?"))
 
     @I_limit.setter
@@ -247,20 +275,78 @@ class genesys(vxi11.Instrument):
     # Measured values
     @property
     def V_meas(self):
+        """
+        Measured output voltage.
+
+        Returns
+        -------
+        retval : float
+            Real-time measured voltage in volts.
+
+        Notes
+        -----
+        - **Reading**: Returns actual voltage at output terminals.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return float(self.respond(":MEAS:VOLT?"))
 
     @property
     def I_meas(self):
+        """
+        Measured output current.
+
+        Returns
+        -------
+        retval : float
+            Real-time measured current in amperes.
+
+        Notes
+        -----
+        - **Reading**: Returns actual current at output terminals.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return float(self.respond(":MEAS:CURR?"))
 
     # Operating mode
     @property
     def mode(self):
+        """
+        Operating mode of the power supply.
+
+        Returns
+        -------
+        retval : str
+            One of "CV" or "CC" indicating constant voltage
+            or constant current mode.
+
+        Notes
+        -----
+        - **Reading**: Returns operating mode.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":SOUR:MODE?")
 
     # Local/remote control
     @property
     def remote(self):
+        # need description list of what these different modes mean (from the manual, with ref)
+        """
+        Remote/local control status.
+
+        Returns
+        -------
+        retval : str
+            One of "LOC", "REM", or "LLO".
+
+        Notes
+        -----
+        - **Reading**: Returns current control status.
+        - **Assignment**: Changes to specified control mode.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":SYST:SET?")
 
     @remote.setter
@@ -271,6 +357,7 @@ class genesys(vxi11.Instrument):
     # Auto-restart
     @property
     def auto_restart(self):
+        # This needs a docstring
         return self.respond(":OUTP:PON?") == "ON"
 
     @auto_restart.setter
@@ -282,6 +369,7 @@ class genesys(vxi11.Instrument):
     # Foldback protection
     @property
     def foldback(self):
+        # this needs a docstring that includes a definition of "foldback"
         return self.respond(":CURR:PROT:STAT?") == "ON"
 
     @foldback.setter
@@ -297,6 +385,7 @@ class genesys(vxi11.Instrument):
     # OVP
     @property
     def V_over(self):
+        # this needs a docstring, with a description of what the overvoltage protection does
         return float(self.respond(":VOLT:PROT:LEV?"))
 
     @V_over.setter
@@ -308,11 +397,13 @@ class genesys(vxi11.Instrument):
 
     @property
     def V_over_tripped(self):
+        # this needs a docstring, with a description of what the overvoltage protection does
         return self.respond(":VOLT:PROT:TRIP?") == "1"
 
     # UVL
     @property
     def V_under(self):
+        # this needs a docstring, with a description of what the undervoltage protection does
         return float(self.respond(":VOLT:LIM:LOW?"))
 
     @V_under.setter
