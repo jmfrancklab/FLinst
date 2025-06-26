@@ -307,3 +307,94 @@ class LakeShore475(gpib_eth):
         if mode not in modes:
             raise ValueError("read_mode must be one of: DC, PEAK, RMS")
         self.write(f"RMODE {modes[mode]}")
+
+    @property
+    def relative_mode(self):
+        # Explain further in main part of doc string (use the manual). Relative to what?
+        """
+        Indicates whether the relative field mode is enabled.
+
+        Returns
+        -------
+        bool
+            True if relative mode is enabled.
+
+        Notes
+        -----
+        - **Reading**: Uses `REL?` to query state (manual §6.3.3.9, p. 109).
+        - **Assignment**: Enable/disable relative mode using `REL`.
+        - **Deletion**: Not supported.
+        """
+        return bool(int(self.respond("REL?")))
+
+    @relative_mode.setter
+    def relative_mode(self, enable: bool):
+        self.write(f"REL {1 if enable else 0}")
+
+    @property
+    def analog_output(self):
+        """
+        Analog output voltage in volts.
+
+        Returns
+        -------
+        float
+            Current analog output voltage.
+
+        Notes
+        -----
+        - **Reading**: Queries `AOUT?` to get analog output (manual §6.3.4.1, p. 110).
+        - **Assignment**: Not supported (read-only).
+        - **Deletion**: Not supported.
+        """
+        return float(self.respond("AOUT?"))
+
+    @property
+    def control_mode(self):
+        """
+        Control mode of the instrument.
+
+        Returns
+        -------
+        str
+            One of "local", "remote", or "locked".
+
+        Notes
+        -----
+        - **Reading**: Queries `CMODE?` (manual §6.3.2.4, p. 104).
+        - **Assignment**: Use `local`, `remote`, or `locked`.
+        - **Deletion**: Not supported.
+        """
+        code = int(self.respond("CMODE?"))
+        modes = {0: "local", 1: "remote", 2: "locked"}
+        return modes[code]
+
+    @control_mode.setter
+    def control_mode(self, mode: str):
+        modes = {"local": 0, "remote": 1, "locked": 2}
+        if mode not in modes:
+            raise ValueError("control_mode must be 'local', 'remote', or 'locked'")
+        self.write(f"CMODE {modes[mode]}")
+
+    @property
+    def hold(self):
+        # I don't know what "hold mode" is.  The main part of the docstring should include an appropriate description derived from the manual.
+        """
+        Hold mode status.
+
+        Returns
+        -------
+        bool
+            True if display updates are paused.
+
+        Notes
+        -----
+        - **Reading**: Queries `HOLD?` to check hold mode (manual §6.3.3.11, p. 109).
+        - **Assignment**: Use `True` to enable, `False` to disable.
+        - **Deletion**: Not supported.
+        """
+        return bool(int(self.respond("HOLD?")))
+
+    @hold.setter
+    def hold(self, value: bool):
+        self.write(f"HOLD {1 if value else 0}")
