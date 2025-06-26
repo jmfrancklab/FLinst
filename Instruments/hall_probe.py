@@ -69,6 +69,24 @@ class LakeShore475(gpib_eth):
         """Return the *IDN? string (manufacturer, model, serial, date)."""
         return self.respond("*IDN?")
 
+    def _get_field_units(self):
+        """
+        Query the instrument for the current magnetic field units.
+
+        Returns
+        -------
+        pint.Unit
+            The unit corresponding to the instrument's current setting.
+        """
+        unit_code = int(self.respond("UNIT?"))
+        unit_map = {
+            1: ureg.gauss,
+            2: ureg.tesla,
+            3: ureg.oersted,
+            4: ureg.ampere / ureg.meter,
+        }
+        return unit_map.get(unit_code, ureg.gauss)
+
     @property
     def field(self):
         """
@@ -480,9 +498,9 @@ class LakeShore475(gpib_eth):
         - **Assignment**: Not supported.
         - **Deletion**: Reset both the min and max.
         """
-        # Remember! You need to actually grab the units!! Don't just assume Gauss!!
-        max_val = float(self.respond("MAXHOLD?")) * ureg.gauss
-        min_val = float(self.respond("MINHOLD?")) * ureg.gauss
+        units = self._get_field_units()
+        max_val = float(self.respond("MAXHOLD?")) * units
+        min_val = float(self.respond("MINHOLD?")) * units
         return (max_val, min_val)
 
     @field_limits.deleter
