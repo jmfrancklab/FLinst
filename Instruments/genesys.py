@@ -71,7 +71,8 @@ class genesys(vxi11.Instrument):
         self.close()
 
     def write(self, message, check=True):
-        if check: self.check_status()
+        if check:
+            self.check_status()
         return super().write(message)
 
     def respond(self, cmd, check=True):
@@ -88,7 +89,8 @@ class genesys(vxi11.Instrument):
         retval : str
             Response with trailing whitespace removed.
         """
-        if check: self.check_status()
+        if check:
+            self.check_status()
         return self.ask(cmd).strip()
 
     @property
@@ -635,16 +637,11 @@ class genesys(vxi11.Instrument):
             k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
         }
         if flags.get("QUES_summary") and any(
-            self.status.get(k)
-            for k in ["V_fault", "I_fault", "fan", "sense"]
+            self.status.get(k) for k in ["V_fault", "I_fault", "fan", "sense"]
         ):
             raise RuntimeError(
                 "Questionable condition"
-                + "|".join(
-                    k
-                    for k in self.status.keys()
-                    if self.status.get(k)
-                )
+                + "|".join(k for k in self.status.keys() if self.status.get(k))
                 + "detected"
             )
         elif flags.get("QUES_summary"):
