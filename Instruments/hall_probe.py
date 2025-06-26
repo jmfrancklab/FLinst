@@ -310,9 +310,11 @@ class LakeShore475(gpib_eth):
 
     @property
     def relative_mode(self):
-        # Explain further in main part of doc string (use the manual). Relative to what?
         """
-        Indicates whether the relative field mode is enabled.
+        Indicates whether relative mode is enabled.
+
+        In this mode, the instrument stores the current field
+        value as an offset and subtracts it from future readings.
 
         Returns
         -------
@@ -378,9 +380,12 @@ class LakeShore475(gpib_eth):
 
     @property
     def hold(self):
-        # I don't know what "hold mode" is.  The main part of the docstring should include an appropriate description derived from the manual.
         """
         Hold mode status.
+
+        When enabled, the display freezes the current field value
+        and no longer reflects live measurements, although data
+        output continues.
 
         Returns
         -------
