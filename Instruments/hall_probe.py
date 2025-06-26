@@ -23,6 +23,24 @@ class LakeShore475(gpib_eth):
             ...
     """
 
+    _status_byte_flags = {
+        "error_queue": 2,      # Error queue not empty
+        "message_available": 4,  # Message available
+        "event_status": 5,    # Event status bit
+        "request_service": 6, # Request service
+    }
+
+    _event_status_flags = {
+        "operation_complete": 0,
+        "request_control": 1,
+        "query_error": 2,
+        "device_error": 3,
+        "execution_error": 4,
+        "command_error": 5,
+        "user_request": 6,
+        "power_on": 7,
+    }
+
     def __init__(self, prologix_instance=None, address=12, eos=0):
         """Initialize instance of connection to hall probe
 
@@ -115,3 +133,56 @@ class LakeShore475(gpib_eth):
     def zero_probe(self):
         """Re-zero the probe before measurements."""
         self.write("ZPROBE")
+
+    @property
+    def status(self):
+        """
+        Status byte decoded into named flags.
+
+        Returns
+        -------
+        dict of bool
+            Dictionary of decoded status bits:
+            - error_queue: Error queue not empty
+            - message_available: Output queue has unread data
+            - event_status: One or more IEEE events occurred
+            - request_service: Instrument is requesting service
+
+        Notes
+        -----
+        - **Reading**: Queries *STB? and returns decoded dictionary.
+          See manual §6.3.1.1, p. 92.
+        """
+        val = int(self.respond("*STB?"))
+        return {
+            k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
+        }
+
+    @property
+    def event_status(self):
+        """
+        Event status register decoded into named flags.
+
+        Returns
+        -------
+        dict of bool
+            Dictionary of decoded *ESR? bits.
+
+        Notes
+        -----
+        - **Reading**: Queries *ESR? and decodes flags.
+          See manual §6.3.1.2, p. 93.
+        """
+        val = int(self.respond("*ESR?"))
+        return {
+            k: bool(val & (1 << b)) for k, b in self._event_status_flags.items()
+        }
+
+    @event_status.setter
+    def event_status(self, flags):
+        val = sum(
+            1 << self._event_status_flags[k]
+            for k, v in flags.items()
+            if v and k in self._event_status_flags
+        )
+        self.write(f"*ESE {val}")
