@@ -354,10 +354,25 @@ class genesys(vxi11.Instrument):
         val = {0: "LOC", 1: "REM", 2: "LLO"}.get(mode, mode)
         self.write(f":SYST:SET {val}")
 
-    # Auto-restart
     @property
     def auto_restart(self):
-        # This needs a docstring
+        # this needs a reference to a section of the manual
+        """
+        Auto-restart state after power-on.
+
+        Returns
+        -------
+        retval : bool
+            True if output is enabled automatically
+            after power-on.
+
+        Notes
+        -----
+        - **Reading**: Indicates if auto-restart is enabled.
+        - **Assignment**: Sets whether output restarts
+          automatically.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":OUTP:PON?") == "ON"
 
     @auto_restart.setter
@@ -369,7 +384,22 @@ class genesys(vxi11.Instrument):
     # Foldback protection
     @property
     def foldback(self):
-        # this needs a docstring that includes a definition of "foldback"
+        # this needs a description of foldback and also a reference to a section of the manual
+        """
+        Foldback protection enable.
+
+        Returns
+        -------
+        retval : bool
+            True if foldback protection is enabled.
+
+        Notes
+        -----
+        - **Reading**: Returns status of foldback protection,
+          which disables output in overcurrent situations.
+        - **Assignment**: Enables or disables foldback.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":CURR:PROT:STAT?") == "ON"
 
     @foldback.setter
@@ -385,7 +415,22 @@ class genesys(vxi11.Instrument):
     # OVP
     @property
     def V_over(self):
-        # this needs a docstring, with a description of what the overvoltage protection does
+        # this needs a reference to the manual and a description of what overvoltage protection is
+        """
+        Overvoltage protection level.
+
+        Returns
+        -------
+        retval : float
+            Trip voltage for overvoltage protection.
+
+        Notes
+        -----
+        - **Reading**: Gets overvoltage threshold.
+        - **Assignment**: Sets protection voltage or "MAX"
+          to allow highest range.
+        - **Deletion**: Not supported.
+        """
         return float(self.respond(":VOLT:PROT:LEV?"))
 
     @V_over.setter
@@ -397,13 +442,39 @@ class genesys(vxi11.Instrument):
 
     @property
     def V_over_tripped(self):
-        # this needs a docstring, with a description of what the overvoltage protection does
+        """
+        Overvoltage protection trip status.
+
+        Returns
+        -------
+        retval : bool
+            True if overvoltage protection has tripped.
+
+        Notes
+        -----
+        - **Reading**: Indicates whether OVP condition
+          occurred (see §6.3.8.10, p. 116).
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":VOLT:PROT:TRIP?") == "1"
 
-    # UVL
     @property
     def V_under(self):
-        # this needs a docstring, with a description of what the undervoltage protection does
+        """
+        Undervoltage limit (UVL) threshold.
+
+        Returns
+        -------
+        retval : float
+            Voltage level for undervoltage cutoff.
+
+        Notes
+        -----
+        - **Reading**: Returns the UVL threshold.
+        - **Assignment**: Sets the UVL threshold.
+        - **Deletion**: Not supported.
+        """
         return float(self.respond(":VOLT:LIM:LOW?"))
 
     @V_under.setter
@@ -426,7 +497,20 @@ class genesys(vxi11.Instrument):
 
     @property
     def hostname(self):
-        # this needs a docstring
+        """
+        Hostname assigned to LAN interface.
+
+        Returns
+        -------
+        retval : str
+            Current hostname configuration.
+
+        Notes
+        -----
+        - **Reading**: Queries configured LAN hostname.
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
+        """
         return self.respond(":SYST:COMM:LAN:HOST?")
 
     @property
