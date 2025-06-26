@@ -403,3 +403,68 @@ class LakeShore475(gpib_eth):
     @hold.setter
     def hold(self, value: bool):
         self.write(f"HOLD {1 if value else 0}")
+
+    @property
+    def relay_state(self):
+        # don't include SCPI strings in the docs.  Also -- add a second paragraph to main explaining what this is!
+        """
+        Current state of the instrument's relay output.
+
+        Returns
+        -------
+        bool
+            True if relay is energized, False otherwise.
+
+        Notes
+        -----
+        - **Reading**: Uses `RELAY?` to query relay state (manual §6.3.4.2, p. 110).
+        - **Assignment**: Use True or False to energize or de-energize relay.
+        - **Deletion**: Not supported.
+        """
+        return bool(int(self.respond("RELAY?")))
+
+    @relay_state.setter
+    def relay_state(self, value: bool):
+        self.write(f"RELAY {1 if value else 0}")
+
+    @property
+    def alarm_enabled(self):
+        # don't include SCPI strings in the docs.  Also -- add a second paragraph to main explaining what this is!
+        """
+        Enable or disable the alarm output.
+
+        Returns
+        -------
+        bool
+            True if alarm is enabled.
+
+        Notes
+        -----
+        - **Reading**: Uses `ALARM?` to query status (manual §6.3.4.4, p. 111).
+        - **Assignment**: Set True to enable, False to disable.
+        - **Deletion**: Not supported.
+        """
+        return bool(int(self.respond("ALARM?")))
+
+    @alarm_enabled.setter
+    def alarm_enabled(self, enable: bool):
+        self.write(f"ALARM {1 if enable else 0}")
+
+    @property
+    def max_hold(self):
+        # don't include SCPI strings in the docs.  Also -- add a second paragraph to main explaining what this is!
+        """
+        Maximum held field value in current units.
+
+        Returns
+        -------
+        float
+            Highest field value recorded since last hold reset.
+
+        Notes
+        -----
+        - **Reading**: Uses `MAXHOLD?` (manual §6.3.3.12, p. 110).
+        - **Assignment**: Not supported.
+        - **Deletion**: Use `HRESET` to clear held max/min.
+        """
+        return float(self.respond("MAXHOLD?"))
