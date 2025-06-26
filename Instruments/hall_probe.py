@@ -196,3 +196,28 @@ class LakeShore475(gpib_eth):
             if v and k in self._event_status_flags
         )
         self.write(f"*ESE {val}")
+
+    @property
+    def operation_complete(self):
+        """
+        Indicates whether all prior operations have completed.
+
+        Returns
+        -------
+        bool
+            True if the instrument has finished processing all commands.
+
+        Notes
+        -----
+        - **Reading**: Returns True if all prior operations are complete (see manual §6.3.1.2, p. 93).
+        - **Assignment**: Setting to True inserts a synchronization point; False has no effect.
+        - **Deletion**: Not supported.
+        """
+        return self.respond("*OPC?") == "1"
+
+    @operation_complete.setter
+    def operation_complete(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("operation_complete must be set to a boolean")
+        if value:
+            self.write("*OPC")
