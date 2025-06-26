@@ -61,6 +61,7 @@ class LakeShore475(gpib_eth):
                 "Not detecting identity as Lakeshore Gaussmeter 475, returned"
                 " ID string as %s" % idstring
             )
+        self.write("HRESET")  # clear field_limits state so that readings are valid since initialization
         return
 
     @property
@@ -458,16 +459,15 @@ class LakeShore475(gpib_eth):
 
     @property
     def field_limits(self):
-        # Clarify -- if HRESET has not been called, will this
-        # return a value?  Also, remember not to have raw SCPI in
-        # the docstring!!
         """
         Maximum and minimum magnetic field values recorded since
-        the last time this property was deleted.
+        the last time this property was deleted (or since
+        initialization).
 
         The instrument continuously tracks the extremal field
         values and stores them until cleared. This is useful for
         monitoring field stability and bounds.
+        (See manual §6.3.3.12–13, pp. 110–111.)
 
         Returns
         -------
@@ -476,11 +476,11 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Uses `MAXHOLD?` and `MINHOLD?` (manual §6.3.3.12–13, pp. 110–111).
+        - **Reading**: Gives values as a tuple pair of pint quantities.
         - **Assignment**: Not supported.
-        - **Deletion**: Calls `HRESET` to clear the stored limits.
+        - **Deletion**: Reset both the min and max.
         """
-        # are you sure this is in Gauss? Do we need to call a different scpi to get the units??
+        # Remember! You need to actually grab the units!! Don't just assume Gauss!!
         max_val = float(self.respond("MAXHOLD?")) * ureg.gauss
         min_val = float(self.respond("MINHOLD?")) * ureg.gauss
         return (max_val, min_val)
