@@ -131,6 +131,8 @@ class genesys(vxi11.Instrument):
 
     @output.setter
     def output(self, on):
+        if not isinstance(on, bool):
+            raise TypeError("output must be set to a boolean")
         self.write(f"OUTP:STAT {'ON' if on else 'OFF'}")
 
     # Measured values
@@ -164,6 +166,8 @@ class genesys(vxi11.Instrument):
 
     @auto_restart.setter
     def auto_restart(self, on):
+        if not isinstance(on, bool):
+            raise TypeError("auto_restart must be set to a boolean")
         self.write(f":OUTP:PON {'ON' if on else 'OFF'}")
 
     # Foldback protection
@@ -173,6 +177,8 @@ class genesys(vxi11.Instrument):
 
     @foldback.setter
     def foldback(self, on):
+        if not isinstance(on, bool):
+            raise TypeError("foldback must be set to a boolean")
         self.write(f":CURR:PROT:STAT {'ON' if on else 'OFF'}")
 
     @property
@@ -294,9 +300,11 @@ class genesys(vxi11.Instrument):
 
     @property
     def operation_complete(self):
-        return int(self.respond("*OPC?"))
+        return self.respond("*OPC?") == "1"
 
     @operation_complete.setter
     def operation_complete(self, val):
+        if not isinstance(val, bool):
+            raise TypeError("operation_complete must be set to a boolean")
         if val:
             self.write("*OPC")
