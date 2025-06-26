@@ -17,6 +17,12 @@ class genesys(vxi11.Instrument):
     ----------
     Genesys Series LAN Interface Manual, TDK Lambda, Rev 0,
     Jan. 2008.
+
+    Parameters
+    ----------
+    host : str
+        IP address or hostname of the power
+        supply to connect.
     """
 
     _status_flags_map = {
@@ -51,16 +57,6 @@ class genesys(vxi11.Instrument):
     }
 
     def __init__(self, host: str):
-        """
-        Initialize and validate connection to Genesys
-        power supply.
-
-        Parameters
-        ----------
-        host : str
-            IP address or hostname of the power
-            supply.
-        """
         super().__init__(host)
         retval = self.ask("*IDN?")
         assert retval.startswith("LAMBDA,GEN"), f"{host} responded {retval}"
@@ -160,13 +156,8 @@ class genesys(vxi11.Instrument):
 
     def self_test(self):
         """
-        Run internal self-diagnostic test.
-        Fails unless it passes.
-
-        Notes
-        -----
-        - **Reading**: Queries the self-test bit pattern.
-          See §6.3.1.7, p. 96.
+        Run internal self-diagnostic test
+        (see §6.3.1.7, p. 96).
         """
         assert self.respond("*TST?") == "0"
 
