@@ -2,7 +2,7 @@ import socket
 import time
 from .gpib_eth import gpib_eth
 from .log_inst import logger
-from pint import UnitRegistry
+from pint import UnitRegistry, Quantity
 
 ureg = UnitRegistry()
 
@@ -221,3 +221,28 @@ class LakeShore475(gpib_eth):
             raise TypeError("operation_complete must be set to a boolean")
         if value:
             self.write("*OPC")
+
+    @property
+    def time_constant(self):
+        """
+        Time constant of the field filter.
+
+        Returns
+        -------
+        pint.Quantity
+            Time constant with units of seconds.
+
+        Notes
+        -----
+        - **Reading**: Returns current filter time constant (see manual §6.3.3.7, p. 108).
+        - **Assignment**: Updates filter time constant; expects a pint Quantity.
+        - **Deletion**: Not supported.
+        """
+        return float(self.respond("FILTER?")) * ureg.second
+
+    @time_constant.setter
+    def time_constant(self, value):
+        if not isinstance(value, Quantity):
+            raise TypeError("Expected a pint Quantity for time_constant")
+        seconds = value.to(ureg.second).magnitude
+        self.write(f"FILTER {seconds:.3f}")
