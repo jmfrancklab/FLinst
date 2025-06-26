@@ -152,11 +152,18 @@ class LakeShore475(gpib_eth):
         -----
         - **Reading**: Queries *STB? and returns decoded dictionary.
           See manual §6.3.1.1, p. 92.
+        - **Deletion**: Clears event/status registers and error queue
+          via *CLS (see §6.3.1.5, p. 95).
+        - **Assignment**: Not supported.
         """
         val = int(self.respond("*STB?"))
         return {
             k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
         }
+
+    @status.deleter
+    def status(self):
+        self.write("*CLS")
 
     @property
     def event_status(self):
@@ -172,6 +179,9 @@ class LakeShore475(gpib_eth):
         -----
         - **Reading**: Queries *ESR? and decodes flags.
           See manual §6.3.1.2, p. 93.
+        - **Assignment**: Use the setter to write a bitmask
+          specifying which events to monitor.
+        - **Deletion**: Not supported.
         """
         val = int(self.respond("*ESR?"))
         return {
