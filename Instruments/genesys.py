@@ -47,7 +47,7 @@ class genesys(vxi11.Instrument):
         retval = self.ask("*IDN?")
         assert retval.startswith("LAMBDA,GEN"), f"{host} responded {retval}"
         logging.debug(f"Connected: {retval}")
-        self.status_flags = {"CV": True}  # ignore CC, alert on CV mode only
+        self.status = {"CV": True}  # ignore CC, alert on CV mode only
 
     def __enter__(self):
         return self
@@ -75,7 +75,36 @@ class genesys(vxi11.Instrument):
     def self_test(self):
         return self.respond("*TST?") == "0"
 
-    def clear_status(self):
+    @property
+    def status(self):
+        result = {}
+        oper = int(self.respond(":STAT:OPER:COND?"))
+        ques = int(self.respond(":STAT:QUES:COND?"))
+        for name, (group, bit) in self._status_flags_map.items():
+            if group == "oper":
+                result[name] = bool(oper & (1 << bit))
+            elif group == "ques":
+                result[name] = bool(ques & (1 << bit))
+        return result
+
+    @status.setter
+    def status(self, flags):
+        self.write(":STAT:PRES")  # start by clearing all
+        oper_mask = sum(
+            (1 << bit)
+            for name, (g, bit) in self._status_flags_map.items()
+            if g == "oper" and flags.get(name, False)
+        )
+        ques_mask = sum(
+            (1 << bit)
+            for name, (g, bit) in self._status_flags_map.items()
+            if g == "ques" and flags.get(name, False)
+        )
+        self.write(f":STAT:OPER:ENAB {oper_mask}")
+        self.write(f":STAT:QUES:ENAB {ques_mask}")
+
+    @status.deleter
+    def status(self):
         self.write("*CLS")
 
     # Voltage and current limits
@@ -200,10 +229,12 @@ class genesys(vxi11.Instrument):
         return self.respond(f":DIAG:COMM:PASS {cmd}")
 
     # Errors
-    def read_error(self):
+    @property
+    def error(self):
         return self.respond(":SYST:ERR?")
 
-    def clear_errors(self):
+    @error.deleter
+    def error(self):
         self.write(":SYST:ERR:ENAB")
 
     # SCPI version
@@ -218,73 +249,54 @@ class genesys(vxi11.Instrument):
             k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
         }
         if flags.get("QUES_summary") and any(
-            self.status_flags.get(k)
+            self.status.get(k)
             for k in ["V_fault", "I_fault", "fan", "sense"]
         ):
             raise RuntimeError(
                 "Questionable condition"
                 + "|".join(
                     k
-                    for k in self.status_flags.keys()
-                    if self.status_flags.get(k)
+                    for k in self.status.keys()
+                    if self.status.get(k)
                 )
                 + "detected"
             )
         elif flags.get("QUES_summary"):
             raise RuntimeError("unknown questionalbe status!")
-        if flags.get("ESB") and any(self.event_status_flags.values()):
+        if flags.get("ESB") and any(self.event_status.values()):
             raise RuntimeError(
                 "Event status flag"
                 + "|".join(
                     k
-                    for k in self.event_status_flags.keys()
-                    if self.event_status_flags.get(k)
+                    for k in self.event_status.keys()
+                    if self.event_status.get(k)
                 )
                 + "active"
             )
         return flags
 
     @property
-    def event_status_flags(self):
+    def event_status(self):
         val = int(self.respond("*ESR?"))
         return {
             k: bool(val & (1 << b))
             for k, b in self._event_status_flags.items()
         }
 
-    def enable_event_status(self, val):
+    @event_status.setter
+    def event_status(self, flags):
+        val = sum(
+            (1 << self._event_status_flags[k])
+            for k, v in flags.items()
+            if v and k in self._event_status_flags
+        )
         self.write(f"*ESE {val}")
 
-    def read_op_complete(self):
+    @property
+    def operation_complete(self):
         return int(self.respond("*OPC?"))
 
-    def set_op_complete(self):
-        self.write("*OPC")
-
-    @property
-    def status_flags(self):
-        result = {}
-        oper = int(self.respond(":STAT:OPER:COND?"))
-        ques = int(self.respond(":STAT:QUES:COND?"))
-        for name, (group, bit) in self._status_flags_map.items():
-            if group == "oper":
-                result[name] = bool(oper & (1 << bit))
-            elif group == "ques":
-                result[name] = bool(ques & (1 << bit))
-        return result
-
-    @status_flags.setter
-    def status_flags(self, flags):
-        self.write(":STAT:PRES")  # start by clearing all
-        oper_mask = sum(
-            (1 << bit)
-            for name, (g, bit) in self._status_flags_map.items()
-            if g == "oper" and flags.get(name, False)
-        )
-        ques_mask = sum(
-            (1 << bit)
-            for name, (g, bit) in self._status_flags_map.items()
-            if g == "ques" and flags.get(name, False)
-        )
-        self.write(f":STAT:OPER:ENAB {oper_mask}")
-        self.write(f":STAT:QUES:ENAB {ques_mask}")
+    @operation_complete.setter
+    def operation_complete(self, val):
+        if val:
+            self.write("*OPC")
