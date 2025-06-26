@@ -74,11 +74,11 @@ class genesys(vxi11.Instrument):
         self.write(f"OUTP:STAT OFF")
         self.close()
 
-    def write(self, message):
-        self.check_status()
+    def write(self, message, check=True):
+        if check: self.check_status()
         return super().write(message)
 
-    def respond(self, cmd):
+    def respond(self, cmd, check=True):
         """
         Wrapper around ask() with strip() for clean responses.
 
@@ -92,6 +92,7 @@ class genesys(vxi11.Instrument):
         retval : str
             Response with trailing whitespace removed.
         """
+        if check: self.check_status()
         return self.ask(cmd).strip()
 
     @property
@@ -123,7 +124,7 @@ class genesys(vxi11.Instrument):
         """
         self.write("*RST")
 
-    def save(self, int: register):
+    def save(self, register: int):
         """
         Save current instrument state to memory.
 
@@ -140,7 +141,7 @@ class genesys(vxi11.Instrument):
         """
         self.write(f"*SAV {register}")
 
-    def recall(self):
+    def recall(self, register: int):
         """
         Recall previously saved instrument state.
 
@@ -327,11 +328,20 @@ class genesys(vxi11.Instrument):
     def V_under(self, volts):
         self.write(f":VOLT:LIM:LOW {volts:.3f}")
 
-    # LAN blink
-    def blink_led(self, on=True):
+    def blink_lan(self, on=True):
         self.write(f":SYST:COMM:LAN:IDLED {'ON' if on else 'OFF'}")
 
-    # Network identity
+    def blink_led(self):
+        """
+        Blink front panel LED for physical identification.
+
+        Notes
+        -----
+        - **Call**: Blinks LED on front panel.
+          See §6.3.1.8, p. 97.
+        """
+        self.write("SYST:LED:BLINK")
+
     @property
     def hostname(self):
         return self.respond(":SYST:COMM:LAN:HOST?")
@@ -345,20 +355,48 @@ class genesys(vxi11.Instrument):
         return self.respond(":SYST:COMM:LAN:MAC?")
 
     def reset_lan(self):
-        self.write(":SYST:COMM:LAN:RES")
+        """
+        Resets LAN interface to DHCP and reboots.
 
-    # Diagnostic serial pass-through
+        Notes
+        -----
+        - **Call**: Useful for resetting network config.
+          See §6.3.2.4, p. 101.
+        """
+        self.write("SYST:COMM:LAN:REST")
+
     def pass_through(self, cmd):
+        """
+        Send arbitrary SCPI command.
+
+        Parameters
+        ----------
+        cmd : str
+            Raw command to send.
+
+        Notes
+        -----
+        - **Call**: Allows manual SCPI control.
+        """
         return self.respond(f":DIAG:COMM:PASS {cmd}")
 
     # Errors
     @property
     def error(self):
+        """
+        Notes
+        -----
+        - On **Retrieval**: Checks for error.  Manual page needed!
+        - On **Delete**: Empties errors and resets
+          summary bits. See §6.3.1.5, p. 95.
+        """
         return self.respond(":SYST:ERR?")
 
     @error.deleter
     def error(self):
         self.write(":SYST:ERR:ENAB")
+        self.write("*CLS")
+        self.write("SYST:ERR:CLE")
 
     # SCPI version
     @property
