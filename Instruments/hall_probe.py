@@ -2,6 +2,9 @@ import socket
 import time
 from .gpib_eth import gpib_eth
 from .log_inst import logger
+from pint import UnitRegistry
+
+ureg = UnitRegistry()
 
 """
 Class for controlling LakeShore 475 Gaussmeter written by AG using ChatGPT and inferring
@@ -21,13 +24,13 @@ class LakeShore475(gpib_eth):
     """
 
     def __init__(self, prologix_instance=None, address=12, eos=0):
-        """ınıtıalıze ınstance of connectıon to hall probe
+        """Initialize instance of connection to hall probe
 
-        parameters
-        ==========
-        eos : ınt
-            2 -- set ınstrument to IEEE Terms = LF
-            0 -- set ınstrument to IEEE Terms = CR LF
+        Parameters
+        ----------
+        eos : int
+            2 -- set instrument to IEEE Terms = LF
+            0 -- set instrument to IEEE Terms = CR LF
         """
         super().__init__(prologix_instance, address, eos=eos)
         idstring = self.respond("*IDN?")
@@ -42,38 +45,25 @@ class LakeShore475(gpib_eth):
             )
         return
 
-    def identify(self):
+    @property
+    def IDN(self):
         """Return the *IDN? string (manufacturer, model, serial, date)."""
         return self.respond("*IDN?")
 
-    def set_field_units(self, unit_code: int):
+    @property
+    def field(self):
         """
-        Select field reading units:
-            1 = Gauss, 2 = Tesla, 3 = Oersted, 4 = A/meter.
-        """
-        self.write(f"UNIT {unit_code}")
+        Read the magnetic field as a pint.Quantity.
 
-    def read_field(self):
-        """Return the present magnetic field reading in gauss."""
-        return float(self.respond("READ?"))
-
-    def get_field_units(self) -> int:
-        """Query the current field‐unit setting (returns the code)."""
-        return int(self.respond("UNIT?"))
-
-    def read_field(self) -> float:
-        """
-        Read the magnetic field in the current units.
-        Returns a float (e.g. +273.150E+00).
+        Returns
+        -------
+        pint.Quantity
+            Magnetic field with appropriate units.
         """
         resp = self.respond("RDGFIELD?")
         try:
-            response = float(
-                resp
-            )  # field reading query :contentReference[oaicite:3]{index=3}
-            return response
-
-        except:  # For error messages, refer Sec. 8.6 at page 8-3 in the manual.
+            value = float(resp)
+        except:
             if resp == "NO PROBE":
                 raise ValueError("No Hall Probe is attached!")
             elif resp == "OL":
@@ -84,7 +74,22 @@ class LakeShore475(gpib_eth):
             else:
                 raise ValueError("Other type of error: %s" % resp)
 
-    def set_range(self, range_code: int):
+        unit_code = int(self.respond("UNIT?"))
+        unit_map = {
+            1: ureg.gauss,
+            2: ureg.tesla,
+            3: ureg.oersted,
+            4: ureg.ampere / ureg.meter,
+        }
+        return value * unit_map.get(unit_code, ureg.gauss)
+
+    @property
+    def range(self) -> int:
+        """Query the present manual range (returns 1–5, field values are probe depended)."""
+        return int(self.respond("RANGE?"))
+
+    @range.setter
+    def range(self, range_code: int):
         """
         Manually select a measurement range (1–5).
         Disables auto-ranging when invoked.
@@ -93,22 +98,19 @@ class LakeShore475(gpib_eth):
             raise ValueError("Range must be an integer from 1 to 5")
         self.write(f"RANGE {range_code}")
 
-    def get_range(self) -> int:
-        """Query the present manual range (returns 1–5, field values are probe depended)."""
-        return int(self.respond("RANGE?"))
+    @property
+    def auto_range(self) -> bool:
+        """Query auto-ranging state (returns True if on)."""
+        return bool(int(self.respond("AUTO?")))
 
-    def enable_auto_range(self, enable: bool):
+    @auto_range.setter
+    def auto_range(self, enable: bool):
         """
         Turn auto-ranging on or off:
             True  → AUTO 1
             False → AUTO 0
         """
         self.write(f"AUTO {1 if enable else 0}")
-
-    def is_auto(self) -> bool:
-        """Query auto-ranging state (returns True if on)."""
-
-        return bool(int(self.respond("AUTO?")))
 
     def zero_probe(self):
         """Re-zero the probe before measurements."""
