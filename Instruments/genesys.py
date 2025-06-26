@@ -6,10 +6,17 @@ class genesys(vxi11.Instrument):
     """
     Full SCPI/VXI-11 interface for Genesys power supply.
 
-    We used ChatGPT to automatically include all functionality
-    documented in the SCPI Reference section
-    of the *Genesys Series LAN Interface Manual*, which is referenced
-    below.
+    We used ChatGPT to comprehensively
+    implement all SCPI commands described in
+    the *Genesys Series LAN Interface
+    Manual*.
+    The implementation includes complete support for status
+    monitoring, control, and diagnostic capabilities.
+
+    References
+    ----------
+    Genesys Series LAN Interface Manual, TDK Lambda, Rev 0,
+    Jan. 2008.
     """
 
     _status_flags_map = {
@@ -83,25 +90,84 @@ class genesys(vxi11.Instrument):
         Returns
         -------
         retval : str
-            Stripped string returned from instrument.
+            Response with trailing whitespace removed.
         """
         return self.ask(cmd).strip()
 
     @property
     def IDN(self):
+        """
+        Identification string of the connected device.
+
+        Returns
+        -------
+        retval : str
+            Full identification string as returned
+            by the instrument.
+
+        Notes
+        -----
+        - **Reading**: Returns device identification
+          information (see §6.3.1.1, p. 92).
+        """
         return self.respond("*IDN?")
 
     def reset(self):
+        """
+        Reset the instrument to factory default state.
+
+        Notes
+        -----
+        This clears configuration and restores
+        startup defaults (see §6.3.1.6, p. 95).
+        """
         self.write("*RST")
 
-    def save(self):
-        self.write("*SAV 0")
+    def save(self, int: register):
+        """
+        Save current instrument state to memory.
+
+        Parameters
+        ----------
+        register : int
+            The register (think MEM 1, MEM 2
+            on a calculator)
+
+        Notes
+        -----
+        Saves all current settings for future recall
+        (see §6.3.1.4, p. 94).
+        """
+        self.write(f"*SAV {register}")
 
     def recall(self):
-        self.write("*RCL 0")
+        """
+        Recall previously saved instrument state.
+
+        Parameters
+        ----------
+        register : int
+            The register (think MEM 1, MEM 2
+            on a calculator)
+
+        Notes
+        -----
+        Loads the last saved settings from memory
+        (see §6.3.1.3, p. 94).
+        """
+        self.write(f"*RCL {register}")
 
     def self_test(self):
-        return self.respond("*TST?") == "0"
+        """
+        Run internal self-diagnostic test.
+        Fails unless it passes.
+
+        Notes
+        -----
+        - **Reading**: Queries the self-test bit pattern.
+          See §6.3.1.7, p. 96.
+        """
+        assert self.respond("*TST?") == "0"
 
     @property
     def status(self):
@@ -120,8 +186,7 @@ class genesys(vxi11.Instrument):
         -----
         - **Reading**: Returns a dictionary of booleans
           indicating current operating mode and faults
-          as described in §6.3.8.1–2 (pp. 111–112) of the
-          *Genesys Series LAN Interface Manual*.
+          as described in §6.3.8.1–2 (pp. 111–112).
         - **Assignment**: Accepts a dictionary of booleans
           specifying which flags should be enabled to
           trigger summary conditions.
