@@ -96,6 +96,12 @@ class LakeShore475(gpib_eth):
         -------
         pint.Quantity
             Magnetic field with appropriate units.
+
+        Notes
+        -----
+        - **Reading**: Uses RDGFIELD? (manual §6.3.3.1, p. 106).
+        - **Assignment**: Not supported.
+        - **Deletion**: Not supported.
         """
         resp = self.respond("RDGFIELD?")
         try:
@@ -111,14 +117,8 @@ class LakeShore475(gpib_eth):
             else:
                 raise ValueError("Other type of error: %s" % resp)
 
-        unit_code = int(self.respond("UNIT?"))
-        unit_map = {
-            1: ureg.gauss,
-            2: ureg.tesla,
-            3: ureg.oersted,
-            4: ureg.ampere / ureg.meter,
-        }
-        return value * unit_map.get(unit_code, ureg.gauss)
+        units = self._get_field_units()
+        return value * units
 
     @property
     def range(self) -> int:
