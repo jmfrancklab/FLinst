@@ -87,6 +87,12 @@ class LakeShore475(gpib_eth):
         }
         return unit_map.get(unit_code, ureg.gauss)
 
+    def calibrate_zero(self):
+        """
+        Perform a zero calibration.
+        """
+        self.write("CALZERO")
+
     @property
     def field(self):
         """
