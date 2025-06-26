@@ -246,3 +246,64 @@ class LakeShore475(gpib_eth):
             raise TypeError("Expected a pint Quantity for time_constant")
         seconds = value.to(ureg.second).magnitude
         self.write(f"FILTER {seconds:.3f}")
+
+    def reset(self):
+        """
+        Reset the instrument to its default state.
+
+        Notes
+        -----
+        - Issues the `*RST` command (see manual §6.3.1.3, p. 94).
+        - Equivalent to pressing the front-panel reset.
+        - Clears the output queue and resets configuration.
+        """
+        self.write("*RST")
+
+    @property
+    def zoffset(self):
+        """
+        Probe zero offset in current field units.
+
+        Returns
+        -------
+        float
+            Current offset applied to field measurement.
+
+        Notes
+        -----
+        - **Reading**: Query the probe zero offset using `ZOFFSET?` (manual §6.3.3.10, p. 109).
+        - **Assignment**: Write a new offset value with `ZOFFSET`.
+        - **Deletion**: Not supported.
+        """
+        return float(self.respond("ZOFFSET?"))
+
+    @zoffset.setter
+    def zoffset(self, value: float):
+        self.write(f"ZOFFSET {float(value):.4f}")
+
+    @property
+    def read_mode(self):
+        """
+        Reading mode: determines how the field measurement is interpreted.
+
+        Returns
+        -------
+        str
+            One of "DC", "PEAK", or "RMS".
+
+        Notes
+        -----
+        - **Reading**: Queries current reading mode via `RMODE?` (manual §6.3.3.8, p. 108).
+        - **Assignment**: Use one of the valid mode strings to update.
+        - **Deletion**: Not supported.
+        """
+        code = int(self.respond("RMODE?"))
+        modes = {0: "DC", 1: "PEAK", 2: "RMS"}
+        return modes[code]
+
+    @read_mode.setter
+    def read_mode(self, mode: str):
+        modes = {"DC": 0, "PEAK": 1, "RMS": 2}
+        if mode not in modes:
+            raise ValueError("read_mode must be one of: DC, PEAK, RMS")
+        self.write(f"RMODE {modes[mode]}")
