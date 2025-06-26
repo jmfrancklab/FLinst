@@ -406,9 +406,11 @@ class LakeShore475(gpib_eth):
 
     @property
     def relay_state(self):
-        # don't include SCPI strings in the docs.  Also -- add a second paragraph to main explaining what this is!
         """
-        Current state of the instrument's relay output.
+        Indicates whether the instrument's rear-panel relay output is energized.
+
+        The relay can be used to control external equipment or trigger devices. When
+        energized, it closes the relay circuit; when de-energized, the circuit is open.
 
         Returns
         -------
@@ -429,9 +431,12 @@ class LakeShore475(gpib_eth):
 
     @property
     def alarm_enabled(self):
-        # don't include SCPI strings in the docs.  Also -- add a second paragraph to main explaining what this is!
         """
-        Enable or disable the alarm output.
+        Indicates whether the alarm output function is enabled.
+
+        When enabled, the alarm system monitors the magnetic field and compares it to
+        user-specified limits. If the reading exceeds those thresholds, an alarm output
+        can be activated.
 
         Returns
         -------
@@ -452,9 +457,12 @@ class LakeShore475(gpib_eth):
 
     @property
     def max_hold(self):
-        # don't include SCPI strings in the docs.  Also -- add a second paragraph to main explaining what this is!
         """
-        Maximum held field value in current units.
+        Highest magnetic field value recorded since the last hold reset.
+
+        The instrument continuously monitors the measured field and stores the
+        maximum value seen until `HRESET` is called. This is useful for peak detection
+        and signal bounding.
 
         Returns
         -------
