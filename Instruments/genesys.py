@@ -57,6 +57,7 @@ class genesys(vxi11.Instrument):
     }
 
     def __init__(self, host: str):
+        self.checking_on = True
         super().__init__(host)
         retval = self.ask("*IDN?")
         assert retval.startswith("LAMBDA,GEN"), f"{host} responded {retval}"
@@ -70,12 +71,12 @@ class genesys(vxi11.Instrument):
         self.write(f"OUTP:STAT OFF")
         self.close()
 
-    def write(self, message, check=True):
-        if check:
+    def write(self, message, encoding='ascii'):
+        if self.checking_on:
             self.check_status()
-        return super().write(message)
+        return super().write(message, encoding)
 
-    def respond(self, cmd, check=True):
+    def respond(self, cmd):
         """
         Wrapper around ask() with strip() for clean responses.
 
@@ -89,9 +90,7 @@ class genesys(vxi11.Instrument):
         retval : str
             Response with trailing whitespace removed.
         """
-        if check:
-            self.check_status()
-        return self.ask(cmd).strip()
+        return self.ask(cmd).strip() # write is called by ask, so that checks, too
 
     @property
     def IDN(self):
@@ -291,7 +290,7 @@ class genesys(vxi11.Instrument):
         - **Assignment**: Not supported.
         - **Deletion**: Not supported.
         """
-        return float(self.respond(":MEAS:VOLT?"))
+        return float(self.respond("MEAS:VOLT?"))
 
     @property
     def I_meas(self):
@@ -309,7 +308,7 @@ class genesys(vxi11.Instrument):
         - **Assignment**: Not supported.
         - **Deletion**: Not supported.
         """
-        return float(self.respond(":MEAS:CURR?"))
+        return float(self.respond("MEAS:CURR?"))
 
     # Operating mode
     @property
@@ -632,7 +631,9 @@ class genesys(vxi11.Instrument):
         - **Assignment**: Not supported.
         - **Deletion**: Not supported.
         """
+        self.checking_on = False # avoid recursion!
         val = int(self.respond("*STB?"))
+        self.checking_on = True
         flags = {
             k: bool(val & (1 << b)) for k, b in self._status_byte_flags.items()
         }

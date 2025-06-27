@@ -1,11 +1,32 @@
 from Instruments import genesys
-from numpy import r_
-from pyspecdata import ndshape
-r_[r_[0:21.7:50j],
-    r_[21.7:0:50j]]
-current_log = ndshape([('t',100)])
-with genesys() as g:
+from numpy import r_, dtype, zeros_like
+from pyspecdata import ndshape, figlist_var
+import time
+
+I_program = r_[r_[0:21.7:50j], [21.7] * 50, r_[21.7:0:50j]]
+log = (
+    ndshape([("t", len(I_program))])
+    .alloc(dtype([("I", "double"), ("V", "double")]))
+    .setaxis("t", zeros_like(I_program))
+    .set_units("t", "s")
+)
+with genesys("192.168.0.199") as g:
     g.V_limit = 25.0
-    g.I_limit = 0.01
+    g.I_limit = 0.0
     g.output = True
-    g.I_meas
+    for j, thisI in enumerate(I_program):
+        g.I_limit = thisI
+        time.sleep(0.1)
+        log["t", j].data["I"] = g.I_meas
+        log["t", j].data["V"] = g.V_meas
+        log["t"] = time.time()
+log["t"] -= log["t"][0]
+log.name("PS_test").hdf5_write(
+    f"power_supply_test_{time.strftime('%y%m%d')}.h5"
+)
+with figlist_var() as fl:
+    fl.next("magnet response")
+    for j in log.data.dtype.names:
+        temp = log.C
+        temp.data = temp.data[j]
+        fl.plot(temp, label=j)
