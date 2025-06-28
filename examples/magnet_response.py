@@ -12,19 +12,26 @@ log = (
 )
 with genesys("192.168.0.199") as g:
     # also nest inside a context block to allow communication with the LakeShore Hall probe
+    g.V_limit = 25.0
+    g.I_limit = 0.0
+    g.output = True
     with prologix_connection() as p:
         with hall_probe(p) as h:
-            g.V_limit = 25.0
-            g.I_limit = 0.0
-            g.output = True
+            # adjust the time constant of the Hall probe to 5 milliseconds
+            h.time_constant = 5e-3
             for j, thisI in enumerate(I_program):
                 g.I_limit = thisI
                 time.sleep(0.1)
                 log["t", j].data["I"] = g.I_meas
                 log["t", j].data["V"] = g.V_meas
-                # use the Hall probe to measure the magnetic field
-                log["t", j].data["B₀"] = h.B_meas
-                log["t", j] = time.time()
+                # Use the Hall probe to measure the magnetic field, and convert
+                # the Hall probe measurement to Tesla (T) to ensure consistency
+                # with the expected units in the data structure.
+                # Dropping the units (using `.magnitude`) ensures that the value
+                # can be stored as a plain numerical type, which is required for
+                # compatibility with the structured array format of `log.data`.
+                log["t", j].data["B₀"] = h.B_meas.to("T").magnitude
+                log["t"][j] = time.time()
 log["t"] -= log["t"][0]
 # Save the logged data to an HDF5 file with a name based on the current date.
 # The `hdf5_write` method writes the data structure to the specified file in HDF5 format.
