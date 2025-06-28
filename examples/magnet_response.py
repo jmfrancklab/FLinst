@@ -1,28 +1,47 @@
 """
-This script performs a magnet response measurement by controlling a Genesys power supply and recording the resulting current, voltage, and magnetic field using a LakeShore Hall probe. The measurement sequence ramps the current up, holds it, and then ramps it down, logging all relevant data at each step.
+This script performs a magnet response measurement by controlling a Genesys
+power supply and recording the resulting current, voltage, and magnetic field
+using a LakeShore Hall probe. The measurement sequence ramps the current up,
+holds it, and then ramps it down, logging all relevant data at each step.
 
 Workflow:
-- Establishes communication with the Genesys power supply and the Hall probe via a Prologix GPIB-USB controller.
-- Sets up a current program (`I_program`) to ramp the current up, hold, and ramp down.
-- Allocates an nddata object (`log`) to store current (I), voltage (V), and magnetic field (B₀) measurements, as well as the time axis.
+
+- Establishes communication with the Genesys power supply and the Hall probe
+  via a Prologix GPIB-USB controller.
+- Sets up a current program (`I_program`) to ramp the current up, hold, and
+  ramp down.
+- Allocates an nddata object (`log`) to store current (I), voltage (V), and
+  magnetic field (B₀) measurements, as well as the time coordinate axis.
 - For each current setpoint:
+
     - Sets the power supply current limit.
     - Waits briefly for stabilization.
-    - Logs measured current, voltage, and magnetic field (converted to Tesla and stripped of units for compatibility).
-    - Records the absolute wall-clock time for each measurement point.
-      # NOTE: Unlike the other fields, the time axis is set to the absolute wall-clock time (in seconds since the epoch) at each step, rather than a measured value from the instrument. This is necessary for accurate time alignment in nddata objects.
+    - Logs measured current, voltage, and magnetic field (converted to Tesla
+      and stripped of units for compatibility).
+    - Records the absolute wall-clock time for each measurement point. # NOTE:
+      Unlike the other fields, the time axis is set to the absolute wall-clock
+      time (in seconds since the epoch) at each step, rather than a measured
+      value from the instrument. This is necessary for accurate time alignment
+      in nddata objects.
+
 - Normalizes the time axis to start at zero.
 - Saves the data to an HDF5 file named with the current date.
-- Plots each field (I, V, B₀) as a function of time using pyspecdata's figlist_var.
+- Plots each field (I, V, B₀) as a function of time using pyspecdata's
+  figlist_var.
 
 Dependencies:
+
 - Instruments (genesys, hall_probe, prologix_connection)
 - numpy
 - pyspecdata
 - time
 
 Note:
-- The time axis in the nddata object is set using absolute wall-clock time, which differs from the other fields that are populated with instrument measurements. This ensures proper time alignment for subsequent analysis and plotting.
+
+- The time axis in the nddata object is set using absolute wall-clock time,
+  which differs from the other fields that are populated with instrument
+  measurements. This ensures proper time alignment for subsequent analysis and
+  plotting.
 """
 
 from Instruments import genesys, hall_probe, prologix_connection
@@ -38,7 +57,8 @@ log = (
     .set_units("t", "s")
 )
 with genesys("192.168.0.199") as g:
-    # also nest inside a context block to allow communication with the LakeShore Hall probe
+    # also nest inside a context block to allow communication with the
+    # LakeShore Hall probe
     g.V_limit = 25.0
     g.I_limit = 0.0
     g.output = True
@@ -53,20 +73,21 @@ with genesys("192.168.0.199") as g:
                 log["t", j].data["V"] = g.V_meas
                 # Use the Hall probe to measure the magnetic field, and convert
                 # the Hall probe measurement to Tesla (T) to ensure consistency
-                # with the expected units in the data structure.
-                # Dropping the units (using `.magnitude`) ensures that the value
-                # can be stored as a plain numerical type, which is required for
+                # with the expected units in the data structure. Dropping the
+                # units (using `.magnitude`) ensures that the value can be
+                # stored as a plain numerical type, which is required for
                 # compatibility with the structured array format of `log.data`.
                 log["t", j].data["B₀"] = h.B_meas.to("T").magnitude
                 # The following line sets the value of the "t" axis at index j
                 # to the current wall-clock time (in seconds since the epoch).
-                # This is different from the other fields, which are stored in the
-                # structured data array; here, we are setting the axis
+                # This is different from the other fields, which are stored in
+                # the structured data array; here, we are setting the axis
                 # coordinate value.
                 log["t"][j] = time.time()
 log["t"] -= log["t"][0]
 # Save the logged data to an HDF5 file with a name based on the current date.
-# The `hdf5_write` method writes the data structure to the specified file in HDF5 format.
+# The `hdf5_write` method writes the data structure to the specified file in
+# HDF5 format.
 log.name("PS_test").hdf5_write(
     f"power_supply_test_{time.strftime('%y%m%d')}.h5"
 )
