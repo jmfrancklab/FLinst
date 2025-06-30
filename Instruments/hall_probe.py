@@ -62,6 +62,8 @@ class LakeShore475(gpib_eth):
                 " ID string as %s" % idstring
             )
         self.write("HRESET")  # clear field_limits state so that readings are valid since initialization
+        self.write("UNIT 2") # set to tesla
+        return
         return
 
     @property

@@ -44,15 +44,17 @@ Note:
   plotting.
 """
 
-from Instruments import genesys, hall_probe, prologix_connection
+from Instruments import genesys, LakeShore475, prologix_connection
 from numpy import r_, dtype, zeros_like
-from pyspecdata import ndshape, figlist_var
+from pyspecdata import ndshape, figlist_var, Q_
 import time
+import os, h5py
 
 I_program = r_[r_[0:21.7:50j], [21.7] * 50, r_[21.7:0:50j]]
+B0_str = "$B_0$"
 log = (
     ndshape([("t", len(I_program))])
-    .alloc(dtype([("I", "double"), ("V", "double"), ("B₀", "double")]))
+    .alloc(dtype([("I", "double"), ("V", "double"), (B0_str, "double")]))
     .setaxis("t", zeros_like(I_program))
     .set_units("t", "s")
 )
@@ -63,9 +65,9 @@ with genesys("192.168.0.199") as g:
     g.I_limit = 0.0
     g.output = True
     with prologix_connection() as p:
-        with hall_probe(p) as h:
+        with LakeShore475(p) as h:
             # adjust the time constant of the Hall probe to 5 milliseconds
-            h.time_constant = 5e-3
+            h.time_constant = Q_(5, "ms")
             for j, thisI in enumerate(I_program):
                 g.I_limit = thisI
                 time.sleep(0.1)
@@ -77,7 +79,7 @@ with genesys("192.168.0.199") as g:
                 # units (using `.magnitude`) ensures that the value can be
                 # stored as a plain numerical type, which is required for
                 # compatibility with the structured array format of `log.data`.
-                log["t", j].data["B₀"] = h.B_meas.to("T").magnitude
+                log["t", j].data[B0_str] = h.field.to("T").magnitude
                 # The following line sets the value of the "t" axis at index j
                 # to the current wall-clock time (in seconds since the epoch).
                 # This is different from the other fields, which are stored in
@@ -88,11 +90,23 @@ log["t"] -= log["t"][0]
 # Save the logged data to an HDF5 file with a name based on the current date.
 # The `hdf5_write` method writes the data structure to the specified file in
 # HDF5 format.
-log.name("PS_test").hdf5_write(
-    f"power_supply_test_{time.strftime('%y%m%d')}.h5"
-)
+num_dataset = 1
+dataset_name = f"PS_test{num_dataset:02d}"
+file_name = f"power_supply_test_{time.strftime('%y%m%d')}.h5"
+if os.path.exists(file_name):
+    # use h5py to see if the dataset already exists if it does, start
+    # incrementing num_dataset
+    with h5py.File(file_name) as f:
+        while dataset_name in f:
+            num_dataset += 1
+            dataset_name = f"PS_test{num_dataset:02d}"
+log.name(dataset_name).hdf5_write(file_name)
 # Iterate over the names of the fields in the structured data type of log.data
 with figlist_var() as fl:
-    fl.next("magnet response")
+    fl.next("magnet response", legend=True)
     for j in log.data.dtype.names:
+        if j == B0_str:
+            fl.twinx()
+        else:
+            fl.twinx(orig=True)
         fl.plot(log.C.run(lambda x: x[j]), label=j)
