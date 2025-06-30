@@ -45,17 +45,26 @@ Note:
 """
 
 from Instruments import genesys, LakeShore475, prologix_connection
-from numpy import r_, dtype, zeros_like
+from numpy import r_, dtype, zeros
 from pyspecdata import ndshape, figlist_var, Q_
 import time
 import os, h5py
 
-I_program = r_[r_[0:21.7:50j], [21.7] * 50, r_[21.7:0:50j]]
+max_current = 22
+increment_delay = 0.05
+# Define the program as a list of (current, n_incr) tuples
+program = (
+    [(i, 1) for i in r_[0:max_current:50j]]  # ramp up
+    + [(max_current, 200)]  # hold at max current
+    + [(i, 1) for i in r_[max_current:0:50j]]  # ramp down
+)
+
 B0_str = "$B_0$"
+N = sum(n_incr for _, n_incr in program)
 log = (
-    ndshape([("t", len(I_program))])
+    ndshape([("t", N)])
     .alloc(dtype([("I", "double"), ("V", "double"), (B0_str, "double")]))
-    .setaxis("t", zeros_like(I_program))
+    .setaxis("t", zeros(N, "double"))
     .set_units("t", "s")
 )
 with genesys("192.168.0.199") as g:
@@ -68,24 +77,28 @@ with genesys("192.168.0.199") as g:
         with LakeShore475(p) as h:
             # adjust the time constant of the Hall probe to 5 milliseconds
             h.time_constant = Q_(5, "ms")
-            for j, thisI in enumerate(I_program):
-                g.I_limit = thisI
-                time.sleep(0.1)
-                log["t", j].data["I"] = g.I_meas
-                log["t", j].data["V"] = g.V_meas
-                # Use the Hall probe to measure the magnetic field, and convert
-                # the Hall probe measurement to Tesla (T) to ensure consistency
-                # with the expected units in the data structure. Dropping the
-                # units (using `.magnitude`) ensures that the value can be
-                # stored as a plain numerical type, which is required for
-                # compatibility with the structured array format of `log.data`.
-                log["t", j].data[B0_str] = h.field.to("T").magnitude
-                # The following line sets the value of the "t" axis at index j
-                # to the current wall-clock time (in seconds since the epoch).
-                # This is different from the other fields, which are stored in
-                # the structured data array; here, we are setting the axis
-                # coordinate value.
-                log["t"][j] = time.time()
+            j = 0
+            for thisI, n_incr in program:
+                for _ in range(n_incr):
+                    g.I_limit = thisI
+                    time.sleep(increment_delay)
+                    log["t", j].data["I"] = g.I_meas
+                    log["t", j].data["V"] = g.V_meas
+                    # Use the Hall probe to measure the magnetic field, and convert
+                    # the Hall probe measurement to Tesla (T) to ensure consistency
+                    # with the expected units in the data structure. Dropping the
+                    # units (using `.magnitude`) ensures that the value can be
+                    # stored as a plain numerical type, which is required for
+                    # compatibility with the structured array format of `log.data`.
+                    log["t", j].data[B0_str] = h.field.to("T").magnitude
+                    # The following line sets the value of the "t" axis at index
+                    # j to the current wall-clock time (in seconds since
+                    # start of unix epoch).
+                    # This is different from the other fields, which are
+                    # stored in the structured data array; here, we are
+                    # setting the axis coordinate value.
+                    log["t"][j] = time.time()
+                    j += 1
 log["t"] -= log["t"][0]
 # Save the logged data to an HDF5 file with a name based on the current date.
 # The `hdf5_write` method writes the data structure to the specified file in
@@ -107,6 +120,8 @@ with figlist_var() as fl:
     for j in log.data.dtype.names:
         if j == B0_str:
             fl.twinx()
+            log.set_plot_color("k")
         else:
             fl.twinx(orig=True)
+            log.set_plot_color(None)
         fl.plot(log.C.run(lambda x: x[j]), label=j)
