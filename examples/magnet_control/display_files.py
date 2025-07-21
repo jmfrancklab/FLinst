@@ -17,4 +17,4 @@ with figlist_var() as fl:
             else:
                 fl.twinx(orig=True)
                 log.set_plot_color(None)
-            fl.plot(log.C.run(lambda x: x[j]), label=j)
+            fl.plot(log.C.run(lambda x: x[j]), label=j,marker='.')
