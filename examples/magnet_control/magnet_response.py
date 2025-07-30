@@ -46,6 +46,15 @@ Note:
 
 from Instruments import genesys, LakeShore475, prologix_connection
 from numpy import r_, dtype, zeros
+
+
+#This block is added to overcome "AttributeError: Module 'numpy._core' has no attribute 'rec'"
+import numpy as numpy
+import types
+
+if not hasattr(numpy._core, "rec"):
+    numpy._core.rec = types.SimpleNamespace(fromarrays=numpy.rec.fromarrays)
+
 from pyspecdata import ndshape, figlist_var, Q_
 import time
 import os, h5py
@@ -90,7 +99,7 @@ with genesys("192.168.0.199") as g:
                     # units (using `.magnitude`) ensures that the value can be
                     # stored as a plain numerical type, which is required for
                     # compatibility with the structured array format of `log.data`.
-                    log["t", j].data[B0_str] = h.field.to("T").magnitude
+                    log["t", j].data[B0_str] = -h.field.to("T").magnitude #- because of the placement of the hall probe
                     # The following line sets the value of the "t" axis at index
                     # j to the current wall-clock time (in seconds since
                     # start of unix epoch).
