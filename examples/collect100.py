@@ -34,6 +34,8 @@ import Instruments as inst
 import numpy as np
 import sys
 
+import json
+
 acquire = False
 fl = psd.figlist_var()
 
@@ -87,9 +89,10 @@ def collect(date, id_string, captures):
     s.ift("t")
     # }}}
     s.name("accumulated_" + date)
-    s.hdf5_write(
+    
+    s.hdf5_write(py
         date + "_" + id_string + ".h5",
-        directory=psd.getDATADIR(exp_type="ODNP_NMR_comp/noise_tests"),
+        directory=psd.getDATADIR(exp_type="B27/noise"),
     )
     print("name of data", s.name())
     print("units should be", s.get_units("t"))

@@ -1,3 +1,10 @@
+"""
+Testing the output of the Genesys power supply
+============================
+Identification, checking and setting the current.
+"""
+
+
 from Instruments import genesys
 import time
 

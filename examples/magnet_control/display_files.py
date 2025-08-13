@@ -1,3 +1,8 @@
+"""
+Shows the data from magnet_response.py
+"""
+
+
 from pyspecdata import figlist_var, nddata_hdf5
 import h5py
 
