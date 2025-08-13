@@ -1,6 +1,8 @@
 import socket
 import time
-from pylab import *
+import numpy as np
+import logging
+from numpy import r_
 
 
 class prologix_connection(object):
@@ -42,11 +44,12 @@ class prologix_connection(object):
         )
         try:
             self.socket.connect((ip, port))
-        except:
+        except Exception:
             raise ValueError(
                 "Can't connect to port " + str(port) + " on " + ip
             )
-        # here I don't set a timeout, since that seems to demand that we receive everything in the buffer
+        # here I don't set a timeout, since that seems to demand that we
+        # receive everything in the buffer
         self.socket.send(("++mode 1" + "\r").encode("utf-8"))
         self.socket.send(("++ifc" + "\r").encode("utf-8"))
         self.socket.send(("++auto 0" + "\r").encode("utf-8"))
@@ -81,8 +84,8 @@ class gpib_eth(object):
         Parameters
         ==========
         prologix: a prologix_connection instance
-            Both the TCP connection to the prologix_instance device and a record
-            of which instrument we are "facing".
+            Both the TCP connection to the prologix_instance device and a
+            record of which instrument we are "facing".
         address: int
             the GPIB address
         """
@@ -93,7 +96,8 @@ class gpib_eth(object):
         # Switch for OS X
         self.flags = {}
         self.eos = eos
-        self.address = address  # the GPIB address of the instrument for which I have generated this instance of gpib_eth
+        self.address = address  # the GPIB address of the instrument for which
+        #                         I have generated this instance of gpib_eth
         if address is None:
             raise ValueError(
                 "you need to set the GPIB address (address=xxx)!!!!"
@@ -169,7 +173,7 @@ class gpib_eth(object):
         if temp[0] == '"':
             return temp[1:-1]
         else:
-            return double(temp)
+            return np.double(temp)
 
     def tek_get_curve(self):
         self.setaddr()
@@ -195,8 +199,8 @@ class gpib_eth(object):
             x,
             y_offset
             + y_mult
-            * array(
-                unpack(
+            * np.array(
+                np.unpack(
                     "%sb" % curve_length, self.serial.read(int(curve_length))
                 )
             ),
@@ -227,6 +231,10 @@ class gpib_eth(object):
             type = int(pra[1])
             points = int(pra[2])
             count = int(pra[3])
+            logging.debug(
+                "format=%d, type=%d, points=%d, count=%d"
+                % (format, type, points, count)
+            )
 
             xinc = float(pra[4])
             xorig = float(pra[5])
@@ -246,7 +254,7 @@ class gpib_eth(object):
             )
 
         x = ((r_[0 : len(wfrm)] - xref) * xinc) + xorig
-        y = ((array(wfrm) - yref) * yinc) + yorig
+        y = ((np.array(wfrm) - yref) * yinc) + yorig
 
         # FIXME: No idea what x_unit and y_unit are for. They just get stowed
         #        in the matlab file so for now it's okay. /eazg

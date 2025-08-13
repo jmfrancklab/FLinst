@@ -68,10 +68,10 @@ class genesys(vxi11.Instrument):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.write(f"OUTP:STAT OFF")
+        self.write("OUTP:STAT OFF")
         self.close()
 
-    def write(self, message, encoding='ascii'):
+    def write(self, message, encoding="ascii"):
         if self.checking_on:
             self.check_status()
         return super().write(message, encoding)
@@ -90,7 +90,9 @@ class genesys(vxi11.Instrument):
         retval : str
             Response with trailing whitespace removed.
         """
-        return self.ask(cmd).strip() # write is called by ask, so that checks, too
+        return self.ask(
+            cmd
+        ).strip()  # write is called by ask, so that checks, too
 
     @property
     def IDN(self):
@@ -333,7 +335,8 @@ class genesys(vxi11.Instrument):
     # Local/remote control
     @property
     def remote(self):
-        # need description list of what these different modes mean (from the manual, with ref)
+        # need description list of what these different modes mean (from the
+        # manual, with ref)
         """
         Remote/local control status.
 
@@ -385,7 +388,8 @@ class genesys(vxi11.Instrument):
     # Foldback protection
     @property
     def foldback(self):
-        # this needs a description of foldback and also a reference to a section of the manual
+        # this needs a description of foldback and also a reference to a
+        # section of the manual
         """
         Foldback protection enable.
 
@@ -416,7 +420,8 @@ class genesys(vxi11.Instrument):
     # OVP
     @property
     def V_over(self):
-        # this needs a reference to the manual and a description of what overvoltage protection is
+        # this needs a reference to the manual and a description of what
+        # overvoltage protection is
         """
         Overvoltage protection level.
 
@@ -631,7 +636,7 @@ class genesys(vxi11.Instrument):
         - **Assignment**: Not supported.
         - **Deletion**: Not supported.
         """
-        self.checking_on = False # avoid recursion!
+        self.checking_on = False  # avoid recursion!
         val = int(self.respond("*STB?"))
         self.checking_on = True
         flags = {
