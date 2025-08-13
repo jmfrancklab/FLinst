@@ -3,7 +3,7 @@ from Instruments import LakeShore475, prologix_connection
 
 with prologix_connection() as p:
     with LakeShore475(p) as g:
-        #print(g.identify())
+        # print(g.identify())
         print(g.read_field())
 
         """

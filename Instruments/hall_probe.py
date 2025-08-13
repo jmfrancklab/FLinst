@@ -1,5 +1,3 @@
-import socket
-import time
 from .gpib_eth import gpib_eth
 from .log_inst import logger
 from pint import UnitRegistry, Quantity
@@ -7,11 +5,12 @@ from pint import UnitRegistry, Quantity
 ureg = UnitRegistry()
 
 """
-Class for controlling LakeShore 475 Gaussmeter written by AG using ChatGPT and inferring
-from HP6623A.py, HP8672A.py and gigatronics.py.
-ChatGPT Conversation: https://chatgpt.com/share/6851b044-3030-800d-ae80-7943105f6a59
-Refer to the user manual for the detailed explanations of the commands starting from
-the page 6-28.
+Class for controlling LakeShore 475 Gaussmeter written by AG using ChatGPT and
+inferring from HP6623A.py, HP8672A.py and gigatronics.py.
+ChatGPT Conversation:
+https://chatgpt.com/share/6851b044-3030-800d-ae80-7943105f6a59 Refer to the
+user manual for the detailed explanations of the commands starting from the
+page 6-28.
 """
 
 
@@ -24,10 +23,10 @@ class LakeShore475(gpib_eth):
     """
 
     _status_byte_flags = {
-        "error_queue": 2,      # Error queue not empty
+        "error_queue": 2,  # Error queue not empty
         "message_available": 4,  # Message available
-        "event_status": 5,    # Event status bit
-        "request_service": 6, # Request service
+        "event_status": 5,  # Event status bit
+        "request_service": 6,  # Request service
     }
 
     _event_status_flags = {
@@ -61,8 +60,9 @@ class LakeShore475(gpib_eth):
                 "Not detecting identity as Lakeshore Gaussmeter 475, returned"
                 " ID string as %s" % idstring
             )
-        self.write("HRESET")  # clear field_limits state so that readings are valid since initialization
-        self.write("UNIT 2") # set to tesla
+        self.write("HRESET")  # clear field_limits state so that readings are
+        #                       valid since initialization
+        self.write("UNIT 2")  # set to tesla
         return
         return
 
@@ -114,7 +114,7 @@ class LakeShore475(gpib_eth):
         resp = self.respond("RDGFIELD?")
         try:
             value = float(resp)
-        except:
+        except Exception:
             if resp == "NO PROBE":
                 raise ValueError("No Hall Probe is attached!")
             elif resp == "OL":
@@ -130,7 +130,8 @@ class LakeShore475(gpib_eth):
 
     @property
     def range(self) -> int:
-        """Query the present manual range (returns 1–5, field values are probe depended)."""
+        """Query the present manual range (returns 1–5, field values are probe
+        depended)."""
         return int(self.respond("RANGE?"))
 
     @range.setter
@@ -212,7 +213,8 @@ class LakeShore475(gpib_eth):
         """
         val = int(self.respond("*ESR?"))
         return {
-            k: bool(val & (1 << b)) for k, b in self._event_status_flags.items()
+            k: bool(val & (1 << b))
+            for k, b in self._event_status_flags.items()
         }
 
     @event_status.setter
@@ -236,8 +238,10 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Returns True if all prior operations are complete (see manual §6.3.1.2, p. 93).
-        - **Assignment**: Setting to True inserts a synchronization point; False has no effect.
+        - **Reading**: Returns True if all prior operations are complete (see
+          manual §6.3.1.2, p. 93).
+        - **Assignment**: Setting to True inserts a synchronization point;
+          False has no effect.
         - **Deletion**: Not supported.
         """
         return self.respond("*OPC?") == "1"
@@ -261,8 +265,10 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Returns current filter time constant (see manual §6.3.3.7, p. 108).
-        - **Assignment**: Updates filter time constant; expects a pint Quantity.
+        - **Reading**: Returns current filter time constant (see manual
+          §6.3.3.7, p. 108).
+        - **Assignment**: Updates filter time constant; expects a pint
+          Quantity.
         - **Deletion**: Not supported.
         """
         return float(self.respond("FILTER?")) * ureg.second
@@ -298,7 +304,8 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Query the probe zero offset using `ZOFFSET?` (manual §6.3.3.10, p. 109).
+        - **Reading**: Query the probe zero offset using `ZOFFSET?` (manual
+          §6.3.3.10, p. 109).
         - **Assignment**: Write a new offset value with `ZOFFSET`.
         - **Deletion**: Not supported.
         """
@@ -320,7 +327,8 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Queries current reading mode via `RMODE?` (manual §6.3.3.8, p. 108).
+        - **Reading**: Queries current reading mode via `RMODE?` (manual
+          §6.3.3.8, p. 108).
         - **Assignment**: Use one of the valid mode strings to update.
         - **Deletion**: Not supported.
         """
@@ -372,7 +380,8 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Queries `AOUT?` to get analog output (manual §6.3.4.1, p. 110).
+        - **Reading**: Queries `AOUT?` to get analog output (manual §6.3.4.1,
+          p. 110).
         - **Assignment**: Not supported (read-only).
         - **Deletion**: Not supported.
         """
@@ -402,7 +411,9 @@ class LakeShore475(gpib_eth):
     def control_mode(self, mode: str):
         modes = {"local": 0, "remote": 1, "locked": 2}
         if mode not in modes:
-            raise ValueError("control_mode must be 'local', 'remote', or 'locked'")
+            raise ValueError(
+                "control_mode must be 'local', 'remote', or 'locked'"
+            )
         self.write(f"CMODE {modes[mode]}")
 
     @property
@@ -421,7 +432,8 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Queries `HOLD?` to check hold mode (manual §6.3.3.11, p. 109).
+        - **Reading**: Queries `HOLD?` to check hold mode (manual §6.3.3.11, p.
+          109).
         - **Assignment**: Use `True` to enable, `False` to disable.
         - **Deletion**: Not supported.
         """
@@ -434,10 +446,12 @@ class LakeShore475(gpib_eth):
     @property
     def relay_state(self):
         """
-        Indicates whether the instrument's rear-panel relay output is energized.
+        Indicates whether the instrument's rear-panel relay output is
+        energized.
 
-        The relay can be used to control external equipment or trigger devices. When
-        energized, it closes the relay circuit; when de-energized, the circuit is open.
+        The relay can be used to control external equipment or trigger devices.
+        When energized, it closes the relay circuit; when de-energized, the
+        circuit is open.
 
         Returns
         -------
@@ -446,7 +460,8 @@ class LakeShore475(gpib_eth):
 
         Notes
         -----
-        - **Reading**: Uses `RELAY?` to query relay state (manual §6.3.4.2, p. 110).
+        - **Reading**: Uses `RELAY?` to query relay state (manual §6.3.4.2, p.
+          110).
         - **Assignment**: Use True or False to energize or de-energize relay.
         - **Deletion**: Not supported.
         """
@@ -461,9 +476,9 @@ class LakeShore475(gpib_eth):
         """
         Indicates whether the alarm output function is enabled.
 
-        When enabled, the alarm system monitors the magnetic field and compares it to
-        user-specified limits. If the reading exceeds those thresholds, an alarm output
-        can be activated.
+        When enabled, the alarm system monitors the magnetic field and compares
+        it to user-specified limits. If the reading exceeds those thresholds,
+        an alarm output can be activated.
 
         See `alarm_thresholds` for setting the limit values.
 
@@ -530,7 +545,8 @@ class LakeShore475(gpib_eth):
         Notes
         -----
         - **Reading**: Queries ALHI? and ALLO? (manual §6.3.4.3, p. 111).
-        - **Assignment**: Provide a tuple of (high, low) as pint Quantities or None.
+        - **Assignment**: Provide a tuple of (high, low) as pint Quantities or
+          None.
         - **Deletion**: Not supported.
         """
         units = self._get_field_units()
@@ -547,13 +563,17 @@ class LakeShore475(gpib_eth):
         hi, lo = limits
         if hi is not None:
             if not isinstance(hi, Quantity):
-                raise TypeError("High threshold must be a pint.Quantity or None")
+                raise TypeError(
+                    "High threshold must be a pint.Quantity or None"
+                )
             self.write(f"ALHI {hi.to(self._get_field_units()).magnitude:.6f}")
         if lo is not None:
             if not isinstance(lo, Quantity):
-                raise TypeError("Low threshold must be a pint.Quantity or None")
+                raise TypeError(
+                    "Low threshold must be a pint.Quantity or None"
+                )
             self.write(f"ALLO {lo.to(self._get_field_units()).magnitude:.6f}")
-        if not (hi is None) and (lo is None):
+        if (hi is not None) and (lo is None):
             self.beep_on_alarm = True
 
     @property
@@ -581,7 +601,8 @@ class LakeShore475(gpib_eth):
 
     @property
     def integration_time(self):
-        # Why are you including this, if there is not SCPI command? I'm confused.
+        # Why are you including this, if there is not SCPI command? I'm
+        # confused.
         """
         Integration time for measurement, if supported.
 
