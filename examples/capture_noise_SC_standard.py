@@ -17,7 +17,7 @@ from datetime import datetime
 import time
 
 my_exp_type = "ODNP_NMR_comp/noise_tests"
-nScans = 100
+nScans = 100 # config dict sets int
 
 
 # {{{ Function for data acquisition
@@ -56,11 +56,11 @@ def collect(config_dict):
     tx_phases = r_[0.0, 90.0, 180.0, 270.0]
     (
         nPoints,
-        SW_kHz, # 200 kHz
-        time_per_segment_ms, # 10 ms
+        SW_kHz, # 200 kHz -- config dict gives float
+        time_per_segment_ms, # 10 ms -- config dict gives float
     ) = sc.get_integer_sampling_intervals(
         SW_kHz=200.0,
-        time_per_segment_ms=10.0,
+        time_per_segment_ms=10.0,# float
     )
     RX_nScans = 1
     # }}}
