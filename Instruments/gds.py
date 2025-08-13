@@ -39,7 +39,7 @@ class GDS_Channel_Properties (object):
             self.gds.write(':CHAN%d:DISP ON'%self.ch)
             self.gds.demand(":CHAN%d:DISP?"%self.ch,'ON')
             cmd = ':CHAN%d:DISP?'%self.ch
-            print("CH",self.ch," display is",bool(str(self.gds.respond(cmd))))
+            logger.debug(strm("CH",self.ch," display is",bool(str(self.gds.respond(cmd)))))
         else:
             self.gds.write(':CHAN%d:DISP OFF'%self.ch)
             self.gds.demand("CHAN%d:DISP?"%self.ch,'OFF')
@@ -59,7 +59,7 @@ class GDS_Channel_Properties (object):
         vs_str = '%0.3E'%vs
         cmd = ':CHAN%d:SCAL %f'%(self.ch,vs)
         #self.demand(':CHAN1:SCAL 100e-9',vs_str)
-        print("Setting CH",self.ch," volt scale to %s volt/div"%vs_str)
+        logger.debug(strm("Setting CH",self.ch," volt scale to %s volt/div"%vs_str))
         self.gds.write(cmd)
         return
 #        @property
@@ -81,7 +81,7 @@ class GDS_scope (SerialInstrument):
     """Next, we can define a class for the scope, based on `pyspecdata`"""
     def __init__(self,model='3254'):
         super().__init__('GDS-'+model)
-        print(strm("debugging -- identify from within GDS",super().respond('*idn?')))
+        logger.debug(strm("debugging -- identify from within GDS",super().respond('*idn?')))
         logger.debug(strm("identify from within GDS",super().respond('*idn?')))
         logger.debug("I should have just opened the serial connection")
         self.CH1 = GDS_Channel_Properties(1,self)
@@ -99,8 +99,8 @@ class GDS_scope (SerialInstrument):
             raise ValueError("There is no channel "+str(arg))
 
     def timscal(self,ts,pos=None):
-        print("Query time scale in sec/div")
-        print(self.respond(':TIM:SCAL?'))
+        logger.debug("Query time scale in sec/div")
+        logger.debug(self.respond(':TIM:SCAL?'))
         ts_str = ' %0.6e'%ts
         self.write(':TIM:SCAL ',ts)
         self.demand(':TIM:SCAL?',ts)
@@ -108,7 +108,7 @@ class GDS_scope (SerialInstrument):
             self.write(':TIM:POS ',pos)
             self.demand(':TIM:POS?',pos)
         #Running into matching error here, but command does work
-        print("Time scale (sec/div) is set to",self.respond(':TIM:SCAL?'))
+        logger.debug(strm("Time scale (sec/div) is set to",self.respond(':TIM:SCAL?')))
         return
     
     def acquire_mode(self,mode,num_avg=1):
@@ -138,10 +138,10 @@ class GDS_scope (SerialInstrument):
         """
         possible_avg = [2**1, 2**2, 2**3, 2**4, 2**5, 2**6, 2**7, 2**8]
         self.write(':ACQ:MOD %s'%mode)
-        print("Acquire mode is:",self.respond(':ACQ:MOD?'))
+        logger.debug(strm("Acquire mode is:",self.respond(':ACQ:MOD?')))
         if num_avg in possible_avg:
             self.write(':ACQ:AVER %d'%num_avg)
-            print("Number of averages set to:",self.respond(':ACQ:AVER?'))
+            logger.debug(strm("Number of averages set to:",self.respond(':ACQ:AVER?')))
     
     def autoset(self):
         self.write(':AUTOS')
@@ -174,11 +174,11 @@ class GDS_scope (SerialInstrument):
         while int(ready) == 0 and j<100:
             time.sleep(0.1)
             ready = self.respond(':ACQ%d:STAT?'%ch)
-            print("acquisition not ready, waiting....")
+            logger.debug(strm("acquisition not ready, waiting...."))
             j += 1
         if j==100: raise RuntimeError("never became ready!!!")
 
-        print("ready:",ready)
+        logger.debug(strm("ready:",ready))
         self.write(':ACQ%d:MEM?'%ch)
         def upto_hashtag():
             this_char = self.read(1)
@@ -214,7 +214,7 @@ class GDS_scope (SerialInstrument):
 
 
         # Similarly, use V/div scale to scale the y values of the data
-        print("acquisition parameters",param)
+        logger.debug(strm("acquisition parameters",param))
         data_array *= float(param.pop('Vertical Scale'))
         data_array *= 5*1.032 # this is empirical
         if not all(isfinite(x_axis)):
