@@ -84,15 +84,16 @@ with genesys("192.168.0.199") as g:
                     time.sleep(increment_delay)
                     log["t", j].data["I"] = g.I_meas
                     log["t", j].data["V"] = g.V_meas
-                    # Use the Hall probe to measure the magnetic field, and convert
-                    # the Hall probe measurement to Tesla (T) to ensure consistency
-                    # with the expected units in the data structure. Dropping the
-                    # units (using `.magnitude`) ensures that the value can be
-                    # stored as a plain numerical type, which is required for
-                    # compatibility with the structured array format of `log.data`.
-                    log["t", j].data[B0_str] = h.field.to("T").magnitude #- because of the placement of the hall probe
-                    # The following line sets the value of the "t" axis at index
-                    # j to the current wall-clock time (in seconds since
+                    # Use the Hall probe to measure the magnetic field, and
+                    # convert the Hall probe measurement to Tesla (T) to ensure
+                    # consistency with the expected units in the data
+                    # structure. Dropping the units (using `.magnitude`)
+                    # ensures that the value can be stored as a plain numerical
+                    # type, which is required for compatibility with the
+                    # structured array format of `log.data`.
+                    log["t", j].data[B0_str] = h.field.to("T").magnitude
+                    # The following line sets the value of the "t" axis at
+                    # index j to the current wall-clock time (in seconds since
                     # start of unix epoch).
                     # This is different from the other fields, which are
                     # stored in the structured data array; here, we are
@@ -124,4 +125,4 @@ with figlist_var() as fl:
         else:
             fl.twinx(orig=True)
             log.set_plot_color(None)
-        fl.plot(log.C.run(lambda x: x[j]), label=j, marker='.')
+        fl.plot(log.C.run(lambda x: x[j]), label=j, marker=".")
