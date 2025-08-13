@@ -2,7 +2,6 @@
 Shows the data from magnet_response.py
 """
 
-
 from pyspecdata import figlist_var, nddata_hdf5
 import h5py
 
@@ -22,4 +21,4 @@ with figlist_var() as fl:
             else:
                 fl.twinx(orig=True)
                 log.set_plot_color(None)
-            fl.plot(log.C.run(lambda x: x[j]), label=j,marker='.')
+            fl.plot(log.C.run(lambda x: x[j]), label=j, marker=".")

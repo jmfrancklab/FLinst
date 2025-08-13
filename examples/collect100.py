@@ -25,6 +25,7 @@ as YYMMDD_file_name.h5 following today's date.
 *** want to have CH2 on as well as CH1 - both set to 50 mV
 
 """
+
 # }}}
 from datetime import datetime
 import time
@@ -33,8 +34,6 @@ import pyspecdata as psd
 import Instruments as inst
 import numpy as np
 import sys
-
-import json
 
 acquire = False
 fl = psd.figlist_var()
@@ -83,14 +82,14 @@ def collect(date, id_string, captures):
     s.labels("capture", captures)
     # {{{ convert to analytic
     s.ft("t", shift=True)
-    s = s["t":(0, None)]
+    s = s["t" : (0, None)]
     s *= 2
     s["t", 0] *= 0.5
     s.ift("t")
     # }}}
     s.name("accumulated_" + date)
-    
-    s.hdf5_write(py
+
+    s.hdf5_write(
         date + "_" + id_string + ".h5",
         directory=psd.getDATADIR(exp_type="B27/noise"),
     )

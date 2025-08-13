@@ -3,17 +3,16 @@ Generating a stable magnetic field for the desired
 duration
 """
 
-from Instruments import genesys, LakeShore475, prologix_connection
+from Instruments import genesys
 import numpy as np
-from pyspecdata import ndshape, figlist_var, Q_
 import time
-import os, h5py
+
 
 def ramp_up_and_hold(g, max_current, steps=50, delay=0.05, hold_time=10.0):
     """
     Ramp the power supply current from 0 to max_current in `steps` increments,
     then hold at max_current for `hold_time` seconds.
-    
+
     Parameters
     ----------
     g : Genesys
@@ -33,15 +32,15 @@ def ramp_up_and_hold(g, max_current, steps=50, delay=0.05, hold_time=10.0):
         time.sleep(delay)
     # Hold at max_current for the desired duration
     g.I_limit = max_current
-    print('Current is at the limit')
+    print("Current is at the limit")
     time.sleep(hold_time)
 
 
 def ramp_down_and_turn_off(g, max_current, steps=50, delay=0.05):
     """
-    Ramp the power supply current down from max_current to 0 in `steps` increments,
-    then disable the output.
-    
+    Ramp the power supply current down from max_current to 0 in `steps`
+    increments, then disable the output.
+
     Parameters
     ----------
     g : Genesys
@@ -54,7 +53,7 @@ def ramp_down_and_turn_off(g, max_current, steps=50, delay=0.05):
         Delay in seconds after setting each current (default: 0.05).
     """
     # Ramp down
-    print('Ramping down in progress')
+    print("Ramping down in progress")
     for I in np.linspace(max_current, 0, steps):
         g.I_limit = I
         time.sleep(delay)
@@ -62,12 +61,11 @@ def ramp_down_and_turn_off(g, max_current, steps=50, delay=0.05):
     g.output = False
 
 
-
 if __name__ == "__main__":
     des_field = 0.3499295
-    fieldI_ratio = 60.9053/0.34995*0.3499295
-    max_current = fieldI_ratio*des_field
-    hold_secs   = 600.0  # hold at max_current for 15 seconds
+    fieldI_ratio = 60.9053 / 0.34995 * 0.3499295
+    max_current = fieldI_ratio * des_field
+    hold_secs = 600.0  # hold at max_current for 15 seconds
 
     with genesys("192.168.0.199") as g:
         # Set voltage limit and ensure starting current is zero
@@ -77,12 +75,13 @@ if __name__ == "__main__":
         try:
             g.output = True
             print("The power supply is on.")
-        except:
+        except Exception:
             raise TypeError("The power supply is not connected.")
 
         # Ramp up to max_current and hold
-        ramp_up_and_hold(g, max_current, steps=50, delay=0.05, hold_time=hold_secs)
-        
+        ramp_up_and_hold(
+            g, max_current, steps=50, delay=0.05, hold_time=hold_secs
+        )
 
         # (Insert any logging/measurement here while held)
 
