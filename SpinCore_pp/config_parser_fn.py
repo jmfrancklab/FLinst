@@ -53,6 +53,12 @@ class configuration(object):
                 " transient, but only one acq_time_ms per transient."
             ),
         ),
+        "tuning_offset_jump_MHz": (
+            float,
+            "acq_params",
+            0.01,
+            "How var to jump when checking the tune.  Currently used by GDS for tune to scan frequencies.",
+        ),
         "carrierFreq_MHz": (
             float,
             "acq_params",
