@@ -275,7 +275,8 @@ class GDS_scope(SerialInstrument):
         data.set_units(param.pop("Vertical Units"))
         name = param.pop("Source")
 
-        # the last part is not actually related to the nddata object -- for convenience,
+        # the last part is not actually related to the nddata object -- for
+        # convenience,
         # I'm just converting the data type of the remaining parameters
         def autoconvert_number(inpstr):
             try:
