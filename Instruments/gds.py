@@ -265,7 +265,7 @@ class GDS_scope(SerialInstrument):
         logger.debug(strm("acquisition parameters", param))
         data_array *= float(param.pop("Vertical Scale"))
         data_array *= 5 * 1.032  # this is empirical
-        if not all(isfinite(x_axis)):
+        if not np.all(np.isfinite(x_axis)):
             raise ValueError(
                 "your x axis is not finite!! len(data_array) is %s and 'Sampling Period' is %s"
                 % (str(len(data_array)), str(param.pop("Sampling Period")))
