@@ -310,7 +310,9 @@ class genesys(vxi11.Instrument):
         - **Assignment**: Not supported.
         - **Deletion**: Not supported.
         """
-        return float(self.respond("MEAS:CURR?"))
+        retval = self.respond("MEAS:CURR?")
+        print("Current measured: ", retval)
+        return float(retval)
 
     # Operating mode
     @property

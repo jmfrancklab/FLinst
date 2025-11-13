@@ -41,11 +41,17 @@ from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
+from Instruments import (
+    genesys,
+    LakeShore475,
+    prologix_connection,
+    power_control,
+)
 
 
 class NMRWindow(QMainWindow):
-    def __init__(self, xepr, myconfig, parent=None):
-        self.xepr = xepr
+    def __init__(self, genesys, myconfig, parent=None):
+        self.genesys = genesys
         self.myconfig = myconfig
         super().__init__(parent)
         self.setWindowTitle("NMR signal finder")
@@ -120,26 +126,67 @@ class NMRWindow(QMainWindow):
         QMessageBox.information(self, "Click!", msg)
 
     def set_field_conditional(self, Field):
-        if (
-            hasattr(self, "prev_field")
-            and abs(Field - self.prev_field) > 50.0 / gammabar_H * 1e4
-            and abs(Field - self.prev_field) < 850.0 / gammabar_H * 1e4
-        ):
-            print(
-                "You are trying to shift by an intermediate offset, so I'm"
-                " going to set the field slowly."
-            )
-            Field = self.xepr.set_field(Field)
-            self.prev_field = Field
-        elif (
-            hasattr(self, "prev_field")
-            and abs(Field - self.prev_field) < 50.0 / gammabar_H * 1e4
-        ):
-            print("You seem to be within 50 Hz, so I'm not changing the field")
-        else:
-            Field = self.xepr.set_coarse_field(Field)
-            self.prev_field = Field
-            print("about to return from set_field_conditional")
+        config_dict = SpinCore_pp.configuration("active.ini")
+        I_setting = Field * config_dict["current_v_field_A_G"]
+        with genesys("192.168.0.199") as g:
+            with prologix_connection() as pro_log:
+                with LakeShore475(pro_log) as h:
+                    true_B0_G = h.field.to("T").magnitude * 1e4
+                    print(
+                        "adjusting current_v_field_A_G from",
+                        config_dict["current_v_field_A_G"],
+                    )
+                    config_dict["current_v_field_A_G"] *= (
+                        self.prev_field / true_B0_G
+                    )
+                    print("to", config_dict["current_v_field_A_G"])
+                    if (
+                        hasattr(self, "prev_field")
+                        and abs(Field - self.prev_field)
+                        > 50.0e-6 / config_dict["gamma_eff_mhz_g"]
+                        and abs(Field - self.prev_field)
+                        < 850.0e-6 / config_dict["gamma_eff_mhz_g"]
+                    ):
+                        print(
+                            "You are trying to shift by an intermediate offset, so I'm"
+                            " going to set the field slowly."
+                        )
+                        config_dict["gamma_eff_mhz_g"] = (
+                            config_dict["carrierfreq_mhz"] / Field
+                        )
+                        I_setting = (
+                            (config_dict["carrierFreq_MHz"])
+                            * (config_dict["current_v_field_A_G"])
+                            / config_dict["gamma_eff_mhz_g"]
+                        )
+                        g.I_limit(I_setting)
+                        Field = I_setting / config_dict["current_v_field_A_G"]
+                        self.prev_field = Field
+                    elif (
+                        hasattr(self, "prev_field")
+                        and abs(Field - self.prev_field)
+                        < 50.0e-6 / config_dict["gamma_eff_mhz_g"]
+                    ):
+                        print(
+                            "You seem to be within 50 Hz, so I'm not changing the field"
+                        )
+                    else:
+                        config_dict["gamma_eff_mhz_g"] = (
+                            config_dict["carrierfreq_mhz"] / Field
+                        )
+                        I_setting = (
+                            (config_dict["carrierFreq_MHz"])
+                            * (config_dict["current_v_field_A_G"])
+                            / config_dict["gamma_eff_mhz_g"]
+                        )
+                        ramp_steps = I_setting * 2
+                        ramp_dt = 0.05
+                        for I in np.linspace(0.0, I_setting, ramp_steps):
+                            g.I_limit = I
+                            time.sleep(ramp_dt)
+                        Field = I_setting / config_dict["current_v_field_A_G"]
+                        self.prev_field = Field
+                        print("about to return from set_field_conditional")
 
     def generate_data(self):
         # {{{let computer set field
@@ -226,9 +273,12 @@ class NMRWindow(QMainWindow):
         self.echo_data.ift("t2")
         filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
-            -abs((
-                self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
-            ))
+            -abs(
+                (
+                    self.echo_data.fromaxis("t2")
+                    - self.myconfig["tau_us"] * 1e-6
+                )
+            )
             / filter_timeconst
         )
         self.echo_data.ft("t2")
@@ -240,9 +290,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set((
-                    longest_dim,
-                ))
+                all_but_longest = set(range(len(myy.data.shape))) ^ set(
+                    (longest_dim,)
+                )
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
