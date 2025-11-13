@@ -12,7 +12,6 @@ JF updated to plot a sine wave
 
 from numpy import r_
 import numpy as np
-from .XEPR_eth import xepr as xepr_from_module
 import time
 import sys
 from PyQt5.QtWidgets import (
@@ -37,7 +36,6 @@ from PyQt5.QtWidgets import (
 )
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
-from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
@@ -45,14 +43,14 @@ from Instruments import (
     genesys,
     LakeShore475,
     prologix_connection,
-    power_control,
 )
 
 
 class NMRWindow(QMainWindow):
-    def __init__(self, genesys, myconfig, parent=None):
-        self.genesys = genesys
+    def __init__(self, genesys, myconfig, LakesShore475, parent=None):
+        self.g = genesys
         self.myconfig = myconfig
+        self.h = LakeShore475
         super().__init__(parent)
         self.setWindowTitle("NMR signal finder")
         self.setGeometry(20, 20, 1500, 800)
@@ -126,67 +124,59 @@ class NMRWindow(QMainWindow):
         QMessageBox.information(self, "Click!", msg)
 
     def set_field_conditional(self, Field):
-        config_dict = SpinCore_pp.configuration("active.ini")
-        I_setting = Field * config_dict["current_v_field_A_G"]
-        with genesys("192.168.0.199") as g:
-            with prologix_connection() as pro_log:
-                with LakeShore475(pro_log) as h:
-                    true_B0_G = h.field.to("T").magnitude * 1e4
-                    print(
-                        "adjusting current_v_field_A_G from",
-                        config_dict["current_v_field_A_G"],
-                    )
-                    config_dict["current_v_field_A_G"] *= (
-                        self.prev_field / true_B0_G
-                    )
-                    print("to", config_dict["current_v_field_A_G"])
-                    if (
-                        hasattr(self, "prev_field")
-                        and abs(Field - self.prev_field)
-                        > 50.0e-6 / config_dict["gamma_eff_mhz_g"]
-                        and abs(Field - self.prev_field)
-                        < 850.0e-6 / config_dict["gamma_eff_mhz_g"]
-                    ):
-                        print(
-                            "You are trying to shift by an intermediate offset, so I'm"
-                            " going to set the field slowly."
-                        )
-                        config_dict["gamma_eff_mhz_g"] = (
-                            config_dict["carrierfreq_mhz"] / Field
-                        )
-                        I_setting = (
-                            (config_dict["carrierFreq_MHz"])
-                            * (config_dict["current_v_field_A_G"])
-                            / config_dict["gamma_eff_mhz_g"]
-                        )
-                        g.I_limit(I_setting)
-                        Field = I_setting / config_dict["current_v_field_A_G"]
-                        self.prev_field = Field
-                    elif (
-                        hasattr(self, "prev_field")
-                        and abs(Field - self.prev_field)
-                        < 50.0e-6 / config_dict["gamma_eff_mhz_g"]
-                    ):
-                        print(
-                            "You seem to be within 50 Hz, so I'm not changing the field"
-                        )
-                    else:
-                        config_dict["gamma_eff_mhz_g"] = (
-                            config_dict["carrierfreq_mhz"] / Field
-                        )
-                        I_setting = (
-                            (config_dict["carrierFreq_MHz"])
-                            * (config_dict["current_v_field_A_G"])
-                            / config_dict["gamma_eff_mhz_g"]
-                        )
-                        ramp_steps = I_setting * 2
-                        ramp_dt = 0.05
-                        for I in np.linspace(0.0, I_setting, ramp_steps):
-                            g.I_limit = I
-                            time.sleep(ramp_dt)
-                        Field = I_setting / config_dict["current_v_field_A_G"]
-                        self.prev_field = Field
-                        print("about to return from set_field_conditional")
+        I_setting = Field * self.myconfig["current_v_field_A_G"]
+        true_B0_G = self.h.field.to("T").magnitude * 1e4
+        print(
+            "adjusting current_v_field_A_G from",
+            self.myconfig["current_v_field_A_G"],
+        )
+        self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
+        print("to", self.myconfig["current_v_field_A_G"])
+        if (
+            hasattr(self, "prev_field")
+            and abs(Field - self.prev_field)
+            > 50.0e-6 / self.myconfig["gamma_eff_mhz_g"]
+            and abs(Field - self.prev_field)
+            < 850.0e-6 / self.myconfig["gamma_eff_mhz_g"]
+        ):
+            print(
+                "You are trying to shift by an intermediate offset, so I'm"
+                " going to set the field slowly."
+            )
+            self.myconfig["gamma_eff_mhz_g"] = (
+                self.myconfig["carrierfreq_mhz"] / Field
+            )
+            I_setting = (
+                (self.myconfig["carrierFreq_MHz"])
+                * (self.myconfig["current_v_field_A_G"])
+                / self.myconfig["gamma_eff_mhz_g"]
+            )
+            self.g.I_limit(I_setting)
+            Field = I_setting / self.myconfig["current_v_field_A_G"]
+            self.prev_field = Field
+        elif (
+            hasattr(self, "prev_field")
+            and abs(Field - self.prev_field)
+            < 50.0e-6 / self.myconfig["gamma_eff_mhz_g"]
+        ):
+            print("You seem to be within 50 Hz, so I'm not changing the field")
+        else:
+            self.myconfig["gamma_eff_mhz_g"] = (
+                self.myconfig["carrierfreq_mhz"] / Field
+            )
+            I_setting = (
+                (self.myconfig["carrierFreq_MHz"])
+                * (self.myconfig["current_v_field_A_G"])
+                / self.myconfig["gamma_eff_mhz_g"]
+            )
+            ramp_steps = round(I_setting * 2)
+            ramp_dt = 0.05
+            for I in np.linspace(0.0, I_setting, ramp_steps):
+                self.g.I_limit = I
+                time.sleep(ramp_dt)
+            Field = I_setting / self.myconfig["current_v_field_A_G"]
+            self.prev_field = Field
+            print("about to return from set_field_conditional")
 
     def generate_data(self):
         # {{{let computer set field
@@ -518,8 +508,43 @@ class NMRWindow(QMainWindow):
 def main():
     myconfig = SpinCore_pp.configuration("active.ini")
     app = QApplication(sys.argv)
-    with xepr_from_module() as x:
-        tunwin = NMRWindow(x, myconfig)
-        tunwin.show()
-        app.exec_()
+    ramp_dt = 0.5
+    settle_initial_s = 80
+    B0_G = (
+        (myconfig["carrierFreq_MHz"]) / myconfig["gamma_eff_mhz_g"]
+    )  # B in G
+    I_setting = B0_G * myconfig["current_v_field_A_G"]  # A
+    ramp_steps = round(2 * I_setting)
+    with genesys("192.168.0.199") as g:
+        with prologix_connection() as pro_log:
+            with LakeShore475(pro_log) as h:
+                tunwin = NMRWindow(g, h, myconfig)
+                try:
+                    g.V_limit = 25.0
+                    g.output = True
+                    print("The power supply is on.")
+                except:
+                    raise TypeError("The power supply is not connected.")
+                # {{{ ramp up the field
+                print("Ramping up the field")
+                for I in np.linspace(0.0, I_setting, ramp_steps):
+                    g.I_limit = I
+                    time.sleep(ramp_dt)
+                print(f"Settling for {settle_initial_s:.0f} s")
+                time.sleep(settle_initial_s)
+                # }}}
+                # {{{ now, adjust  current_v_field_A_G to get the field we want,
+                #     just once at the beginning
+                true_B0_G = h.field.to("T").magnitude * 1e4
+                print(
+                    "adjusting current_v_field_A_G from",
+                    myconfig["current_v_field_A_G"],
+                )
+                myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
+                print(
+                    "to", myconfig["current_v_field_A_G"], "and settling again"
+                )
+                time.sleep(settle_initial_s)
+    tunwin.show()
+    app.exec_()
     myconfig.write()
