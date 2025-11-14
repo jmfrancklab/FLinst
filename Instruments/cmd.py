@@ -2,6 +2,7 @@ import Instruments
 import Instruments.power_control_server
 import Instruments.microwave_tuning_gui
 import Instruments.nmr_signal_gui
+import Instruments.gds_tune_gui
 from Instruments.XEPR_eth import xepr
 import sys
 
@@ -17,6 +18,7 @@ def cmd():
     cmds = {
             "NMRsignal":Instruments.nmr_signal_gui.main,
             "MWtune":Instruments.microwave_tuning_gui.main,
+            "GDStune":Instruments.gds_tune_gui.main,
             "server":Instruments.power_control_server.main,
             "quitServer":Instruments.power_control_server.main,
             "setField":set_field,
