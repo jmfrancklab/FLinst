@@ -162,7 +162,8 @@ class NMRWindow(QMainWindow):
         if (
             hasattr(self, "prev_field")
             and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
-            and abs(Field - self.prev_field) < coarse_change / gammabar_H * 1e4
+            and abs(Field - self.prev_field)
+            < coarse_step_Hz / gammabar_H * 1e4
         ):
             print(
                 "You have an intermediate difference in field.  In the future,"
@@ -177,28 +178,7 @@ class NMRWindow(QMainWindow):
                 " the field"
             )
         else:
-            I_setting = (
-                (self.myconfig["carrierFreq_MHz"])
-                * (self.myconfig["current_v_field_A_G"])
-                / self.myconfig["gamma_eff_mhz_g"]
-            )
-            self.g.I_limit(I_setting)
-            Field = I_setting / self.myconfig["current_v_field_A_G"]
-            self.prev_field = Field
-            self.myconfig["gamma_eff_mhz_g"] = (
-                self.myconfig["carrierfreq_mhz"] / Field
-            )
-            I_setting = (
-                (self.myconfig["carrierFreq_MHz"])
-                * (self.myconfig["current_v_field_A_G"])
-                / self.myconfig["gamma_eff_mhz_g"]
-            )
-            ramp_steps = round(I_setting * 2)
-            ramp_dt = 0.05
-            for I in np.linspace(0.0, I_setting, ramp_steps):
-                self.g.I_limit = I
-                time.sleep(ramp_dt)
-            Field = I_setting / self.myconfig["current_v_field_A_G"]
+            self.g.I_limit = I_setting
             self.prev_field = Field
             print("about to return from set_field_conditional")
 
@@ -287,9 +267,12 @@ class NMRWindow(QMainWindow):
         self.echo_data.ift("t2")
         filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
-            -abs((
-                self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
-            ))
+            -abs(
+                (
+                    self.echo_data.fromaxis("t2")
+                    - self.myconfig["tau_us"] * 1e-6
+                )
+            )
             / filter_timeconst
         )
         self.echo_data.ft("t2")
@@ -301,9 +284,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set((
-                    longest_dim,
-                ))
+                all_but_longest = set(range(len(myy.data.shape))) ^ set(
+                    (longest_dim,)
+                )
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
@@ -531,41 +514,48 @@ def main():
     app = QApplication(sys.argv)
     ramp_dt = 0.5
     settle_initial_s = 80
-    B0_G = (myconfig["carrierFreq_MHz"]) / myconfig[
-        "gamma_eff_mhz_g"
-    ]  # B in G
+    B0_G = (
+        (myconfig["carrierFreq_MHz"]) / myconfig["gamma_eff_mhz_g"]
+    )  # B in G
     I_setting = B0_G * myconfig["current_v_field_A_G"]  # A
-    ramp_steps = round(2 * I_setting)
     with genesys("192.168.0.199") as g:
         with prologix_connection() as pro_log:
             with LakeShore475(pro_log) as h:
                 tunwin = NMRWindow(g, h, myconfig)
                 try:
-                    g.V_limit = 25.0
-                    g.output = True
-                    print("The power supply is on.")
+                    if not g.output:
+                        g.V_limit = 25.0
+                        g.output = True
+                        print("The power supply is on.")
+                        I_initial = 0
+                        ramp_steps = int(2 * I_setting)
+                    else:
+                        I_inital = g.I_limit
+                        ramp_steps = np.ceil(2 * (I_setting - I_initial))
+                    # {{{ ramp up the field
+                    print("Ramping up the field")
+                    for I in np.linspace(I_inital, I_setting, ramp_steps):
+                        g.I_limit = I
+                        time.sleep(ramp_dt)
+                    print(f"Settling for {settle_initial_s:.0f} s")
+                    time.sleep(settle_initial_s)
+                    # }}}
+                    # {{{ now, adjust  current_v_field_A_G to get the field we want,
+                    #     just once at the beginning
+                    true_B0_G = h.field.to("T").magnitude * 1e4
+                    print(
+                        "adjusting current_v_field_A_G from",
+                        myconfig["current_v_field_A_G"],
+                    )
+                    myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
+                    print(
+                        "to",
+                        myconfig["current_v_field_A_G"],
+                        "and settling again",
+                    )
+                    time.sleep(settle_initial_s)
                 except:
                     raise TypeError("The power supply is not connected.")
-                # {{{ ramp up the field
-                print("Ramping up the field")
-                for I in np.linspace(0.0, I_setting, ramp_steps):
-                    g.I_limit = I
-                    time.sleep(ramp_dt)
-                print(f"Settling for {settle_initial_s:.0f} s")
-                time.sleep(settle_initial_s)
-                # }}}
-                # {{{ now, adjust  current_v_field_A_G to get the field we want,
-                #     just once at the beginning
-                true_B0_G = h.field.to("T").magnitude * 1e4
-                print(
-                    "adjusting current_v_field_A_G from",
-                    myconfig["current_v_field_A_G"],
-                )
-                myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
-                print(
-                    "to", myconfig["current_v_field_A_G"], "and settling again"
-                )
-                time.sleep(settle_initial_s)
     tunwin.show()
     app.exec_()
     myconfig.write()
