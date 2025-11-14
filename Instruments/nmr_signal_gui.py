@@ -36,6 +36,7 @@ from PyQt5.QtWidgets import (
 )
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
+from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
@@ -47,10 +48,12 @@ from Instruments import (
 
 
 class NMRWindow(QMainWindow):
-    def __init__(self, genesys, myconfig, LakesShore475, parent=None):
-        self.g = genesys
+    def __init__(self, mygenesys, myLakeShore475, myconfig, parent=None):
+        assert isinstance(mygenesys, genesys)
+        assert isinstance(myLakeShore475, LakeShore475)
+        self.g = mygenesys
         self.myconfig = myconfig
-        self.h = LakeShore475
+        self.h = myLakeShore475
         super().__init__(parent)
         self.setWindowTitle("NMR signal finder")
         self.setGeometry(20, 20, 1500, 800)
@@ -123,29 +126,57 @@ class NMRWindow(QMainWindow):
 
         QMessageBox.information(self, "Click!", msg)
 
-    def set_field_conditional(self, Field):
+    def set_field_conditional(
+        self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
+    ):
+        """If the field is off by more min_change_Hz/γ_H*1e4, then change the field.
+
+        If we are directly controlling the current, read the field from the
+        hall sensor and use it to adjust the current_v_field_A_G parameter.
+
+        There is no mention of the gamma_eff_MHz_G parameter in this code,
+        because that is adjusted by the `regen_plots` function
+        (b/c that is where we determine the signal peak, which we need in order
+        to determine the **actual** field,
+        which comes not from the Hall probe, but from the NMR signal.
+
+        Parameters
+        ==========
+        min_change_Hz : float
+            The frequency offset that we are OK with.
+        coarse_step_Hz : float
+            The frequency difference between which we switch between two
+            different mechanisms of changing the field
+            (e.g. on the bruker, there were two different commands,
+            and ultimately for homebuilt, we plan on using main field vs. B₀ shim)
+        """
         I_setting = Field * self.myconfig["current_v_field_A_G"]
         true_B0_G = self.h.field.to("T").magnitude * 1e4
         print(
             "adjusting current_v_field_A_G from",
             self.myconfig["current_v_field_A_G"],
+            end="",
         )
         self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
         print("to", self.myconfig["current_v_field_A_G"])
         if (
             hasattr(self, "prev_field")
-            and abs(Field - self.prev_field)
-            > 50.0e-6 / self.myconfig["gamma_eff_mhz_g"]
-            and abs(Field - self.prev_field)
-            < 850.0e-6 / self.myconfig["gamma_eff_mhz_g"]
+            and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
+            and abs(Field - self.prev_field) < coarse_change / gammabar_H * 1e4
         ):
             print(
-                "You are trying to shift by an intermediate offset, so I'm"
-                " going to set the field slowly."
+                "You have an intermediate difference in field.  In the future,"
+                " we will use the shim stack to adjust for this difference"
             )
-            self.myconfig["gamma_eff_mhz_g"] = (
-                self.myconfig["carrierfreq_mhz"] / Field
+        elif (
+            hasattr(self, "prev_field")
+            and abs(Field - self.prev_field) < min_change_Hz / gammabar_H * 1e4
+        ):
+            print(
+                f"You seem to be within {min_change_Hz} Hz, so I'm not changing"
+                " the field"
             )
+        else:
             I_setting = (
                 (self.myconfig["carrierFreq_MHz"])
                 * (self.myconfig["current_v_field_A_G"])
@@ -154,13 +185,6 @@ class NMRWindow(QMainWindow):
             self.g.I_limit(I_setting)
             Field = I_setting / self.myconfig["current_v_field_A_G"]
             self.prev_field = Field
-        elif (
-            hasattr(self, "prev_field")
-            and abs(Field - self.prev_field)
-            < 50.0e-6 / self.myconfig["gamma_eff_mhz_g"]
-        ):
-            print("You seem to be within 50 Hz, so I'm not changing the field")
-        else:
             self.myconfig["gamma_eff_mhz_g"] = (
                 self.myconfig["carrierfreq_mhz"] / Field
             )
@@ -263,12 +287,9 @@ class NMRWindow(QMainWindow):
         self.echo_data.ift("t2")
         filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
-            -abs(
-                (
-                    self.echo_data.fromaxis("t2")
-                    - self.myconfig["tau_us"] * 1e-6
-                )
-            )
+            -abs((
+                self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
+            ))
             / filter_timeconst
         )
         self.echo_data.ft("t2")
@@ -280,9 +301,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set(
-                    (longest_dim,)
-                )
+                all_but_longest = set(range(len(myy.data.shape))) ^ set((
+                    longest_dim,
+                ))
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
@@ -510,9 +531,9 @@ def main():
     app = QApplication(sys.argv)
     ramp_dt = 0.5
     settle_initial_s = 80
-    B0_G = (
-        (myconfig["carrierFreq_MHz"]) / myconfig["gamma_eff_mhz_g"]
-    )  # B in G
+    B0_G = (myconfig["carrierFreq_MHz"]) / myconfig[
+        "gamma_eff_mhz_g"
+    ]  # B in G
     I_setting = B0_G * myconfig["current_v_field_A_G"]  # A
     ramp_steps = round(2 * I_setting)
     with genesys("192.168.0.199") as g:
