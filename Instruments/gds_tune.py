@@ -27,39 +27,41 @@ def list_serial_instruments():
     SerialInstrument(None)
 
 
-def grab_waveforms(scope):
+def grab_waveforms(scope, control_channel=2, reflection_channel=3):
     """Capture a control/reflection waveform pair from the supplied scope."""
-    ch1 = scope.waveform(ch=2)
-    ch2 = scope.waveform(ch=3)
+    control_trace = scope.waveform(ch=control_channel)
+    reflection_trace = scope.waveform(ch=reflection_channel)
     success = False
     for _ in range(10):
-        if ch1.data.max() < 50e-3:
-            ch1 = scope.waveform(ch=2)
-            ch2 = scope.waveform(ch=3)
+        if control_trace.data.max() < 50e-3:
+            control_trace = scope.waveform(ch=control_channel)
+            reflection_trace = scope.waveform(ch=reflection_channel)
         else:
             success = True
     if not success:
         raise ValueError("can't seem to get a waveform that's large enough!")
-    waveforms = concat([ch1, ch2], "ch")
+    waveforms = concat([control_trace, reflection_trace], "ch")
     waveforms.reorder("ch")
     return waveforms
 
 
-def configure_scope(scope):
+def configure_scope(scope, control_channel=2, reflection_channel=3):
     """Reset and configure the Tektronix scope to the expected settings."""
     scope.reset()
-    scope.CH2.disp = True
-    scope.CH3.disp = True
-    scope.write(":CHAN1:DISP OFF")
-    scope.write(":CHAN2:DISP ON")
-    scope.write(":CHAN3:DISP ON")
-    scope.write(":CHAN4:DISP OFF")
-    scope.CH2.voltscal = 100e-3
-    scope.CH3.voltscal = 50e-3
+    for channel in range(1, 5):
+        getattr(scope, f"CH{channel}").disp = False
+        scope.write(":CHAN%d:DISP OFF" % channel)
+    for channel, scale in [
+        (control_channel, 100e-3),
+        (reflection_channel, 50e-3),
+    ]:
+        getattr(scope, f"CH{channel}").disp = True
+        scope.write(":CHAN%d:DISP ON" % channel)
+        getattr(scope, f"CH{channel}").voltscal = scale
     scope.timscal(500e-9, pos=2.325e-6)
-    scope.write(":CHAN2:IMP 5.0E+1")
-    scope.write(":CHAN3:IMP 5.0E+1")
-    scope.write(":TRIG:SOUR CH2")
+    for channel in (control_channel, reflection_channel):
+        scope.write(":CHAN%d:IMP 5.0E+1" % channel)
+    scope.write(":TRIG:SOUR CH%d" % control_channel)
     scope.write(":TRIG:MOD NORMAL")
     scope.write(":TRIG:HLEV 7.5E-2")
 
@@ -70,13 +72,15 @@ def run_frequency_sweep(
     waveform_callback=None,
     status_callback=None,
     stop_requested=None,
+    control_channel=2,
+    reflection_channel=3,
 ):
     """Acquire waveforms for each frequency offset and return nddata containers."""
     if jump_series is None:
         jump_series = jump_series_default
     d_all = None
     with GDS_scope() as scope:
-        configure_scope(scope)
+        configure_scope(scope, control_channel, reflection_channel)
         for idx, carrier in enumerate(
             parser_dict["carrierFreq_MHz"]
             + parser_dict["tuning_offset_jump_MHz"] * jump_series
@@ -88,7 +92,7 @@ def run_frequency_sweep(
             SpinCore_pp.tune(carrier)
             if status_callback is not None:
                 status_callback("changed frequency to %s" % carrier)
-            waveforms = grab_waveforms(scope)
+            waveforms = grab_waveforms(scope, control_channel, reflection_channel)
             SpinCore_pp.stopBoard()
             if d_all is None:
                 d_all = (

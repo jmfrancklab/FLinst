@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QMessageBox,
     QTabWidget,
+    QComboBox,
 )
 import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
@@ -36,11 +37,13 @@ class SweepWorker(QObject):
     finished = pyqtSignal(object, object)
     failed = pyqtSignal(str)
 
-    def __init__(self, parser_dict, jump_series):
+    def __init__(self, parser_dict, jump_series, control_channel, reflection_channel):
         super().__init__()
         self.parser_dict = parser_dict
         self.jump_series = jump_series
         self._stop = False
+        self.control_channel = control_channel
+        self.reflection_channel = reflection_channel
 
     def request_stop(self):
         """Flag the worker so the acquisition loop exits gracefully."""
@@ -55,6 +58,8 @@ class SweepWorker(QObject):
                 waveform_callback=lambda data, idx: self.progress.emit(data, idx),
                 status_callback=lambda text: self.status.emit(text),
                 stop_requested=lambda: self._stop,
+                control_channel=self.control_channel,
+                reflection_channel=self.reflection_channel,
             )
             self.finished.emit(d_all, flat_slice)
         except Exception as exc:
@@ -125,6 +130,22 @@ class GdsTuneWindow(QMainWindow):
         self.result_label = QLabel("Reflection results will appear here.")
         self.result_label.setWordWrap(True)
         layout.addWidget(self.result_label)
+
+        self.control_label = QLabel("control waveform:")
+        layout.addWidget(self.control_label)
+        self.control_channel_box = QComboBox()
+        for channel in range(1, 5):
+            self.control_channel_box.addItem("CH%d" % channel)
+        self.control_channel_box.setCurrentText("CH2")
+        layout.addWidget(self.control_channel_box)
+
+        self.reflection_label = QLabel("reflection waveform:")
+        layout.addWidget(self.reflection_label)
+        self.reflection_channel_box = QComboBox()
+        for channel in range(1, 5):
+            self.reflection_channel_box.addItem("CH%d" % channel)
+        self.reflection_channel_box.setCurrentText("CH3")
+        layout.addWidget(self.reflection_channel_box)
         layout.addStretch(1)
         return panel
 
@@ -169,12 +190,26 @@ class GdsTuneWindow(QMainWindow):
             return
         if not self.confirm_connections():
             return
+        control_channel = self.selected_channel(self.control_channel_box)
+        reflection_channel = self.selected_channel(self.reflection_channel_box)
+        if control_channel == reflection_channel:
+            QMessageBox.warning(
+                self,
+                "Invalid channel selection",
+                "Choose different scope channels for control and reflection.",
+            )
+            return
         self.reset_plots()
         self.status_label.setText("Listing instruments...")
         list_serial_instruments()
         self.status_label.setText("Starting sweep...")
         jump_series = self.parse_jump_series()
-        self.worker = SweepWorker(self.parser_dict, jump_series)
+        self.worker = SweepWorker(
+            self.parser_dict,
+            jump_series,
+            control_channel,
+            reflection_channel,
+        )
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
         self.worker_thread.started.connect(self.worker.run)
@@ -204,9 +239,12 @@ class GdsTuneWindow(QMainWindow):
 
     def confirm_connections(self):
         """Show the modal wiring confirmation in place of the legacy input() call."""
+        control_channel = self.selected_channel(self.control_channel_box)
+        reflection_channel = self.selected_channel(self.reflection_channel_box)
         message = (
-            "I'm going to assume the control is on CH2 and the reflection is on CH3"
+            "I'm going to assume the control is on CH%d and the reflection is on CH%d"
             " of the GDS. Is that correct?"
+            % (control_channel, reflection_channel)
         )
         reply = QMessageBox.question(
             self,
@@ -276,39 +314,45 @@ class GdsTuneWindow(QMainWindow):
             (self.waveform_lines["reflection"],) = self.waveform_axes.plot(
                 time_axis, reflection.data, alpha=0.3, label="Reflection"
             )
-            magnitude = abs(zero_offset)
+            magnitude = np.abs(reflection.data)
             (self.waveform_lines["magnitude"],) = self.waveform_axes.plot(
-                time_axis, magnitude.data, linewidth=2, label="|signal|"
+                time_axis, magnitude, linewidth=2, label="|reflection|"
             )
             self.waveform_axes.legend(loc="best")
         else:
             self.waveform_lines["control"].set_data(time_axis, control.data)
             self.waveform_lines["reflection"].set_data(time_axis, reflection.data)
-            magnitude = abs(zero_offset)
-            self.waveform_lines["magnitude"].set_data(time_axis, magnitude.data)
+            magnitude = np.abs(reflection.data)
+            self.waveform_lines["magnitude"].set_data(time_axis, magnitude)
         self.waveform_axes.relim()
         self.waveform_axes.autoscale_view()
         self.waveform_canvas.draw_idle()
 
     def update_frequency_plot(self, data, offset_index):
         """Plot the analytic reflection magnitude and raise the sweep tab."""
-        reflection = abs(data["ch", 1]["offset", offset_index])
-        time_axis = reflection.getaxis("t")
+        reflection_slice = data["ch", 1]["offset", offset_index]
+        time_axis = reflection_slice.getaxis("t")
+        magnitude = np.abs(reflection_slice.data)
         offset_value = data.getaxis("offset")[offset_index]
         label = "%s %+0.3f MHz" % (
             self.parser_dict["carrierFreq_MHz"],
             offset_value,
         )
         if offset_value not in self.sweep_lines:
-            (line,) = self.sweep_axes.plot(time_axis, reflection.data, label=label)
+            (line,) = self.sweep_axes.plot(time_axis, magnitude, label=label)
             self.sweep_lines[offset_value] = line
             self.sweep_axes.legend(loc="best")
         else:
-            self.sweep_lines[offset_value].set_data(time_axis, reflection.data)
+            self.sweep_lines[offset_value].set_data(time_axis, magnitude)
         self.sweep_axes.relim()
         self.sweep_axes.autoscale_view()
         self.sweep_canvas.draw_idle()
         self.tabs.setCurrentWidget(self.sweep_tab)
+
+    def selected_channel(self, combo_box):
+        """Return the numeric scope channel selected by the supplied combo box."""
+        text = combo_box.currentText().strip()
+        return int(text.replace("CH", ""))
 
     def sweep_finished(self, data, flat_slice):
         """Summarize the reflection metric once the sweep completes."""
