@@ -47,13 +47,22 @@ from Instruments import (
 )
 
 
+def _field_in_G(h):
+    "helper function to give the field in Gauss"
+    return h.field.to("T").magnitude * 1e4
+
+
 class NMRWindow(QMainWindow):
-    def __init__(self, mygenesys, myLakeShore475, myconfig, parent=None):
+    def __init__(
+        self, mygenesys, myLakeShore475, myconfig, parent=None, ini_field=None
+    ):
         assert isinstance(mygenesys, genesys)
         assert isinstance(myLakeShore475, LakeShore475)
         self.g = mygenesys
         self.myconfig = myconfig
         self.h = myLakeShore475
+        if ini_field is not None:
+            self.prev_field = ini_field
         super().__init__(parent)
         self.setWindowTitle("NMR signal finder")
         self.setGeometry(20, 20, 1500, 800)
@@ -129,16 +138,17 @@ class NMRWindow(QMainWindow):
     def set_field_conditional(
         self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
     ):
-        """If the field is off by more min_change_Hz/γ_H*1e4, then change the field.
+        """If the field is off by more min_change_Hz/γ_H*1e4, then change the
+        field.
 
         If we are directly controlling the current, read the field from the
         hall sensor and use it to adjust the current_v_field_A_G parameter.
 
         There is no mention of the gamma_eff_MHz_G parameter in this code,
-        because that is adjusted by the `regen_plots` function
-        (b/c that is where we determine the signal peak, which we need in order
-        to determine the **actual** field,
-        which comes not from the Hall probe, but from the NMR signal.
+        because that is adjusted by the `regen_plots` function (b/c that is
+        where we determine the signal peak, which we need in order to determine
+        the **actual** field, which comes not from the Hall probe, but from the
+        NMR signal.
 
         Parameters
         ==========
@@ -146,19 +156,24 @@ class NMRWindow(QMainWindow):
             The frequency offset that we are OK with.
         coarse_step_Hz : float
             The frequency difference between which we switch between two
-            different mechanisms of changing the field
-            (e.g. on the bruker, there were two different commands,
-            and ultimately for homebuilt, we plan on using main field vs. B₀ shim)
+            different mechanisms of changing the field (e.g. on the bruker,
+            there were two different commands, and ultimately for homebuilt, we
+            plan on using main field vs. B₀ shim)
         """
-        I_setting = Field * self.myconfig["current_v_field_A_G"]
-        true_B0_G = self.h.field.to("T").magnitude * 1e4
-        print(
-            "adjusting current_v_field_A_G from",
-            self.myconfig["current_v_field_A_G"],
-            end="",
-        )
-        self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
-        print("to", self.myconfig["current_v_field_A_G"])
+        if hasattr(self, "prev_field"):
+            true_B0_G = _field_in_G(self.h)
+            print(
+                "adjusting current_v_field_A_G from",
+                self.myconfig["current_v_field_A_G"],
+                end="",
+            )
+            self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
+            print("to", self.myconfig["current_v_field_A_G"])
+        else:
+            print(
+                "seems to be the first time you set a field, so I'm trusting"
+                " the existing current_v_field_A_G"
+            )
         if (
             hasattr(self, "prev_field")
             and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
@@ -174,13 +189,14 @@ class NMRWindow(QMainWindow):
             and abs(Field - self.prev_field) < min_change_Hz / gammabar_H * 1e4
         ):
             print(
-                f"You seem to be within {min_change_Hz} Hz, so I'm not changing"
-                " the field"
+                f"You seem to be within {min_change_Hz} Hz, so I'm not"
+                " changing the field"
             )
         else:
-            self.g.I_limit = I_setting
-            self.prev_field = Field
-            print("about to return from set_field_conditional")
+            # we enter this block if we've been asked to make a coarse step
+            self.g.I_limit = Field * self.myconfig["current_v_field_A_G"]
+            time.sleep(10) # settle for 10 s
+            self.prev_field = _field_in_G(self.h)
 
     def generate_data(self):
         # {{{let computer set field
@@ -514,48 +530,46 @@ def main():
     app = QApplication(sys.argv)
     ramp_dt = 0.5
     settle_initial_s = 80
-    B0_G = (
-        (myconfig["carrierFreq_MHz"]) / myconfig["gamma_eff_mhz_g"]
-    )  # B in G
-    I_setting = B0_G * myconfig["current_v_field_A_G"]  # A
+    B0_G = myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
+    I_setting = B0_G * myconfig["current_v_field_A_G"]
     with genesys("192.168.0.199") as g:
         with prologix_connection() as pro_log:
             with LakeShore475(pro_log) as h:
-                tunwin = NMRWindow(g, h, myconfig)
-                try:
-                    if not g.output:
-                        g.V_limit = 25.0
-                        g.output = True
-                        print("The power supply is on.")
-                        I_initial = 0
-                        ramp_steps = int(2 * I_setting)
-                    else:
-                        I_inital = g.I_limit
-                        ramp_steps = np.ceil(2 * (I_setting - I_initial))
-                    # {{{ ramp up the field
-                    print("Ramping up the field")
-                    for I in np.linspace(I_inital, I_setting, ramp_steps):
-                        g.I_limit = I
-                        time.sleep(ramp_dt)
-                    print(f"Settling for {settle_initial_s:.0f} s")
-                    time.sleep(settle_initial_s)
-                    # }}}
-                    # {{{ now, adjust  current_v_field_A_G to get the field we want,
-                    #     just once at the beginning
-                    true_B0_G = h.field.to("T").magnitude * 1e4
-                    print(
-                        "adjusting current_v_field_A_G from",
-                        myconfig["current_v_field_A_G"],
-                    )
-                    myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
-                    print(
-                        "to",
-                        myconfig["current_v_field_A_G"],
-                        "and settling again",
-                    )
-                    time.sleep(settle_initial_s)
-                except:
-                    raise TypeError("The power supply is not connected.")
-    tunwin.show()
-    app.exec_()
+                if g.output:
+                    print("Genesys PS is already on")
+                else:
+                    g.V_limit = 25.0
+                    g.I_limit = 0
+                    g.output = True
+                    print("I turned on the Genesys PS")
+                # {{{ ramp up the field
+                print("Ramping up the field")
+                for I in r_[r_[g.I_limit : I_setting : 0.5], I_setting]:
+                    g.I_limit = I
+                    time.sleep(ramp_dt)
+                print(f"Settling for {settle_initial_s:.0f} s")
+                time.sleep(settle_initial_s)
+                # }}}
+                # {{{ now, adjust  current_v_field_A_G to get the field we
+                #     want, just once at the beginning
+                true_B0_G = _field_in_G(h)
+                print(
+                    "adjusting current_v_field_A_G from",
+                    myconfig["current_v_field_A_G"],
+                )
+                myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
+                print(
+                    "to",
+                    myconfig["current_v_field_A_G"],
+                    "and settling again",
+                )
+                time.sleep(settle_initial_s)
+                # {{{ and adjust again, since this doesn't cost any significant
+                #     time
+                true_B0_G = _field_in_G(h)
+                myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
+                # }}}
+                tunwin = NMRWindow(g, h, myconfig, ini_field=true_B0_G)
+                tunwin.show()
+                app.exec_()
     myconfig.write()
