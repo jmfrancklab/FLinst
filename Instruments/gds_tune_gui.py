@@ -2,6 +2,7 @@
 
 import sys
 import numpy as np
+import SpinCore_pp
 from PyQt5.QtCore import QThread, pyqtSignal, QObject
 from PyQt5.QtWidgets import (
     QApplication,
@@ -36,6 +37,8 @@ class SweepWorker(QObject):
     status = pyqtSignal(str)
     finished = pyqtSignal(object, object)
     failed = pyqtSignal(str)
+    ready = pyqtSignal()
+    ready_cleared = pyqtSignal()
 
     def __init__(self, parser_dict, jump_series, control_channel, reflection_channel):
         super().__init__()
@@ -60,6 +63,8 @@ class SweepWorker(QObject):
                 stop_requested=lambda: self._stop,
                 control_channel=self.control_channel,
                 reflection_channel=self.reflection_channel,
+                ready_callback=lambda: self.ready.emit(),
+                ready_clear_callback=lambda: self.ready_cleared.emit(),
             )
             self.finished.emit(d_all, flat_slice)
         except Exception as exc:
@@ -81,6 +86,9 @@ class GdsTuneWindow(QMainWindow):
         self.latest_slice = None
         self.waveform_lines = {}
         self.sweep_lines = {}
+        # Enable the GUI-controlled pause logic so tune() waits for READY.
+        SpinCore_pp.gui_pause_enabled = True
+        SpinCore_pp.gui_pause_ready = False
 
         self.build_ui()
 
@@ -146,8 +154,33 @@ class GdsTuneWindow(QMainWindow):
             self.reflection_channel_box.addItem("CH%d" % channel)
         self.reflection_channel_box.setCurrentText("CH3")
         layout.addWidget(self.reflection_channel_box)
+        self.ready_button = QPushButton("READY")
+        self.ready_button.setStyleSheet(
+            "background-color: red; color: white; font-weight: bold;"
+        )
+        self.ready_button.clicked.connect(self.ready_clicked)
+        self.ready_button.hide()
+        layout.addWidget(self.ready_button)
         layout.addStretch(1)
         return panel
+
+    def ready_clicked(self):
+        """Set the SpinCore flag so tune() continues after the READY press."""
+        SpinCore_pp.gui_pause_ready = True
+        self.ready_button.setEnabled(False)
+        self.ready_button.setText("Waiting...")
+
+    def show_ready_prompt(self):
+        """Display the red READY button when tune() is about to pause."""
+        self.ready_button.setText("READY")
+        self.ready_button.setEnabled(True)
+        self.ready_button.show()
+
+    def hide_ready_prompt(self):
+        """Hide the READY button once tune() has finished pausing."""
+        self.ready_button.hide()
+        self.ready_button.setEnabled(True)
+        self.ready_button.setText("READY")
 
     def build_plots(self):
         """Create the waveform/sweep tab widget and keep references to each tab."""
@@ -200,6 +233,7 @@ class GdsTuneWindow(QMainWindow):
             )
             return
         self.reset_plots()
+        self.hide_ready_prompt()
         self.status_label.setText("Listing instruments...")
         list_serial_instruments()
         self.status_label.setText("Starting sweep...")
@@ -217,6 +251,8 @@ class GdsTuneWindow(QMainWindow):
         self.worker.status.connect(self.update_status)
         self.worker.finished.connect(self.sweep_finished)
         self.worker.failed.connect(self.sweep_failed)
+        self.worker.ready.connect(self.show_ready_prompt)
+        self.worker.ready_cleared.connect(self.hide_ready_prompt)
         self.worker.finished.connect(self.cleanup_worker)
         self.worker.failed.connect(self.cleanup_worker)
         self.worker_thread.start()
@@ -227,6 +263,8 @@ class GdsTuneWindow(QMainWindow):
         if self.worker is not None:
             self.worker.request_stop()
             self.status_label.setText("Stopping...")
+            SpinCore_pp.gui_pause_ready = True
+            self.hide_ready_prompt()
 
     def cleanup_worker(self):
         """Tear down the worker thread state once the sweep finishes or fails."""
@@ -236,6 +274,7 @@ class GdsTuneWindow(QMainWindow):
             self.worker_thread = None
         self.worker = None
         self.start_button.setText("Start sweep")
+        self.hide_ready_prompt()
 
     def confirm_connections(self):
         """Show the modal wiring confirmation in place of the legacy input() call."""
@@ -398,6 +437,12 @@ class GdsTuneWindow(QMainWindow):
             self.status_label.setText("Saved %s to %s" % (dataset_name, file_path))
         except Exception as exc:
             QMessageBox.warning(self, "Save failed", str(exc))
+
+    def closeEvent(self, event):
+        """Reset the SpinCore pause flags when the GUI closes."""
+        SpinCore_pp.gui_pause_enabled = False
+        SpinCore_pp.gui_pause_ready = False
+        super().closeEvent(event)
 
 
 def main(*args):

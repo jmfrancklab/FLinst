@@ -74,8 +74,10 @@ def run_frequency_sweep(
     stop_requested=None,
     control_channel=2,
     reflection_channel=3,
+    ready_callback=None,
+    ready_clear_callback=None,
 ):
-    """Acquire waveforms for each frequency offset and return nddata containers."""
+    """Acquire waveforms and optionally notify GUIs before tune() pauses."""
     if jump_series is None:
         jump_series = jump_series_default
     d_all = None
@@ -89,7 +91,16 @@ def run_frequency_sweep(
                 raise RuntimeError("Sweep cancelled")
             if status_callback is not None:
                 status_callback("about to change frequency to %s" % carrier)
-            SpinCore_pp.tune(carrier)
+            if ready_callback is not None:
+                # Tell the GUI to show the READY button before tune() pauses.
+                SpinCore_pp.gui_pause_ready = False
+                ready_callback()
+            try:
+                SpinCore_pp.tune(carrier)
+            finally:
+                if ready_clear_callback is not None:
+                    # Hide the READY button once tune() returns or raises.
+                    ready_clear_callback()
             if status_callback is not None:
                 status_callback("changed frequency to %s" % carrier)
             waveforms = grab_waveforms(scope, control_channel, reflection_channel)

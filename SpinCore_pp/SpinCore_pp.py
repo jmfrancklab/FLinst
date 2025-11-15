@@ -100,9 +100,18 @@ def get_time():
     return _SpinCore_pp.get_time()
 get_time = _SpinCore_pp.get_time
 
+_hardware_pause = _SpinCore_pp.pause
+gui_pause_enabled = False
+gui_pause_ready = False
+
 def pause():
-    return _SpinCore_pp.pause()
-pause = _SpinCore_pp.pause
+    """Wrap the hardware pause so GUI sweeps can use a READY button."""
+    global gui_pause_ready
+    if not gui_pause_enabled:
+        return _hardware_pause()
+    while not gui_pause_ready:
+        time.sleep(0.05)
+    gui_pause_ready = False
 
 def configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints):
     return _SpinCore_pp.configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints)
@@ -125,6 +134,7 @@ def ppg_element(str_label, firstarg, secondarg=0):
 ppg_element = _SpinCore_pp.ppg_element
 
 import logging
+import time
 def strm(*args):
     return ' '.join([j for j in args])
 marker_names = {}
