@@ -66,11 +66,15 @@ def list_serial_instruments():
 
 def grab_waveforms(scope, control_channel=1, reflection_channel=2):
     """Capture a control/reflection waveform pair from the supplied scope."""
+    # ``waveform`` already expects the zero-based index that the GUI passes
+    # around, so hand the arguments straight through without any translation.
     control_trace = scope.waveform(ch=control_channel)
     reflection_trace = scope.waveform(ch=reflection_channel)
     success = False
     for _ in range(10):
         if control_trace.data.max() < 50e-3:
+            # Keep retrying with the same zero-based indices until the scope
+            # reports a signal large enough for the GUI workflow.
             control_trace = scope.waveform(ch=control_channel)
             reflection_trace = scope.waveform(ch=reflection_channel)
         else:
@@ -83,11 +87,13 @@ def grab_waveforms(scope, control_channel=1, reflection_channel=2):
 
 
 def configure_scope(scope, control_channel=1, reflection_channel=2):
-    """Reset and configure the Tektronix scope to the expected settings."""
+    """Reset the scope using zero-based channel indices for control/reflection."""
     scope.reset()
     for channel_index in range(4):
-        channel_name = channel_label(channel_index)
-        getattr(scope, channel_name).disp = False
+        # Mirror the original ``gds_for_tune`` script by blanking all four
+        # displays via SCPI so we never touch a non-existent ``CH4`` attribute.
+        # ``channel_index`` stays zero-based, hence the ``+ 1`` when issuing
+        # Tektronix commands.
         scope.write(":CHAN%d:DISP OFF" % (channel_index + 1))
     for channel_index, scale in [
         (control_channel, 100e-3),
