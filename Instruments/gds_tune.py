@@ -14,7 +14,44 @@ from pyspecdata import concat
 from Instruments import GDS_scope, SerialInstrument
 import SpinCore_pp
 
+try:
+    import _SpinCore_pp as _spin_core_backend
+except ImportError:
+    _spin_core_backend = None
+
+_gui_pause_enable_func = getattr(SpinCore_pp, "set_gui_pause_enabled", None)
+_gui_pause_ready_func = getattr(SpinCore_pp, "set_gui_pause_ready", None)
+if _gui_pause_enable_func is None and _spin_core_backend is not None:
+    if hasattr(_spin_core_backend, "set_gui_pause_enabled"):
+        _gui_pause_enable_func = _spin_core_backend.set_gui_pause_enabled
+if _gui_pause_ready_func is None and _spin_core_backend is not None:
+    if hasattr(_spin_core_backend, "set_gui_pause_ready"):
+        _gui_pause_ready_func = _spin_core_backend.set_gui_pause_ready
+
+gui_pause_supported = (
+    _gui_pause_enable_func is not None and _gui_pause_ready_func is not None
+)
+
+
+def set_gui_pause_enabled(enabled):
+    """Proxy to the C extension so callers need not import _SpinCore_pp."""
+    if not gui_pause_supported:
+        raise RuntimeError("SpinCore pause override is unavailable on this build.")
+    _gui_pause_enable_func(enabled)
+
+
+def set_gui_pause_ready(ready):
+    """Update the extension's READY latch from Qt without touching stdin."""
+    if not gui_pause_supported:
+        raise RuntimeError("SpinCore pause override is unavailable on this build.")
+    _gui_pause_ready_func(ready)
+
 jump_series_default = r_[-1, -0.5, 0, 0.5, 1]
+
+
+def channel_label(channel_index):
+    """Return the Tektronix-style ``CHn`` label for a zero-based channel index."""
+    return "CH%d" % (channel_index + 1)
 
 
 def load_active_config():
@@ -27,39 +64,43 @@ def list_serial_instruments():
     SerialInstrument(None)
 
 
-def grab_waveforms(scope):
+def grab_waveforms(scope, control_channel=1, reflection_channel=2):
     """Capture a control/reflection waveform pair from the supplied scope."""
-    ch1 = scope.waveform(ch=2)
-    ch2 = scope.waveform(ch=3)
+    control_trace = scope.waveform(ch=control_channel)
+    reflection_trace = scope.waveform(ch=reflection_channel)
     success = False
     for _ in range(10):
-        if ch1.data.max() < 50e-3:
-            ch1 = scope.waveform(ch=2)
-            ch2 = scope.waveform(ch=3)
+        if control_trace.data.max() < 50e-3:
+            control_trace = scope.waveform(ch=control_channel)
+            reflection_trace = scope.waveform(ch=reflection_channel)
         else:
             success = True
     if not success:
         raise ValueError("can't seem to get a waveform that's large enough!")
-    waveforms = concat([ch1, ch2], "ch")
+    waveforms = concat([control_trace, reflection_trace], "ch")
     waveforms.reorder("ch")
     return waveforms
 
 
-def configure_scope(scope):
+def configure_scope(scope, control_channel=1, reflection_channel=2):
     """Reset and configure the Tektronix scope to the expected settings."""
     scope.reset()
-    scope.CH2.disp = True
-    scope.CH3.disp = True
-    scope.write(":CHAN1:DISP OFF")
-    scope.write(":CHAN2:DISP ON")
-    scope.write(":CHAN3:DISP ON")
-    scope.write(":CHAN4:DISP OFF")
-    scope.CH2.voltscal = 100e-3
-    scope.CH3.voltscal = 50e-3
+    for channel_index in range(4):
+        channel_name = channel_label(channel_index)
+        getattr(scope, channel_name).disp = False
+        scope.write(":CHAN%d:DISP OFF" % (channel_index + 1))
+    for channel_index, scale in [
+        (control_channel, 100e-3),
+        (reflection_channel, 50e-3),
+    ]:
+        channel_name = channel_label(channel_index)
+        getattr(scope, channel_name).disp = True
+        scope.write(":CHAN%d:DISP ON" % (channel_index + 1))
+        getattr(scope, channel_name).voltscal = scale
     scope.timscal(500e-9, pos=2.325e-6)
-    scope.write(":CHAN2:IMP 5.0E+1")
-    scope.write(":CHAN3:IMP 5.0E+1")
-    scope.write(":TRIG:SOUR CH2")
+    for channel_index in (control_channel, reflection_channel):
+        scope.write(":CHAN%d:IMP 5.0E+1" % (channel_index + 1))
+    scope.write(":TRIG:SOUR %s" % channel_label(control_channel))
     scope.write(":TRIG:MOD NORMAL")
     scope.write(":TRIG:HLEV 7.5E-2")
 
@@ -70,13 +111,17 @@ def run_frequency_sweep(
     waveform_callback=None,
     status_callback=None,
     stop_requested=None,
+    control_channel=1,
+    reflection_channel=2,
+    ready_callback=None,
+    ready_clear_callback=None,
 ):
-    """Acquire waveforms for each frequency offset and return nddata containers."""
+    """Acquire waveforms and optionally notify GUIs before tune() pauses."""
     if jump_series is None:
         jump_series = jump_series_default
     d_all = None
     with GDS_scope() as scope:
-        configure_scope(scope)
+        configure_scope(scope, control_channel, reflection_channel)
         for idx, carrier in enumerate(
             parser_dict["carrierFreq_MHz"]
             + parser_dict["tuning_offset_jump_MHz"] * jump_series
@@ -85,10 +130,20 @@ def run_frequency_sweep(
                 raise RuntimeError("Sweep cancelled")
             if status_callback is not None:
                 status_callback("about to change frequency to %s" % carrier)
-            SpinCore_pp.tune(carrier)
+            if ready_callback is not None:
+                # Tell the GUI to show the READY button before tune() pauses.
+                if gui_pause_supported:
+                    set_gui_pause_ready(0)
+                ready_callback()
+            try:
+                SpinCore_pp.tune(carrier)
+            finally:
+                if ready_clear_callback is not None:
+                    # Hide the READY button once tune() returns or raises.
+                    ready_clear_callback()
             if status_callback is not None:
                 status_callback("changed frequency to %s" % carrier)
-            waveforms = grab_waveforms(scope)
+            waveforms = grab_waveforms(scope, control_channel, reflection_channel)
             SpinCore_pp.stopBoard()
             if d_all is None:
                 d_all = (
