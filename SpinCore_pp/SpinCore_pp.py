@@ -104,6 +104,20 @@ def pause():
     return _SpinCore_pp.pause()
 pause = _SpinCore_pp.pause
 
+if hasattr(_SpinCore_pp, 'set_gui_pause_enabled'):
+    set_gui_pause_enabled = _SpinCore_pp.set_gui_pause_enabled
+else:
+    def set_gui_pause_enabled(enabled):
+        raise AttributeError('SpinCore_pp built without GUI pause support')
+
+if hasattr(_SpinCore_pp, 'set_gui_pause_ready'):
+    set_gui_pause_ready = _SpinCore_pp.set_gui_pause_ready
+else:
+    def set_gui_pause_ready(ready):
+        raise AttributeError('SpinCore_pp built without GUI pause support')
+
+gui_pause_support_available = hasattr(_SpinCore_pp, 'set_gui_pause_enabled') and hasattr(_SpinCore_pp, 'set_gui_pause_ready')
+
 def configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints):
     return _SpinCore_pp.configureTX(adcOffset, carrierFreq_MHz, tx_phases, amplitude, nPoints)
 configureTX = _SpinCore_pp.configureTX

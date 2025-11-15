@@ -126,6 +126,8 @@ py.install_sources(files([
     'Instruments/gpib_legacy.py',
     'Instruments/power_control.py',
     'Instruments/microwave_tuning_gui.py',
+    'Instruments/gds_tune.py',
+    'Instruments/gds_tune_gui.py',
     'Instruments/just_quit.py',
     'Instruments/hall_probe.py',
     'Instruments/genesys.py',
