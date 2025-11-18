@@ -382,7 +382,11 @@ class NMRWindow(QMainWindow):
         self.textbox_plen = QLineEdit()
         self.combo_sw = QComboBox()
         self.combo_sw.addItem("200")
+        self.combo_sw.addItem("100")
+        self.combo_sw.addItem("50")
         self.combo_sw.addItem("24")
+        self.combo_sw.addItem("8")
+        self.combo_sw.addItem("6")
         self.combo_sw.addItem("3.9")
         self.combo_sw.activated[str].connect(self.SW_changed)
         self.set_default_choices()
@@ -445,7 +449,16 @@ class NMRWindow(QMainWindow):
         self.setCentralWidget(self.main_frame)
 
     def SW_changed(self, arg):
-        my_sw = {"200": 200.0, "24": 24.0, "3.9": 3.9}
+        my_sw = {
+            "200": 200.0,
+            "100": 100.0,
+            "50": 50.0,
+            "24": 24.0,
+            "16": 16.0,
+            "8": 8.0,
+            "6": 6.0,
+            "3.9": 3.9,
+        }
         self.sw = my_sw[arg]
         print("changing SW to", self.sw)
 
