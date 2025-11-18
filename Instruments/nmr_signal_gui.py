@@ -403,6 +403,7 @@ class NMRWindow(QMainWindow):
         self.combo_sw.addItem("24")
         self.combo_sw.addItem("16")
         self.combo_sw.addItem("8")
+        self.combo_sw.addItem("6")
         self.combo_sw.addItem("3.9")
         self.combo_sw.activated[str].connect(self.SW_changed)
         self.set_default_choices()
@@ -472,6 +473,7 @@ class NMRWindow(QMainWindow):
             "24": 24.0,
             "16": 16.0,
             "8": 8.0,
+            "6": 6.0,
             "3.9": 3.9,
         }
         self.sw = my_sw[arg]
@@ -575,6 +577,7 @@ def main():
                     myconfig["current_v_field_A_G"],
                     "and settling again",
                 )
+                g.I_limit = B0_G * myconfig["current_v_field_A_G"]
                 time.sleep(settle_initial_s)
                 # {{{ and adjust again, since this doesn't cost any significant
                 #     time
