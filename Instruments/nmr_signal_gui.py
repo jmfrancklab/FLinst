@@ -62,7 +62,7 @@ class NMRWindow(QMainWindow):
         self.myconfig = myconfig
         self.h = myLakeShore475
         if ini_field is not None:
-            self.prev_field = ini_field
+            self.prev_field = ini_field # prev_field is the last field that we *asked* for
         super().__init__(parent)
         self.setWindowTitle("NMR signal finder")
         self.setGeometry(20, 20, 1500, 800)
@@ -162,18 +162,7 @@ class NMRWindow(QMainWindow):
         """
         if hasattr(self, "prev_field"):
             true_B0_G = _field_in_G(self.h)
-            print(
-                "adjusting current_v_field_A_G from",
-                self.myconfig["current_v_field_A_G"],
-                end="",
-            )
             self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
-            print("to", self.myconfig["current_v_field_A_G"])
-        else:
-            print(
-                "seems to be the first time you set a field, so I'm trusting"
-                " the existing current_v_field_A_G"
-            )
         if (
             hasattr(self, "prev_field")
             and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
@@ -196,7 +185,9 @@ class NMRWindow(QMainWindow):
             # we enter this block if we've been asked to make a coarse step
             self.g.I_limit = Field * self.myconfig["current_v_field_A_G"]
             time.sleep(10)  # settle for 10 s
-            self.prev_field = _field_in_G(self.h)
+            self.prev_field = Field # prev_field is the last field that we *asked* for
+            # JF to here -- please review the rest of this diff and make sure
+            # it looks justified.  Also, make it runs with the change that we made.
 
     def generate_data(self):
         # {{{let computer set field
