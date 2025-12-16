@@ -46,8 +46,13 @@ from Instruments import (
     prologix_connection,
 )
 
+V_limit = 25.0
+ramp_dt = 0.4
+ramp_I_step = 0.4
+settle_initial_s = 80
 
-def _field_in_G(h):
+
+def read_field_in_G(h):
     "helper function to give the field in Gauss"
     return h.field.to("T").magnitude * 1e4
 
@@ -62,7 +67,9 @@ class NMRWindow(QMainWindow):
         self.myconfig = myconfig
         self.h = myLakeShore475
         if ini_field is not None:
-            self.prev_field = ini_field # prev_field is the last field that we *asked* for
+            self.prev_field = (
+                ini_field  # prev_field is the last field that we *asked* for
+            )
         super().__init__(parent)
         self.setWindowTitle("NMR signal finder")
         self.setGeometry(20, 20, 1500, 800)
@@ -148,21 +155,24 @@ class NMRWindow(QMainWindow):
         because that is adjusted by the `regen_plots` function (b/c that is
         where we determine the signal peak, which we need in order to determine
         the **actual** field, which comes not from the Hall probe, but from the
-        NMR signal.
+        NMR signal.)
 
         Parameters
         ==========
         min_change_Hz : float
-            The frequency offset that we are OK with.
+            The frequency offset that we are OK with (*i.e.* we expect a drift
+            of at least this much)
         coarse_step_Hz : float
             The frequency difference between which we switch between two
             different mechanisms of changing the field (e.g. on the bruker,
-            there were two different commands, and ultimately for homebuilt, we
+            there were two different commands, or for homebuilt, where we
             plan on using main field vs. B₀ shim)
         """
+        # {{{ if the field has been set before, pull our SETTING and
         if hasattr(self, "prev_field"):
-            true_B0_G = _field_in_G(self.h)
+            true_B0_G = read_field_in_G(self.h)
             self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
+        # }}}
         if (
             hasattr(self, "prev_field")
             and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
@@ -185,9 +195,9 @@ class NMRWindow(QMainWindow):
             # we enter this block if we've been asked to make a coarse step
             self.g.I_limit = Field * self.myconfig["current_v_field_A_G"]
             time.sleep(10)  # settle for 10 s
-            self.prev_field = Field # prev_field is the last field that we *asked* for
-            # JF to here -- please review the rest of this diff and make sure
-            # it looks justified.  Also, make it runs with the change that we made.
+            self.prev_field = (
+                Field  # prev_field is the last field that we *asked* for
+            )
 
     def generate_data(self):
         # {{{let computer set field
@@ -275,10 +285,7 @@ class NMRWindow(QMainWindow):
         filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
             -abs(
-                (
-                    self.echo_data.fromaxis("t2")
-                    - self.myconfig["tau_us"] * 1e-6
-                )
+                self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
             )
             / filter_timeconst
         )
@@ -291,9 +298,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set(
-                    (longest_dim,)
-                )
+                all_but_longest = set(range(len(myy.data.shape))) ^ set((
+                    longest_dim,
+                ))
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
@@ -388,14 +395,8 @@ class NMRWindow(QMainWindow):
         self.textbox_apo = QLineEdit()
         self.textbox_plen = QLineEdit()
         self.combo_sw = QComboBox()
-        self.combo_sw.addItem("200")
-        self.combo_sw.addItem("100")
-        self.combo_sw.addItem("50")
-        self.combo_sw.addItem("24")
-        self.combo_sw.addItem("16")
-        self.combo_sw.addItem("8")
-        self.combo_sw.addItem("6")
-        self.combo_sw.addItem("3.9")
+        for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
+            self.combo_sw.addItem(str(j))
         self.combo_sw.activated[str].connect(self.SW_changed)
         self.set_default_choices()
         self.bottomleft_vbox.addWidget(self.combo_sw)
@@ -457,17 +458,7 @@ class NMRWindow(QMainWindow):
         self.setCentralWidget(self.main_frame)
 
     def SW_changed(self, arg):
-        my_sw = {
-            "200": 200.0,
-            "100": 100.0,
-            "50": 50.0,
-            "24": 24.0,
-            "16": 16.0,
-            "8": 8.0,
-            "6": 6.0,
-            "3.9": 3.9,
-        }
-        self.sw = my_sw[arg]
+        self.sw = np.round(float(arg), 1)
         print("changing SW to", self.sw)
 
     def create_status_bar(self):
@@ -533,23 +524,22 @@ class NMRWindow(QMainWindow):
 def main():
     myconfig = SpinCore_pp.configuration("active.ini")
     app = QApplication(sys.argv)
-    ramp_dt = 0.5
-    settle_initial_s = 80
-    B0_G = myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
-    I_setting = B0_G * myconfig["current_v_field_A_G"]
+    B0_from_carrier_G = (
+        myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
+    )
+    I_setting = B0_from_carrier_G * myconfig["current_v_field_A_G"]
     with genesys("192.168.0.199") as g:
         with prologix_connection() as pro_log:
             with LakeShore475(pro_log) as h:
-                if g.output:
-                    print("Genesys PS is already on")
-                else:
-                    g.V_limit = 25.0
+                if not g.output:
+                    g.V_limit = V_limit
                     g.I_limit = 0
                     g.output = True
-                    print("I turned on the Genesys PS")
                 # {{{ ramp up the field
                 print("Ramping up the field")
-                for I in r_[r_[g.I_limit : I_setting : 0.5], I_setting]:
+                for I in r_[
+                    r_[g.I_limit : I_setting : ramp_I_step], I_setting
+                ]:
                     g.I_limit = I
                     time.sleep(ramp_dt)
                 print(f"Settling for {settle_initial_s:.0f} s")
@@ -557,25 +547,20 @@ def main():
                 # }}}
                 # {{{ now, adjust  current_v_field_A_G to get the field we
                 #     want, just once at the beginning
-                true_B0_G = _field_in_G(h)
-                print(
-                    "adjusting current_v_field_A_G from",
-                    myconfig["current_v_field_A_G"],
-                )
-                myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
-                print(
-                    "to",
-                    myconfig["current_v_field_A_G"],
-                    "and settling again",
-                )
-                g.I_limit = B0_G * myconfig["current_v_field_A_G"]
+                myconfig[
+                    "current_v_field_A_G"
+                ] *= B0_from_carrier_G / read_field_in_G(h)
+                g.I_limit = B0_from_carrier_G * myconfig["current_v_field_A_G"]
                 time.sleep(settle_initial_s)
                 # {{{ and adjust again, since this doesn't cost any significant
                 #     time
-                true_B0_G = _field_in_G(h)
-                myconfig["current_v_field_A_G"] *= B0_G / true_B0_G
+                myconfig[
+                    "current_v_field_A_G"
+                ] *= B0_from_carrier_G / read_field_in_G(h)
                 # }}}
-                tunwin = NMRWindow(g, h, myconfig, ini_field=true_B0_G)
+                tunwin = NMRWindow(
+                    g, h, myconfig, ini_field=read_field_in_G(h)
+                )
                 tunwin.show()
                 app.exec_()
     myconfig.write()

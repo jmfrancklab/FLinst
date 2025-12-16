@@ -60,7 +60,7 @@ class configuration(object):
             "How var to jump when checking the tune.  Currently used by GDS for tune to scan frequencies.",
         ),
         "tuning_offset_jumps": (
-            float,
+            int,
             "acq_params",
             5,
             "How many points to jump when checking the tune.  Currently used by GDS for tune to scan frequencies.",
