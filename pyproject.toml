@@ -15,8 +15,12 @@ license = {file = "LICENSE.md"}
 dependencies = [
     "numpy",
     "h5py",
-    "pyserial>=3.0"
+    "pyserial>=3.0",
+    "PyYAML"
 ]
+
+[tool.setuptools.package-data]
+SpinCore_pp = ["config_params.yaml"]
 
 [project.scripts]
 calc_tempol_vd = "SpinCore_pp.calc_vdlist:print_tempo_vdlist"

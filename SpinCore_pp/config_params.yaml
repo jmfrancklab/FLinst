@@ -1,0 +1,243 @@
+amplitude:
+  type: float
+  section: acq_params
+  default: null
+  description: amplitude of the pulse
+deadtime_us:
+  type: float
+  section: acq_params
+  default: null
+  description: mandatory delay after the pulse -- allows receivers to recover
+tau_us:
+  type: float
+  section: acq_params
+  default: null
+  description: |-
+    extra delay added between 90° and 180° pulse -- note this is not the same as τ_echo!
+    see eq 6 of coherence paper
+deblank_us:
+  type: float
+  section: acq_params
+  default: null
+  description: type between the deblank TTL pulse and the actual pulse itself
+SW_kHz:
+  type: float
+  section: acq_params
+  default: null
+  description: spectral width of data acquisition in kHz
+acq_time_ms:
+  type: float
+  section: acq_params
+  default: null
+  description: acquisition time in milliseconds - we've found 1024.0 to work well
+echo_acq_ms:
+  type: float
+  section: acq_params
+  default: null
+  description: |-
+    Length of acquisition during stroboscopic echo acquisition, in milliseconds.  Keep this separate from acq_time_ms to avoid confusion, because there are many echo_acq_ms per transient, but only one acq_time_ms per transient.
+tuning_offset_jump_MHz:
+  type: float
+  section: acq_params
+  default: 0.01
+  description: |-
+    How var to jump when checking the tune.  Currently used by GDS for tune to scan frequencies.
+tuning_offset_jumps:
+  type: int
+  section: acq_params
+  default: 5
+  description: |-
+    How many points to jump when checking the tune.  Currently used by GDS for tune to scan frequencies.
+current_v_field_a_g:
+  type: float
+  section: acq_params
+  default: null
+  description: Ratio of the current to corresponding magnetic field in G.
+carrierFreq_MHz:
+  type: float
+  section: acq_params
+  default: null
+  description: carrierfrequency in MHz - usually around 14.89 MHz
+startconstant:
+  type: float
+  section: acq_params
+  default: null
+  description: |-
+    Fraction of T₁ min bounds to start vdlist at (0.15 recommended).
+    (from Weiss, where T₁ determination problem is treated as determining the T₁,
+    which is known to be between some min and max bounds)
+stopconstant:
+  type: float
+  section: acq_params
+  default: null
+  description: |-
+    Fraction of max T₁ bounds to stop vdlist at.
+     
+    Weiss recommends 0.75, which only gives 5% recovery -- we choose 2.0,
+     since it gives 73% recovery, and that makes us feel better
+p90_us:
+  type: float
+  section: acq_params
+  default: null
+  description: |-
+    90 time of the probe in microseconds.
+    Used to determine 90° 180°, etc pulses
+beta_90_s_sqrtW:
+  type: float
+  section: acq_params
+  default: 2.0e-05
+  description: |-
+    Beta value of the probe in seconds * sqrt(W).
+    Used to determine 90° 180°, etc pulses
+gamma_eff_MHz_G:
+  type: float
+  section: acq_params
+  default: 0.00425
+  description: the ratio of the NMR resonance frequency to the field
+field_width:
+  type: float
+  section: acq_params
+  default: 6
+  description: |-
+    number of points collected in a field sweep, for a finer data acquisition increase this number
+tau_extra_us:
+  type: float
+  section: acq_params
+  default: 1000.0
+  description: |-
+    amount of extra time both before and after the acquisition during a symmetric echo sequence
+concentration:
+  type: float
+  section: sample_params
+  default: null
+  description: concentration of spin label in the sample in M
+FIR_rep:
+  type: float
+  section: odnp_params
+  default: null
+  description: |-
+    Repetition delay for fast inversion recovery as defined by Weiss-this is calculated in the combined ODNP ppg
+krho_cold:
+  type: float
+  section: sample_params
+  default: null
+  description: |-
+    the self relaxivity constant of the specific sample with the power off (i.e. when it is coldest)
+krho_hot:
+  type: float
+  section: sample_params
+  default: null
+  description: |-
+    the self relaxivity constant of the specific sample at the highest temperature/power
+T1water_hot:
+  type: float
+  section: sample_params
+  default: null
+  description: |-
+    T₁ of ultra pure water at the highest power - this really should not change unless a new measurement is made
+T1water_cold:
+  type: float
+  section: sample_params
+  default: null
+  description: |-
+    T₁ of ultra pure water with the microwave power off - this really should not change unless a new measurement is made
+repetition_us:
+  type: float
+  section: sample_params
+  default: null
+  description: repetition delay in microseconds
+guessed_MHz_to_GHz:
+  type: float
+  section: sample_params
+  default: 1.51671
+  description: |-
+    the ppt value we use to determine our rf carrier frequency based on our microwave
+max_power:
+  type: float
+  section: odnp_params
+  default: null
+  description: the highest power you plan on acquiring data at - in W
+uw_dip_center_GHz:
+  type: float
+  section: odnp_params
+  default: null
+  description: |-
+    ESR resonance frequency found by minimizing the B12 dip at increasing powers
+uw_dip_width_GHz:
+  type: float
+  section: odnp_params
+  default: null
+  description: the range over which the dip lock will be performed
+min_dBm_step:
+  type: float
+  section: odnp_params
+  default: 1.0
+  description: |-
+    dBm increment for making the power list in ODNP and for T1(p). Depending on the power source this can be 0.1, 0.5, or 1.0
+guessed_phalf:
+  type: float
+  section: sample_params
+  default: 0.2
+  description: estimated power for half saturation
+adc_offset:
+  type: int
+  section: acq_params
+  default: null
+  description: |-
+    SpinCore-specific ADC offset correction
+    we believe this is a DC offset, but are not positive
+nScans:
+  type: int
+  section: acq_params
+  default: 1
+  description: number of scans
+indirect_pts:
+  type: int
+  section: acq_params
+  default: 5
+  description: |-
+    generic parameter for number of indirect points (for nutation, field sweep, etc.)
+thermal_nScans:
+  type: int
+  section: acq_params
+  default: 1
+  description: |-
+    number of thermal scans - useful for no power datasets with low signal
+nEchoes:
+  type: int
+  section: acq_params
+  default: null
+  description: |-
+    number of echoes - 1, aside from CPMG, where it can be any desired number
+IR_steps:
+  type: int
+  section: acq_params
+  default: null
+  description: |-
+    number of points collected in an IR experiment between the min and max time points
+power_steps:
+  type: int
+  section: odnp_params
+  default: 14
+  description: number of points collected in an enhancement experiment
+num_T1s:
+  type: int
+  section: odnp_params
+  default: null
+  description: number of IR experiments collected in the ODNP experiment
+date:
+  type: int
+  section: file_names
+  default: null
+  description: today's date
+chemical:
+  type: str
+  section: file_names
+  default: null
+  description: |-
+    name specific to the sample - your data set will be named: date_chemical_type
+type:
+  type: str
+  section: file_names
+  default: null
+  description: type of experiment being performed
