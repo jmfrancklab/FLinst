@@ -85,6 +85,7 @@ py.install_sources(files([
     'SpinCore_pp/test_CPMG_params.py',
     'SpinCore_pp/run_STE.py',
     'SpinCore_pp/config_parser_fn.py',
+    'SpinCore_pp/config_params.yaml',
     'SpinCore_pp/GDS.py',
     'SpinCore_pp/run_STE_mw.py',
     'SpinCore_pp/power_helper.py',
