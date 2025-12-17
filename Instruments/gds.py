@@ -134,7 +134,6 @@ class GDS_scope(SerialInstrument):
     def timscal(self, ts, pos=None):
         logger.debug("Query time scale in sec/div")
         logger.debug(self.respond(":TIM:SCAL?"))
-        ts_str = " %0.6e" % ts
         self.write(":TIM:SCAL ", ts)
         self.demand(":TIM:SCAL?", ts)
         if pos is not None:
