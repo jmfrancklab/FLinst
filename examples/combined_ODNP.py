@@ -105,10 +105,10 @@ T1_powers_dB = gen_powerlist(
     three_down=False,
 )
 T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
-print("dB_settings", dB_settings)
-print("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
-print("T1_powers_dB", T1_powers_dB)
-print("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
+logger.info("dB_settings", dB_settings)
+logger.info("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
+logger.info("T1_powers_dB", T1_powers_dB)
+logger.info("correspond to powers in Watts", 10 ** (T1_powers_dB / 10.0 - 3))
 myinput = input("Look ok?")
 if myinput.lower().startswith("n"):
     raise ValueError("you said no!!!")
@@ -271,7 +271,7 @@ with h5py.File(
 # file itself
 vd_data.hdf5_write(filename, directory=target_directory)
 # }}}
-logger.info("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
+logger.debug("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 logger.debug(psd.strm("Name of saved data", vd_data.name()))
 # }}}
 # {{{run enhancement
@@ -411,14 +411,17 @@ with power_control() as p:
     logger.debug(psd.strm("Name of saved data", DNP_data.name()))
     # }}}
     # {{{run IR
+    last_dB_setting = 10
     for j, this_dB in enumerate(T1_powers_dB):
-        logger.debug(
-            strm(
-                "setting this power for T1(p)",
-                this_dB,
-            )
-        )
+        # {{{ make small steps in power if needed
+        if this_dB - last_dB_setting > 3:
+            smallstep_dB = last_dB_setting + 2
+            while smallstep_dB + 2 < this_dB:
+                p.set_power(smallstep_dB)
+                smallstep_dB += 2
         p.set_power(this_dB)
+        last_dB_setting = this_dB
+        # }}}
         for k in range(10):
             time.sleep(0.5)
             # JF notes that the following works for powers going up, but not
