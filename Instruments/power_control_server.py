@@ -6,9 +6,12 @@ from Instruments import Bridge12, prologix_connection, gigatronics, logobj
 IP = "0.0.0.0"
 PORT = 6002
 
+
 def main():
     # {{{ set up log at ~/power_control_server.log
-    log_filename = os.path.join(os.path.expanduser("~"), "power_control_server.log")
+    log_filename = os.path.join(
+        os.path.expanduser("~"), "power_control_server.log"
+    )
     formatter = logging.Formatter(
         "--> %(filename)s(%(lineno)s):%(name)s %(funcName)20s"
         " %(asctime)20s\n%(levelname)s: %(message)s"
@@ -83,7 +86,9 @@ def main():
                                     else:
                                         break
                                 nsecs += time.time()
-                                logging.debug(f"took, {j}, tries and, {nsecs}, seconds")
+                                logging.debug(
+                                    f"took, {j}, tries and, {nsecs}, seconds"
+                                )
                                 while dBm_setting > last_power + 3:
                                     last_power += 3
                                     nsecs = -1 * time.time()
@@ -96,8 +101,14 @@ def main():
                                         else:
                                             break
                                     nsecs += time.time()
-                                    logging.debug(f"took, {j}, tries and, {nsecs}, seconds")
-                            logging.info("FINALLY - SETTING TO DESIRED POWER of {dBm_setting}")
+                                    logging.debug(
+                                        f"took, {j}, tries and, {nsecs},"
+                                        " seconds"
+                                    )
+                            logging.info(
+                                "FINALLY - SETTING TO DESIRED POWER of"
+                                " {dBm_setting}"
+                            )
                             nsecs = -1 * time.time()
                             b.set_power(dBm_setting)
                             logging.debug("returned from set power")
@@ -107,12 +118,15 @@ def main():
                                 else:
                                     break
                             nsecs += time.time()
-                            logging.debug(f"took, {j}, tries and, {nsecs}, seconds")
+                            logging.debug(
+                                f"took, {j}, tries and, {nsecs}, seconds"
+                            )
                         elif args[0] == b"SET_FREQ":
                             logging.debug(f"SET_FREQ to {args[1]}")
                             if not this_logobj.wg_has_been_flipped:
                                 raise ValueError(
-                                    "Turn on the power (to a low value) before setting the frequency"
+                                    "Turn on the power (to a low value) before"
+                                    " setting the frequency"
                                 )
                             current_power = b.power_float()
                             if current_power > 10:

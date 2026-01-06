@@ -10,8 +10,6 @@ from pyspecdata import init_logging
 from Instruments import power_control
 from SpinCore_pp import configuration
 import os, time, h5py
-from numpy import empty
-from matplotlib.ticker import FuncFormatter
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
@@ -20,9 +18,10 @@ logger = init_logging(level="debug")
 config_dict = configuration("active.ini")
 
 time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-assert not os.path.exists(
-    "output.h5"
-), "later we can just check that the node doesn't exist, but in this example, we're writing a fresh h5 file"
+assert not os.path.exists("output.h5"), (
+    "later we can just check that the node doesn't exist, but in this example,"
+    " we're writing a fresh h5 file"
+)
 with power_control() as p:
     p.set_power(10)
     p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
@@ -48,7 +47,7 @@ log_array = this_log.total_log
 logger.debug("log array:\n" + repr(log_array))
 logger.debug(f"log array shape {log_array.shape}")
 log_dict = this_log.log_dict
-logger.debug(f"log dict:\n" + repr(log_dict))
+logger.debug("log dict:\n" + repr(log_dict))
 with h5py.File("output.h5", "a") as f:
     log_grp = f.create_group(
         "log"
