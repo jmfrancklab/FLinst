@@ -41,9 +41,6 @@ def adjust_and_settle(B0_des_G, config_dict, h, gen):
 
 
 def main():
-    # ☐ TODO:
-    #         NOTE -- make sure the yaml branch is tested and merged first
-    # ☐ TODO: add settle_initial_s, ramp_dt, genesys_ip, gigatronics_adress to config_parser
     config_dict = SpinCore_pp.configuration("active.ini")
     with genesys(config_dict["genesys_ip"]) as gen:
         with prologix_connection() as p:
