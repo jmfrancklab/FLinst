@@ -13,21 +13,10 @@ def integral_as_quad(expr, lims):
     return quad(sp.lambdify(var, expr, modules="numpy"), a, b)[0]
 
 
-<<<<<<< HEAD
-Emax, p, phalf, pmax = sp.symbols(
-    "E_max p p_half p_max",
-    real=True,
-    positive=True
-)
-||||||| 9b45cda
-Emax, p, phalf, pmax = sp.symbols("E_max p p_half p_max", real=True, positive=True)
-
-=======
 Emax, p, phalf, pmax = sp.symbols(
     "E_max p p_half p_max", real=True, positive=True
 )
 
->>>>>>> master
 
 def Ep_spacing_from_phalf(
     est_phalf=0.2,
@@ -51,16 +40,9 @@ def Ep_spacing_from_phalf(
     for the function :math:`f(p)` and then place lines evenly along the
     length of the line, rather than in one dimension.  To do this, we
     calculate
-<<<<<<< HEAD
-    :math:`dl = \sqrt{dp^2 + df^2} =
-    dp\sqrt{\left(\frac{dp}{dp}\right)^2+\left(\frac{df}{dp}\right)}=dp\sqrt{1+\frac{df}{dp}}`
-||||||| 9b45cda
-    :math:`dl = \sqrt{dp^2 + df^2} = dp\sqrt{\left(\frac{dp}{dp}\right)^2+\left(\frac{df}{dp}\right)}=dp\sqrt{1+\frac{df}{dp}}`
-=======
     :math:`dl = \sqrt{dp^2 + df^2} =
     dp\sqrt{\left(\frac{dp}{dp}\right)^2+\left(\frac{df}{dp}\right)}=\
-            dp\sqrt{1+\frac{df}{dp}}`
->>>>>>> master
+dp\sqrt{1+\frac{df}{dp}}`
     and then integrate :math:`l(p) = \int_{p=0}^{p=p_{max}} dl`,
     which gives the length along the curve (as though we placed a string along
     the curve).
@@ -77,36 +59,17 @@ def Ep_spacing_from_phalf(
     est_phalf:      float
                     estimated power for half saturation
     sim_Emax:       float
-<<<<<<< HEAD
-                    ONLY FOR PLOTTING PURPOSES. When fl is not None, this will
-                    generate an E(p) curve using this Emax but it is not used
-                    in the actual function.  max_power:      float
-||||||| 9b45cda
-                    ONLY FOR PLOTTING PURPOSES. When fl is not None, this will generate an E(p) curve using this Emax but it is not used in the actual function.
-    max_power:      float
-=======
                     ONLY FOR PLOTTING PURPOSES. When fl is not None, this will
                     generate an E(p) curve using this Emax but it is not used
                     in the actual function.
     max_power:      float
->>>>>>> master
                     maximum power that you will send to the sample (W)
     aspect_ratio:   float
-<<<<<<< HEAD
-                    width of figure size/ height of figure size. Most likely
-                    you will not need to change this but if you want to make a
-                    different figure size aspect ratio this ensures the E(p)
-                    spacing is even within that figure p_steps:        float
-||||||| 9b45cda
-                    width of figure size/ height of figure size. Most likely you will not need to change this but if you want to make a different figure size aspect ratio this ensures the E(p) spacing is even within that figure
-    p_steps:        float
-=======
                     width of figure size/ height of figure size. Most likely
                     you will not need to change this but if you want to make a
                     different figure size aspect ratio this ensures the E(p)
                     spacing is even within that figure
     p_steps:        float
->>>>>>> master
                     number of power steps in the enhancement experiment
     min_dBm_step:   float
                     minimum stepsize that is allowed, in dBm
@@ -136,12 +99,10 @@ def Ep_spacing_from_phalf(
         excluded=[0],
     )
     length_data = psp.nddata(
-        length_vs_p_fn(est_phalf, p_array),
-        [-1],
-        ["p"]).setaxis("p", p_array)
+        length_vs_p_fn(est_phalf, p_array), [-1], ["p"]
+    ).setaxis("p", p_array)
     length_data.invinterp(
-        "p",
-        np.linspace(0, length_data["p", -1].item(), p_steps)
+        "p", np.linspace(0, length_data["p", -1].item(), p_steps)
     )
     if fl is not None:
         fl.plot(

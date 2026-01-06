@@ -32,11 +32,6 @@ preview = true
 [tool.mesonpy]
 setup-kwargs = { native_file = "cross_file.txt" }
 
-[tool.black]
-line-length = 79
-target-version = ['py36', 'py37', 'py38', 'py39']
-preview = true
-
 [tool.ruff]
 # your max‐line‐length stays at top level
 line-length = 79

@@ -226,8 +226,8 @@ class Bridge12(Serial):
 
         Need to have 2 safeties for set_power:
 
-        1. When power is increased above 10dBm, the power is not allowed to
-           increase by more than 3dBm above the current power.
+        1. When power is increased above 10 dBm, the power is not allowed to
+           increase by more than 3 dBm above the current power.
         2. When increasing the power, call the power reading function.
 
         Parameters
@@ -276,7 +276,7 @@ class Bridge12(Serial):
         logging.debug("about to enter loop to check 10 times")
         for j in range(10):
             result = self.power_int()
-            logging.debug("power check evaluated to "+str(result))
+            logging.debug("power check evaluated to " + str(result))
             if setting > 0:
                 self.rxpowerdbm_float()  # doing this just for safety interlock
             logging.debug("passed safety interlock")
@@ -357,11 +357,13 @@ class Bridge12(Serial):
         if hasattr(self, "freq_bounds"):
             assert Hz >= self.freq_bounds[0], (
                 "You are trying to set the frequency outside the frequency"
-                " bounds, which are: " + str(self.freq_bounds)
+                " bounds, which are: "
+                + str(self.freq_bounds)
             )
             assert Hz <= self.freq_bounds[1], (
                 "You are trying to set the frequency outside the frequency"
-                " bounds, which are: " + str(self.freq_bounds)
+                " bounds, which are: "
+                + str(self.freq_bounds)
             )
         setting = int(Hz / 1e3 + 0.5)
         self.write(b"freq %d\r" % (setting))
@@ -584,9 +586,9 @@ class Bridge12(Serial):
                         " lower than the rx_dBm of the dip, which doesn't make"
                         " sense -- check %gdBm_%s" % (10.0, rx_dBm)
                     )
-        assert self.frq_sweep_10dBm_has_been_run, (
-            "I should have run the 10 dBm curve -- not sure what happened"
-        )
+        assert (
+            self.frq_sweep_10dBm_has_been_run
+        ), "I should have run the 10 dBm curve -- not sure what happened"
         over_diff = r_[
             0, np.diff(np.int32(over_bool))
         ]  # should indicate whether this position has lifted over (+1) or
@@ -668,7 +670,7 @@ class Bridge12(Serial):
             " zoom"
         )
         # {{{ fit the mV values
-        # start by pulling the data from the last tuning curve
+        #     start by pulling the data from the last tuning curve
         rx, tx, freq = [
             self.tuning_curve_data[self.last_sweep_name + "_" + j]
             for j in ["rx", "tx", "freq"]
