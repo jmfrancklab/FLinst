@@ -5,23 +5,35 @@ from scipy.integrate import quad
 import pyspecdata as psp
 
 "Helper functions for dealing with powers"
+
+
 # {{{ For even spacing based on phalf estimation
 def integral_as_quad(expr, lims):
     var, a, b = lims
     return quad(sp.lambdify(var, expr, modules="numpy"), a, b)[0]
 
 
+<<<<<<< HEAD
 Emax, p, phalf, pmax = sp.symbols(
     "E_max p p_half p_max",
     real=True,
     positive=True
 )
+||||||| 9b45cda
+Emax, p, phalf, pmax = sp.symbols("E_max p p_half p_max", real=True, positive=True)
+
+=======
+Emax, p, phalf, pmax = sp.symbols(
+    "E_max p p_half p_max", real=True, positive=True
+)
+
+>>>>>>> master
 
 def Ep_spacing_from_phalf(
     est_phalf=0.2,
     sim_Emax=30,
     max_power=3.16,
-    aspect_ratio=1.618,# golden ratio
+    aspect_ratio=1.618,  # golden ratio
     p_steps=20,
     min_dBm_step=1.0,
     three_down=True,
@@ -39,8 +51,16 @@ def Ep_spacing_from_phalf(
     for the function :math:`f(p)` and then place lines evenly along the
     length of the line, rather than in one dimension.  To do this, we
     calculate
+<<<<<<< HEAD
     :math:`dl = \sqrt{dp^2 + df^2} =
     dp\sqrt{\left(\frac{dp}{dp}\right)^2+\left(\frac{df}{dp}\right)}=dp\sqrt{1+\frac{df}{dp}}`
+||||||| 9b45cda
+    :math:`dl = \sqrt{dp^2 + df^2} = dp\sqrt{\left(\frac{dp}{dp}\right)^2+\left(\frac{df}{dp}\right)}=dp\sqrt{1+\frac{df}{dp}}`
+=======
+    :math:`dl = \sqrt{dp^2 + df^2} =
+    dp\sqrt{\left(\frac{dp}{dp}\right)^2+\left(\frac{df}{dp}\right)}=\
+            dp\sqrt{1+\frac{df}{dp}}`
+>>>>>>> master
     and then integrate :math:`l(p) = \int_{p=0}^{p=p_{max}} dl`,
     which gives the length along the curve (as though we placed a string along
     the curve).
@@ -57,15 +77,36 @@ def Ep_spacing_from_phalf(
     est_phalf:      float
                     estimated power for half saturation
     sim_Emax:       float
+<<<<<<< HEAD
                     ONLY FOR PLOTTING PURPOSES. When fl is not None, this will
                     generate an E(p) curve using this Emax but it is not used
                     in the actual function.  max_power:      float
+||||||| 9b45cda
+                    ONLY FOR PLOTTING PURPOSES. When fl is not None, this will generate an E(p) curve using this Emax but it is not used in the actual function.
+    max_power:      float
+=======
+                    ONLY FOR PLOTTING PURPOSES. When fl is not None, this will
+                    generate an E(p) curve using this Emax but it is not used
+                    in the actual function.
+    max_power:      float
+>>>>>>> master
                     maximum power that you will send to the sample (W)
     aspect_ratio:   float
+<<<<<<< HEAD
                     width of figure size/ height of figure size. Most likely
                     you will not need to change this but if you want to make a
                     different figure size aspect ratio this ensures the E(p)
                     spacing is even within that figure p_steps:        float
+||||||| 9b45cda
+                    width of figure size/ height of figure size. Most likely you will not need to change this but if you want to make a different figure size aspect ratio this ensures the E(p) spacing is even within that figure
+    p_steps:        float
+=======
+                    width of figure size/ height of figure size. Most likely
+                    you will not need to change this but if you want to make a
+                    different figure size aspect ratio this ensures the E(p)
+                    spacing is even within that figure
+    p_steps:        float
+>>>>>>> master
                     number of power steps in the enhancement experiment
     min_dBm_step:   float
                     minimum stepsize that is allowed, in dBm
@@ -106,14 +147,15 @@ def Ep_spacing_from_phalf(
         fl.plot(
             f_fn(sim_Emax, est_phalf, length_data.fromaxis("p")),
             "o",
-            human_units=False
+            human_units=False,
         )
         psp.text(
             0.5,
             0.5,
-            "Just showing the E(p) to show JF the spacing is what we want "
-            "- \n we can delete this figure after we are good with "
-            "everything else",)
+            "Just showing the E(p) to show JF the spacing is what we want -"
+            " \nwe can delete this figure after we are good with everything"
+            " else",
+        )
     W_settings = length_data.fromaxis("p").data
     rdB_settings = np.ones_like(W_settings)
     for x in range(len(W_settings)):
@@ -128,8 +170,9 @@ def Ep_spacing_from_phalf(
     if three_down:
         append_dB = [
             rdB_settings[
-                abs(10 ** (rdB_settings / 10.0 - 3) - max_power
-                    * frac).argmin()
+                abs(
+                    10 ** (rdB_settings / 10.0 - 3) - max_power * frac
+                ).argmin()
             ]
             for frac in [0.75, 0.5, 0.25]
         ]
@@ -139,7 +182,7 @@ def Ep_spacing_from_phalf(
 
 # }}}
 # {{{ Older method of just generating a power list - works for concentrated
-# samples but not great for dilute
+#     samples but not great for dilute
 def gen_powerlist(max_power, steps, min_dBm_step=0.5, three_down=False):
     """Generate a list of (roughly) evenly spaced powers up
     to max_power.
@@ -179,12 +222,12 @@ def gen_powerlist(max_power, steps, min_dBm_step=0.5, three_down=False):
                 "below %f a step?"
             ) % (steps, max_power, min_dBm_step)
     if three_down:
-        append_dB = [
-            dB_settings[abs(10 ** (dB_settings / 10.0 - 3) - max_power 
-                            * frac).argmin()]
+        dB_settings += [
+            dB_settings[
+                abs(10 ** (dB_settings / 10.0 - 3) - max_power * frac).argmin()
+            ]
             for frac in [0.75, 0.5, 0.25]
         ]
-        dB_settings = np.append(dB_settings, append_dB)
     return dB_settings
 
 
