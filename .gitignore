@@ -27,3 +27,6 @@ build/src.win-amd64-3.7/
 build/temp.win-amd64-3.7/
 examples/active.ini.bak
 examples/data_files.csv
+Instruments/.DS_Store
+.DS_Store
+examples/magnet_control/data_files.csv

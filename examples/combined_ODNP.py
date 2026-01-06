@@ -15,6 +15,7 @@ This needs to be run in sync with the power control server. To do so:
     progressive power saturation dataset, and a log of the power over time
     saved as nodes in an h5 file.
 """
+
 from numpy import r_, zeros_like
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
@@ -116,6 +117,7 @@ powers = 1e-3 * 10 ** (dB_settings / 10.0)
 IR_postproc = "spincore_IR_v4"  # note that you have changed the way the data
 #                                 is saved, and so this should change
 #                                 likewise!!!!
+IR_pathway = {"ph1": 0, "ph2": +1}
 Ep_postproc = "spincore_ODNP_v5"
 # }}}
 # {{{check total points
@@ -243,7 +245,7 @@ vd_data.set_units("t2", "s")
 vd_data.setaxis("nScans", r_[0 : config_dict["thermal_nScans"]])
 vd_data.name("FIR_noPower")
 vd_data.set_prop("stop_time", time.time())
-vd_data.set_prop("coherence_pathway", {"ph1": 0, "ph2": +1})
+vd_data.set_prop("coherence_pathway", IR_pathway)
 vd_data.set_prop("start_time", ini_time)
 vd_data.set_prop("acq_params", config_dict.asdict())
 vd_data.set_prop("postproc_type", IR_postproc)
@@ -460,7 +462,7 @@ with power_control() as p:
         vd_data.set_prop("stop_time", time.time())
         vd_data.set_prop("acq_params", config_dict.asdict())
         vd_data.set_prop("postproc_type", IR_postproc)
-        vd_data.set_prop("coherence_pathway", {"ph1": +1, "ph2": -2})
+        vd_data.set_prop("coherence_pathway", IR_pathway)
         vd_data.rename("indirect", "vd")
         vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
         if phase_cycling:

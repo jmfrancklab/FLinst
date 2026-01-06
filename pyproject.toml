@@ -26,3 +26,33 @@ FLInst = "Instruments.cmd:cmd"
 
 [tool.mesonpy]
 setup-kwargs = { native_file = "cross_file.txt" }
+
+[tool.black]
+line-length = 79
+target-version = ['py36', 'py37', 'py38', 'py39']
+preview = true
+
+[tool.ruff]
+# your max‐line‐length stays at top level
+line-length = 79
+
+[tool.ruff.lint]
+# enable all E, F, W, Q rules…
+select = ["E", "F", "W", "Q"]
+# …then ignore your exact list (mapping E293→W293, dropping W503)
+ignore = [
+  "E203","E225","E226","E231","E261","E265",  # whitespace rules
+  "W293",                                     # blank‐line‐with‐whitespace (maps E293)
+  "E302","E305","E306",                       # blank‐lines around defs
+  "E401","E731","E741",                       # import/lambda/name
+  "Q002","W291"                               # quote/doc + trailing‐ws
+]
+
+[tool.ruff.lint.flake8-builtins]
+# treat get_ipython as a valid builtin
+allowed-modules = ["get_ipython"]
+
+[tool.ruff.lint.flake8-quotes]
+# enforce double‐quotes inline & in docstrings
+inline-quotes    = "double"
+docstring-quotes = "double"
