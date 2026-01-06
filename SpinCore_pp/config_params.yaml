@@ -188,9 +188,34 @@ adc_offset:
     we believe this is a DC offset, but are not positive
 settle_initial_s:
   type: float
-  section: current_param
+  section: current_params
+  default: 80.0
+  description: Initial settling time in s when ramping up the current
+ramp_dt:
+  type: float
+  section: current_params
+  default: 0.05
+  description: Time between current ramping steps in s
+settle_per_point_s:
+  type: float
+  section: current_params
+  default: 10.0
+  description: Time (s) between changing the field and echo experiment in current sweep
+B_offset_MHz:
+  type: float
+  section: current_params
   default: null
-  description: 
+  description: Field offset in curren sweep experiment in MHz
+genesys_ip:
+  type: str
+  section: network_params
+  default: 192.168.0.199
+  description: IP address of the genesys PS connection
+gigatronics_address:
+  type: int
+  section: network_params
+  default: 7
+  description: Connection address of the gigatronics
 nScans:
   type: int
   section: acq_params
