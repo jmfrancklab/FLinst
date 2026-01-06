@@ -186,6 +186,11 @@ adc_offset:
   description: |-
     SpinCore-specific ADC offset correction
     we believe this is a DC offset, but are not positive
+settle_initial_s:
+  type: float
+  section: current_param
+  default: null
+  description: 
 nScans:
   type: int
   section: acq_params
