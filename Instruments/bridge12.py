@@ -1,4 +1,4 @@
-## coding: utf-8
+# coding: utf-8
 # ## Initialization
 #
 # To run on a different computer, run ``jupyter notebook --ip='*'`` copy and
@@ -9,6 +9,7 @@ from serial import Serial
 from numpy import r_
 import numpy as np
 import time
+import logging
 from .log_inst import logger
 
 
@@ -225,8 +226,8 @@ class Bridge12(Serial):
 
         Need to have 2 safeties for set_power:
 
-        1. When power is increased above 10dBm, the power is not allowed to
-           increase by more than 3dBm above the current power.
+        1. When power is increased above 10 dBm, the power is not allowed to
+           increase by more than 3 dBm above the current power.
         2. When increasing the power, call the power reading function.
 
         Parameters
@@ -236,6 +237,7 @@ class Bridge12(Serial):
         dBm: float
             power values -- give a dBm (not 10*dBm) as a floating point number
         """
+        logging.debug("entered set power")
         if not self._inside_with_block:
             raise ValueError(
                 "you MUST use a with block so the error handling works well"
@@ -251,11 +253,6 @@ class Bridge12(Serial):
         elif setting < 0:
             raise ValueError("Negative dBm -- not supported")
         elif setting > 100:
-            if not self.frq_sweep_10dBm_has_been_run:
-                raise RuntimeError(
-                    "Before you try to set the power above 10 dBm, you must"
-                    " first run a tuning curve at 10 dBm!!!"
-                )
             if not hasattr(self, "cur_pwr_int"):
                 raise RuntimeError(
                     "Before you try to set the power above 10 dBm, you must"
@@ -270,16 +267,22 @@ class Bridge12(Serial):
                     " shouldn't encounter this error!"
                     % (self.cur_pwr_int / 10.0, setting / 10.0)
                 )
+        logging.debug("about to write power")
         self.write(b"power %d\r" % setting)
+        logging.debug("about to read power")
         self.read_until(b"Power updated\r\n")
         if setting > 0:
             self.rxpowerdbm_float()  # doing this just for safety interlock
+        logging.debug("about to enter loop to check 10 times")
         for j in range(10):
             result = self.power_int()
+            logging.debug("power check evaluated to " + str(result))
             if setting > 0:
                 self.rxpowerdbm_float()  # doing this just for safety interlock
+            logging.debug("passed safety interlock")
             if result == setting:
                 self.cur_pwr_int = result
+                logging.debug("about to return")
                 return
             time.sleep(10e-3)
         raise RuntimeError(
@@ -354,11 +357,13 @@ class Bridge12(Serial):
         if hasattr(self, "freq_bounds"):
             assert Hz >= self.freq_bounds[0], (
                 "You are trying to set the frequency outside the frequency"
-                " bounds, which are: " + str(self.freq_bounds)
+                " bounds, which are: "
+                + str(self.freq_bounds)
             )
             assert Hz <= self.freq_bounds[1], (
                 "You are trying to set the frequency outside the frequency"
-                " bounds, which are: " + str(self.freq_bounds)
+                " bounds, which are: "
+                + str(self.freq_bounds)
             )
         setting = int(Hz / 1e3 + 0.5)
         self.write(b"freq %d\r" % (setting))
@@ -500,8 +505,7 @@ class Bridge12(Serial):
             self.frq_sweep_10dBm_has_been_run = True
             # reset the safe rx level to the top of the tuning curve at 10 dBm
             # (this is the condition where we are reflecting 10 dBm onto the Rx
-            # diode)
-            # self.safe_rx_level_int = int(10*rxvalues.max())
+            # diode) self.safe_rx_level_int = int(10*rxvalues.max())
         sweep_name = "%gdBm" % (self.cur_pwr_int / 10.0)
         self.tuning_curve_data[sweep_name + "_tx"] = txvalues
         self.tuning_curve_data[sweep_name + "_rx"] = rxvalues
@@ -582,9 +586,9 @@ class Bridge12(Serial):
                         " lower than the rx_dBm of the dip, which doesn't make"
                         " sense -- check %gdBm_%s" % (10.0, rx_dBm)
                     )
-        assert self.frq_sweep_10dBm_has_been_run, (
-            "I should have run the 10 dBm curve -- not sure what happened"
-        )
+        assert (
+            self.frq_sweep_10dBm_has_been_run
+        ), "I should have run the 10 dBm curve -- not sure what happened"
         over_diff = r_[
             0, np.diff(np.int32(over_bool))
         ]  # should indicate whether this position has lifted over (+1) or
@@ -666,7 +670,7 @@ class Bridge12(Serial):
             " zoom"
         )
         # {{{ fit the mV values
-        # start by pulling the data from the last tuning curve
+        #     start by pulling the data from the last tuning curve
         rx, tx, freq = [
             self.tuning_curve_data[self.last_sweep_name + "_" + j]
             for j in ["rx", "tx", "freq"]
@@ -750,7 +754,8 @@ class Bridge12(Serial):
         self.set_amp(False)
         self.set_wg(False)
         self.frq_sweep_10dBm_has_been_run = False
-        del self.freq_bounds
+        if hasattr(self, "freq_bounds"):
+            del self.freq_bounds
         return
 
     def safe_shutdown(self):

@@ -17,6 +17,7 @@ cp examples/capture_noise_SC_standard.py $orig_dir
 cp examples/run_generic_echo.py $orig_dir
 cp examples/run_nutation.py $orig_dir
 cp examples/run_field_dep_justMW.py $orig_dir
+cp examples/combined_ODNP.py $orig_dir
 echo "==========================================================================="
 cd /c/git/pyspecdata
 echo -e "I'm in this branch of pyspecdata:\n$(git rev-parse --abbrev-ref @)"

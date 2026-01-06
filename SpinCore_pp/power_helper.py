@@ -28,9 +28,9 @@ def Ep_spacing_from_phalf(
     three_down=True,
     fl=None,
 ):
-    r"""Evenly space powers along the :math:`E(p)` curve, as though you
-    took a string with evenly marked lengths, and laid it down on top of
-    the curve.
+    r"""
+    Evenly space powers along the :math:`E(p)` curve, as though you took a
+    string with evenly marked lengths, and laid it down on top of the curve.
 
     This is essential to sampling the linear regime for samples that are
     very easy to saturate.
@@ -42,15 +42,15 @@ def Ep_spacing_from_phalf(
     calculate
     :math:`dl = \sqrt{dp^2 + df^2} =
     dp\sqrt{\left(\frac{dp}{dp}\right)^2+\left(\frac{df}{dp}\right)}=\
-            dp\sqrt{1+\frac{df}{dp}}`
+dp\sqrt{1+\frac{df}{dp}}`
     and then integrate :math:`l(p) = \int_{p=0}^{p=p_{max}} dl`,
     which gives the length along the curve (as though we placed a string along
     the curve).
 
-    Note that we very rarely plot so that our power axis and enhancement
-    axis are plotted with an equal aspect ratio,
-    so we use the max power, max enhancement, and aspect ratio to
-    determine the spacing of powers that fits the above description
+    Note that we very rarely plot so that our power axis and enhancement axis
+    are plotted with an equal aspect ratio,
+    so we use the max power, max enhancement, and aspect ratio to determine the
+    spacing of powers that fits the above description
     *as plotted*.
 
 
@@ -164,7 +164,6 @@ def gen_powerlist(max_power, steps, min_dBm_step=0.5, three_down=False):
 
     def det_allowed(lin_steps):
         powers = r_[0 : max_power : 1j * lin_steps][1:]
-        np.vectorize(powers)
         rdB_settings = np.ones_like(powers)
         for x in range(len(powers)):
             rdB_settings[x] = (

@@ -1,5 +1,5 @@
 # To be run from the computer connected to the EPR spectrometer
-import time, socket, pickle
+import time, socket, pickle, os, logging, sys
 from Instruments import Bridge12, prologix_connection, gigatronics, logobj
 
 
@@ -8,6 +8,26 @@ PORT = 6002
 
 
 def main():
+    # {{{ set up log at ~/power_control_server.log
+    log_filename = os.path.join(
+        os.path.expanduser("~"), "power_control_server.log"
+    )
+    formatter = logging.Formatter(
+        "--> %(filename)s(%(lineno)s):%(name)s %(funcName)20s"
+        " %(asctime)20s\n%(levelname)s: %(message)s"
+    )
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    file_handler = logging.FileHandler(
+        log_filename, mode="w", encoding="utf-8"
+    )
+    file_handler.setFormatter(formatter)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    # can set levels independently with:
+    stdout_handler.setLevel(logging.INFO)
+    logger.addHandler(stdout_handler)
+    logger.addHandler(file_handler)
+    # }}}
     with prologix_connection() as p:
         with gigatronics(prologix_instance=p, address=7) as g:
             with Bridge12() as b:
@@ -37,54 +57,84 @@ def main():
                             b.set_freq(min_f)
                             min_f = float(b.freq_int()) * 1e3
                             conn.send(("%0.6f" % min_f).encode("ASCII"))
+                            this_logobj.wg_has_been_flipped = True
                         else:
                             raise ValueError(
                                 "I don't understand this 3 component command"
                             )
                     if len(args) == 2:
                         if args[0] == b"SET_POWER":
+                            logging.debug(f"SET_POWER to {args[1]}")
+                            if not this_logobj.wg_has_been_flipped:
+                                # {{{ then I need to turn everything on
+                                b.set_wg(True)
+                                b.set_rf(True)
+                                b.set_amp(True)
+                                # }}}
+                                this_logobj.wg_has_been_flipped = True
                             dBm_setting = float(args[1])
                             last_power = b.power_float()
                             if dBm_setting > last_power + 3:
                                 last_power += 3
                                 nsecs = -1 * time.time()
-                                print("SETTING TO...", last_power)
+                                logging.info(f"SETTING TO... {last_power}")
                                 b.set_power(last_power)
+                                logging.debug("returned from set power")
                                 for j in range(30):
                                     if b.power_float() < last_power:
                                         time.sleep(0.1)
                                     else:
                                         break
                                 nsecs += time.time()
-                                print("took", j, "tries and", nsecs, "seconds")
+                                logging.debug(
+                                    f"took, {j}, tries and, {nsecs}, seconds"
+                                )
                                 while dBm_setting > last_power + 3:
                                     last_power += 3
                                     nsecs = -1 * time.time()
-                                    print("SETTING TO...", last_power)
+                                    logging.info(f"SETTING TO... {last_power}")
                                     b.set_power(last_power)
+                                    logging.debug("returned from set power")
                                     for j in range(30):
                                         if b.power_float() < last_power:
                                             time.sleep(0.1)
                                         else:
                                             break
                                     nsecs += time.time()
-                                    print(
-                                        "took",
-                                        j,
-                                        "tries and",
-                                        nsecs,
-                                        "seconds",
+                                    logging.debug(
+                                        f"took, {j}, tries and, {nsecs},"
+                                        " seconds"
                                     )
-                            print("FINALLY - SETTING TO DESIRED POWER")
+                            logging.info(
+                                "FINALLY - SETTING TO DESIRED POWER of"
+                                " {dBm_setting}"
+                            )
                             nsecs = -1 * time.time()
                             b.set_power(dBm_setting)
+                            logging.debug("returned from set power")
                             for j in range(30):
                                 if b.power_float() < last_power:
                                     time.sleep(0.1)
                                 else:
                                     break
                             nsecs += time.time()
-                            print("took", j, "tries and", nsecs, "seconds")
+                            logging.debug(
+                                f"took, {j}, tries and, {nsecs}, seconds"
+                            )
+                        elif args[0] == b"SET_FREQ":
+                            logging.debug(f"SET_FREQ to {args[1]}")
+                            if not this_logobj.wg_has_been_flipped:
+                                raise ValueError(
+                                    "Turn on the power (to a low value) before"
+                                    " setting the frequency"
+                                )
+                            current_power = b.power_float()
+                            if current_power > 10:
+                                raise ValueError(
+                                    "to manually set the power, you must be at"
+                                    " 10 dBm or less!"
+                                )
+                            b.set_freq(float(args[1]))
                         else:
                             raise ValueError(
                                 "I don't understand this 2 component command:"
