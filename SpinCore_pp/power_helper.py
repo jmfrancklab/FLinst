@@ -5,20 +5,24 @@ from scipy.integrate import quad
 import pyspecdata as psp
 
 "Helper functions for dealing with powers"
+
+
 # {{{ For even spacing based on phalf estimation
 def integral_as_quad(expr, lims):
     var, a, b = lims
     return quad(sp.lambdify(var, expr, modules="numpy"), a, b)[0]
 
 
-Emax, p, phalf, pmax = sp.symbols("E_max p p_half p_max", real=True, positive=True)
+Emax, p, phalf, pmax = sp.symbols(
+    "E_max p p_half p_max", real=True, positive=True
+)
 
 
 def Ep_spacing_from_phalf(
     est_phalf=0.2,
     sim_Emax=30,
     max_power=3.16,
-    aspect_ratio=1.618,# golden ratio
+    aspect_ratio=1.618,  # golden ratio
     p_steps=20,
     min_dBm_step=1.0,
     three_down=True,
@@ -85,13 +89,17 @@ def Ep_spacing_from_phalf(
         ),
         excluded=[0],
     )
-    length_data = psp.nddata(length_vs_p_fn(est_phalf, p_array), [-1], ["p"]).setaxis(
-        "p", p_array
+    length_data = psp.nddata(
+        length_vs_p_fn(est_phalf, p_array), [-1], ["p"]
+    ).setaxis("p", p_array)
+    length_data.invinterp(
+        "p", np.linspace(0, length_data["p", -1].item(), p_steps)
     )
-    length_data.invinterp("p", np.linspace(0, length_data["p", -1].item(), p_steps))
     if fl is not None:
         fl.plot(
-            f_fn(sim_Emax, est_phalf, length_data.fromaxis("p")), "o", human_units=False
+            f_fn(sim_Emax, est_phalf, length_data.fromaxis("p")),
+            "o",
+            human_units=False,
         )
         psp.text(
             0.5,
@@ -112,7 +120,9 @@ def Ep_spacing_from_phalf(
     if three_down:
         append_dB = [
             rdB_settings[
-                abs(10 ** (rdB_settings / 10.0 - 3) - max_power * frac).argmin()
+                abs(
+                    10 ** (rdB_settings / 10.0 - 3) - max_power * frac
+                ).argmin()
             ]
             for frac in [0.75, 0.5, 0.25]
         ]
@@ -141,11 +151,11 @@ def gen_powerlist(max_power, steps, min_dBm_step=0.5, three_down=False):
 
     def det_allowed(lin_steps):
         powers = r_[0 : max_power : 1j * lin_steps][1:]
-        np.vectorize(powers)
         rdB_settings = np.ones_like(powers)
         for x in range(len(powers)):
             rdB_settings[x] = (
-                round(10 * (np.log10(powers[x]) + 3.0) / min_dBm_step) * min_dBm_step
+                round(10 * (np.log10(powers[x]) + 3.0) / min_dBm_step)
+                * min_dBm_step
             )  # round to nearest min_dBm_step
         return np.unique(rdB_settings)
 
@@ -161,7 +171,9 @@ def gen_powerlist(max_power, steps, min_dBm_step=0.5, three_down=False):
             ) % (steps, max_power, min_dBm_step)
     if three_down:
         append_dB = [
-            dB_settings[abs(10 ** (dB_settings / 10.0 - 3) - max_power * frac).argmin()]
+            dB_settings[
+                abs(10 ** (dB_settings / 10.0 - 3) - max_power * frac).argmin()
+            ]
             for frac in [0.75, 0.5, 0.25]
         ]
         dB_settings = append(dB_settings, append_dB)

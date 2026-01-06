@@ -12,6 +12,42 @@ class configuration(object):
             None,
             "mandatory delay after the pulse -- allows receivers to recover",
         ),
+        "settle_initial_s": (
+            float,
+            "current_params",
+            None,
+            "Initial settling time in s when ramping up the current",
+        ),
+        "ramp_dt": (
+            float,
+            "current_params",
+            None,
+            "Time between current ramping steps in s",
+        ),
+        "settle_per_point_s": (
+            float,
+            "current_params",
+            None,
+            "Time (s) between changing the field and echo experiment in current sweep",
+        ),
+        "offset_MHz": (
+            float,
+            "current_params",
+            None,
+            "Field offset in curren sweep experiment in MHz",
+        ),
+        "geneysis_ip": (
+            str,
+            "network_params",
+            None,
+            "IP address of the genesys PS connection",
+        ),
+        "gigatronics_address": (
+            int,
+            "network_params",
+            None,
+            "Connection address of the gigatronics",
+        ),
         "tau_us": (
             float,
             "acq_params",
