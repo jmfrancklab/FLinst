@@ -16,13 +16,37 @@ IP = "0.0.0.0"
 PORT = 6002
 
 
+def read_field_in_G(h):
+    "helper function to give the field in Gauss"
+    return h.field.to("T").magnitude * 1e4
+
+
+def adjust_and_settle(B0_des_G, config_dict, h, gen):
+    true_B0_G = read_field_in_G(h)
+    logging.info(
+        "adjusting current_v_field_A_G from",
+        config_dict["current_v_field_A_G"],
+    )
+    config_dict["current_v_field_A_G"] *= B0_des_G / true_B0_G
+    logging.info(
+        "to",
+        config_dict["current_v_field_A_G"],
+        "and settling again for",
+        config_dict["settle_initial_s"],
+        "s",
+    )
+    time.sleep(config_dict["settle_initial_s"])
+    I_setting = B0_des_G * config_dict["current_v_field_A_G"]
+    gen.I_limit = I_setting
+
+
 def main():
-    # ☐ TODO: since we are using the config dict, add the IP addresses as entries.
-    #         NOTE -- make sure the yaml branch is tested and merged first
     config_dict = SpinCore_pp.configuration("active.ini")
-    with genesys("192.168.0.199") as gen:
+    with genesys(config_dict["genesys_ip"]) as gen:
         with prologix_connection() as p:
-            with gigatronics(prologix_instance=p, address=7) as g:
+            with gigatronics(
+                prologix_instance=p, address=config_dict["gigatronics_adress"]
+            ) as g:
                 with Bridge12() as b:
                     with LakeShore475(p) as h:
                         sock = socket.socket(
@@ -71,7 +95,10 @@ def main():
                                             print("SETTING TO...", last_power)
                                             b.set_power(last_power)
                                             for j in range(30):
-                                                if b.power_float() < last_power:
+                                                if (
+                                                    b.power_float()
+                                                    < last_power
+                                                ):
                                                     time.sleep(0.1)
                                                 else:
                                                     break
@@ -86,7 +113,9 @@ def main():
                                             while dBm_setting > last_power + 3:
                                                 last_power += 3
                                                 nsecs = -1 * time.time()
-                                                print("SETTING TO...", last_power)
+                                                print(
+                                                    "SETTING TO...", last_power
+                                                )
                                                 b.set_power(last_power)
                                                 for j in range(30):
                                                     if (
@@ -104,7 +133,9 @@ def main():
                                                     nsecs,
                                                     "seconds",
                                                 )
-                                        print("FINALLY - SETTING TO DESIRED POWER")
+                                        print(
+                                            "FINALLY - SETTING TO DESIRED POWER"
+                                        )
                                         nsecs = -1 * time.time()
                                         b.set_power(dBm_setting)
                                         for j in range(30):
@@ -127,133 +158,65 @@ def main():
                                         )  # B in G
                                         I_setting = (
                                             B0_des_G
-                                            * config_dict["current_v_field_A_G"]
+                                            * config_dict[
+                                                "current_v_field_A_G"
+                                            ]
                                         )
-                                        # ☐ TODO: this needs to be in
-                                        #         active.ini, not hardcoded
-                                        ramp_dt = 0.05  # Settling time at each ramping step (s)
                                         ramp_steps = I_setting * 2
-                                        # ☐ TODO: here, you need some type of
-                                        #         statement that throws an
-                                        #         error if we are asking for an
-                                        #         unreasonable current (i.e. we
-                                        #         need a software interlock).
-                                        #         This takes the place of
-                                        #         asking the user if they are
-                                        #         sure, which for a
-                                        #         continuously running server
-                                        #         isn't a reasonable mode of
-                                        #         operation
-                                        # ☐ TODO: this needs to be in
-                                        #         active.ini, not hardcoded
-                                        settle_initial_s = 60
-                                        # ☐ TODO: we don't want to do the
-                                        #         following *every* time we set
-                                        #         the field.
-                                        #         Rather, track a variable as
-                                        #         to whether or not we have
-                                        #         turned on the field, and then
-                                        #         do this.  ALSO: in a server
-                                        #         context, when turning on the
-                                        #         PS for the first time, we
-                                        #         should turn the current to
-                                        #         zero.
+                                        if I_setting > 25:
+                                            raise ValueError(
+                                                "Current is too high."
+                                            )
                                         try:
-                                            g.V_limit = 25.0
-                                            g.output = True
-                                            print("The power supply is on.")
+                                            if not gen.output:
+                                                gen.V_limit = 25.0
+                                                gen.output = True
+                                                gen.I_limit = 0
+                                                print(
+                                                    "The power supply is on."
+                                                )
                                         except:
                                             raise TypeError(
                                                 "The power supply is not"
                                                 " connected."
                                             )
-                                        # ☐ TODO: we do not always want to ramp
-                                        # from 0.  Rather, we should ramp from
-                                        # where we are at now to where we want
-                                        # to be.  This might be just one step.
-                                        # {{{ Ramping up the field
                                         logging.info("Ramping up the field")
                                         for I in np.linspace(
-                                            0.0, I_setting, ramp_steps
+                                            gen.I_meas, I_setting, ramp_steps
                                         ):
                                             gen.I_limit = I
-                                            time.sleep(ramp_dt)
+                                            time.sleep(config_dict["ramp_dt"])
                                         # }}}
-                                        # ☐ TODO: we are going to want to do
-                                        #         the following more than once,
-                                        #         so it probably makes sense to
-                                        #         define a function (up top in
-                                        #         the module) that does this --
-                                        #         accepting the config dict and
-                                        #         hall probe instance, or
-                                        #         whatever we need.
-                                        #         Then, in particular, if our
-                                        #         current was already at a
-                                        #         somewhat reasonable value
-                                        #         (e.g. say we're doing a field
-                                        #         sweep experiment)
                                         # {{{ now, adjust current_v_field_A_G
                                         #     to get the field we want,
                                         #     just once at the beginning
-                                        true_B0_G = h.field.to("T").magnitude * 1e4
-                                        logging.info(
-                                            "adjusting current_v_field_A_G from",
-                                            config_dict["current_v_field_A_G"],
+                                        time.sleep(
+                                            config_dict["settle_initial_s"]
                                         )
-                                        config_dict["current_v_field_A_G"] *= (
-                                            B0_des_G / true_B0_G
-                                        )
-                                        logging.info(
-                                            "to",
-                                            config_dict["current_v_field_A_G"],
-                                            "and settling again",
-                                        )
-                                        # ☐ TODO: this needs to come from active.ini
-                                        time.sleep(settle_initial_s)
-                                        I_setting = (
-                                            B0_des_G
-                                            * config_dict["current_v_field_A_G"]
-                                        )
-                                        gen.I_limit = I_setting
+                                        if (
+                                            abs(read_field_in_G(h) - B0_des_G)
+                                            > 0.8
+                                        ):
+                                            adjust_and_settle(B0_des_G)
+                                        true_B0_G = read_field_in_G(h)
                                         logging.info(
                                             "Your field is"
-                                            f" {h.field.to('T').magnitude * 1e4} G, and"
+                                            f" {true_B0_G} G, and"
                                             "the ratio of the field I want to the"
-                                            " one Iget is"
+                                            " one I get is"
                                             f" {B0_des_G / true_B0_G}\nIn other"
                                             " words, the discrepancy"
                                             f" is{true_B0_G - B0_des_G} G"
                                         )
-                                        # ☐ TODO: here I would reply with the
-                                        #         field too.  But see next
-                                        #         comment before trying this.
-                                    case b"GET_FIELD":
-                                        # ☐ TODO: this is not right.  All the
-                                        #         stuff printed is typically
-                                        #         ignored.  What you want to do
-                                        #         is reply to the client
-                                        #         program (the pulse program)
-                                        #         --> so conn.send (read other
-                                        #         usages in this file for
-                                        #         examples)
-                                        #         ALSO! This does not have an
-                                        #         argument, so it goes in the
-                                        #         next len(args) block 
-                                        try:
-                                            print(
-                                                "Your field is"
-                                                f" {h.field.to('T').magnitude * 1e4} G"
+                                        conn.send(
+                                            ("%0.2f" % true_B0_G).encode(
+                                                "ASCII"
                                             )
-                                        except:
-                                            raise ValueError(
-                                                "Hall probe is not connected",
-                                                "or the power supply is off",
-                                            )
+                                        )
                                     case _:
                                         raise ValueError(
                                             "I don't understand this 2 component"
-                                            " command:"
-                                            + str(args)
+                                            " command:" + str(args)
                                         )
                             elif len(args) == 1:
                                 match args[0]:
@@ -287,11 +250,26 @@ def main():
                                         this_logobj.reset()
                                     case b"MW_OFF":
                                         b.soft_shutdown()
+                                    case b"GET_FIELD":
+                                        # ☐ TODO: this is not right.  All the
+                                        #         stuff printed is typically
+                                        #         ignored.  What you want to do
+                                        #         is reply to the client
+                                        #         program (the pulse program)
+                                        #         --> so conn.send (read other
+                                        #         usages in this file for
+                                        #         examples)
+                                        #         ALSO! This does not have an
+                                        #         argument, so it goes in the
+                                        #         next len(args) block
+                                        result = read_field_in_G(h)
+                                        conn.send(
+                                            ("%0.2f" % result).encode("ASCII")
+                                        )
                                     case _:
                                         raise ValueError(
                                             "I don't understand this 1 component"
-                                            " command"
-                                            + str(args)
+                                            " command" + str(args)
                                         )
                             return leave_open
 
