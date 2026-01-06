@@ -83,7 +83,7 @@ def main():
                                     else:
                                         break
                                 nsecs += time.time()
-                                logging.info(f"took, {j}, tries and, {nsecs}, seconds")
+                                logging.debug(f"took, {j}, tries and, {nsecs}, seconds")
                                 while dBm_setting > last_power + 3:
                                     last_power += 3
                                     nsecs = -1 * time.time()
@@ -96,13 +96,7 @@ def main():
                                         else:
                                             break
                                     nsecs += time.time()
-                                    print(
-                                        "took",
-                                        j,
-                                        "tries and",
-                                        nsecs,
-                                        "seconds",
-                                    )
+                                    logging.debug(f"took, {j}, tries and, {nsecs}, seconds")
                             logging.info("FINALLY - SETTING TO DESIRED POWER of {dBm_setting}")
                             nsecs = -1 * time.time()
                             b.set_power(dBm_setting)
@@ -113,7 +107,7 @@ def main():
                                 else:
                                     break
                             nsecs += time.time()
-                            logging.info(f"took, {j}, tries and, {nsecs}, seconds")
+                            logging.debug(f"took, {j}, tries and, {nsecs}, seconds")
                         elif args[0] == b"SET_FREQ":
                             logging.debug(f"SET_FREQ to {args[1]}")
                             if not this_logobj.wg_has_been_flipped:
