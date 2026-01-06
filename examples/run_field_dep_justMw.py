@@ -9,7 +9,9 @@ the power_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print
 "I am listening..."
 """
+
 import pyspecdata as psd
+from pyspecdata import strm
 import time
 import logging
 import SpinCore_pp
@@ -37,9 +39,10 @@ right = (
 right = right + (config_dict["field_width"] / 2)
 assert right < 3700, "Are you crazy??? Field is too high!!!"
 assert left > 3300, "Are you crazy??? Field is too low!!!"
-field_axis = r_[left:right:1.0]
+print("I see", config_dict["indirect_pts"], "indirect points setting")
+field_axis = np.linspace(left, right, config_dict["indirect_pts"])
 myinput = input(
-    psd.strm("Your field axis is:", field_axis, "\nDoes this look okay?")
+    strm("Your field axis is:", field_axis, "\nDoes this look okay?")
 )
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
@@ -85,11 +88,8 @@ assert total_pts < 2**14, (
 # }}}
 # {{{Run field sweep
 with power_control() as p:
-    dip_f = p.dip_lock(
-        config_dict["uw_dip_center_GHz"] - config_dict["uw_dip_width_GHz"] / 2,
-        config_dict["uw_dip_center_GHz"] + config_dict["uw_dip_width_GHz"] / 2,
-    )
-    dip_f /= 1e9
+    p.set_power(10)
+    p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
     p.set_power(dB_settings)
     for k in range(10):
         time.sleep(0.5)
@@ -122,7 +122,7 @@ with power_control() as p:
         )
         myfreqs_fields = sweep_data.getaxis("indirect")
         myfreqs_fields[0]["Field"] = first_B0
-        myfreqs_fields[0]["carrierFreq"] = config_dict["carrierFreq_MHz"]
+        myfreqs_fields[0]["carrierFreq"] = carrierFreq_MHz
         for B0_index, desired_B0 in enumerate(field_axis[1:]):
             true_B0 = x_server.set_field(desired_B0)
             logging.info("My field in G is %f" % true_B0)
@@ -130,7 +130,7 @@ with power_control() as p:
             new_carrierFreq_MHz = config_dict["gamma_eff_MHz_G"] * true_B0
             myfreqs_fields[B0_index + 1]["Field"] = true_B0
             myfreqs_fields[B0_index + 1]["carrierFreq"] = new_carrierFreq_MHz
-            logging.info("My frequency in MHz is", new_carrierFreq_MHz)
+            logging.info(strm("My frequency in MHz is", new_carrierFreq_MHz))
             run_spin_echo(
                 nScans=config_dict["nScans"],
                 indirect_idx=B0_index + 1,

@@ -116,6 +116,11 @@ class power_control(object):
     def dip_lock(self, start_f, stop_f):
         """Runs dip lock using start_f and stop_f as freq range, leaves
         Bridge12 at resonance frequency"""
+        raise ValueError(
+            "error! we no longer use dip lock since we want a persistent"
+            " frequency, which you get by running the tuning GUI.  You need to"
+            " edit the script where this was thrown"
+        )
         self.send("DIP_LOCK %0.3f %0.3f" % (start_f, stop_f))
         retval = self.get(n_slow_tries=10)
         retval = float(retval)

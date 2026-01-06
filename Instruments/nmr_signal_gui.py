@@ -9,9 +9,9 @@ which is a good layout reference
 
 JF updated to plot a sine wave
 """
+
 from numpy import r_
 import numpy as np
-from .XEPR_eth import xepr as xepr_from_module
 import time
 import sys
 from PyQt5.QtWidgets import (
@@ -40,12 +40,36 @@ from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qt5agg as mplqt5
 from matplotlib.figure import Figure
+from Instruments import (
+    genesys,
+    LakeShore475,
+    prologix_connection,
+)
+
+V_limit = 25.0
+ramp_dt = 0.4
+ramp_I_step = 0.4
+settle_initial_s = 80
+
+
+def read_field_in_G(h):
+    "helper function to give the field in Gauss"
+    return h.field.to("T").magnitude * 1e4
 
 
 class NMRWindow(QMainWindow):
-    def __init__(self, xepr, myconfig, parent=None):
-        self.xepr = xepr
+    def __init__(
+        self, mygenesys, myLakeShore475, myconfig, parent=None, ini_field=None
+    ):
+        assert isinstance(mygenesys, genesys)
+        assert isinstance(myLakeShore475, LakeShore475)
+        self.g = mygenesys
         self.myconfig = myconfig
+        self.h = myLakeShore475
+        if ini_field is not None:
+            self.prev_field = (
+                ini_field  # prev_field is the last field that we *asked* for
+            )
         super().__init__(parent)
         self.setWindowTitle("NMR signal finder")
         self.setGeometry(20, 20, 1500, 800)
@@ -86,16 +110,24 @@ class NMRWindow(QMainWindow):
 
     def set_default_choices(self):
         self.textbox_apo.setText("10 ms")
+        self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
         self.textbox_apo.setMinimumWidth(10)
-        self.myconfig["SW_kHz"] = 200
+        self.textbox_plen.setMinimumWidth(10)
+        self.sw = 200
 
-    def on_textchange(self):
+    def on_apo_edit(self):
         print(
             "you changed your apodization to",
             self.textbox_apo.text(),
             "but I'm not yet programmed to do anything about that!",
         )
         self.apo_time_const = 10e-3
+        return
+
+    def on_plen_edit(self):
+        thetext = self.textbox_plen.text()
+        print("you changed your pulse length to", thetext, "s sqrt(W)")
+        self.myconfig["beta_90_s_sqrtW"] = float(thetext)
         return
 
     def on_pick(self, event):
@@ -110,26 +142,62 @@ class NMRWindow(QMainWindow):
 
         QMessageBox.information(self, "Click!", msg)
 
-    def set_field_conditional(self, Field):
+    def set_field_conditional(
+        self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
+    ):
+        """If the field is off by more min_change_Hz/γ_H*1e4, then change the
+        field.
+
+        If we are directly controlling the current, read the field from the
+        hall sensor and use it to adjust the current_v_field_A_G parameter.
+
+        There is no mention of the gamma_eff_MHz_G parameter in this code,
+        because that is adjusted by the `regen_plots` function (b/c that is
+        where we determine the signal peak, which we need in order to determine
+        the **actual** field, which comes not from the Hall probe, but from the
+        NMR signal.)
+
+        Parameters
+        ==========
+        min_change_Hz : float
+            The frequency offset that we are OK with (*i.e.* we expect a drift
+            of at least this much)
+        coarse_step_Hz : float
+            The frequency difference between which we switch between two
+            different mechanisms of changing the field (e.g. on the bruker,
+            there were two different commands, or for homebuilt, where we
+            plan on using main field vs. B₀ shim)
+        """
+        # {{{ if the field has been set before, pull our SETTING and
+        if hasattr(self, "prev_field"):
+            true_B0_G = read_field_in_G(self.h)
+            self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
+        # }}}
         if (
             hasattr(self, "prev_field")
-            and abs(Field - self.prev_field) > 50.0 / gammabar_H * 1e4
-            and abs(Field - self.prev_field) < 850.0 / gammabar_H * 1e4
+            and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
+            and abs(Field - self.prev_field)
+            < coarse_step_Hz / gammabar_H * 1e4
         ):
             print(
-                "You are trying to shift by an intermediate offset, so I'm"
-                " going to set the field slowly."
+                "You have an intermediate difference in field.  In the future,"
+                " we will use the shim stack to adjust for this difference"
             )
-            Field = self.xepr.set_field(Field)
-            self.prev_field = Field
         elif (
             hasattr(self, "prev_field")
-            and abs(Field - self.prev_field) < 50.0 / gammabar_H * 1e4
+            and abs(Field - self.prev_field) < min_change_Hz / gammabar_H * 1e4
         ):
-            print("You seem to be within 50 Hz, so I'm not changing the field")
+            print(
+                f"You seem to be within {min_change_Hz} Hz, so I'm not"
+                " changing the field"
+            )
         else:
-            Field = self.xepr.set_coarse_field(Field)
-            self.prev_field = Field
+            # we enter this block if we've been asked to make a coarse step
+            self.g.I_limit = Field * self.myconfig["current_v_field_A_G"]
+            time.sleep(10)  # settle for 10 s
+            self.prev_field = (
+                Field  # prev_field is the last field that we *asked* for
+            )
 
     def generate_data(self):
         # {{{let computer set field
@@ -148,8 +216,10 @@ class NMRWindow(QMainWindow):
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
         self.set_field_conditional(Field)
+        print("returned from set_field_conditional")
         # }}}
         # {{{acquire echo
+        print("about to run_spin_echo")
         self.echo_data = run_spin_echo(
             nScans=self.myconfig["nScans"],
             indirect_idx=0,
@@ -163,7 +233,7 @@ class NMRWindow(QMainWindow):
             repetition_us=self.myconfig["repetition_us"],
             amplitude=self.myconfig["amplitude"],
             tau_us=self.myconfig["tau_us"],
-            SW_kHz=self.myconfig["SW_kHz"],
+            SW_kHz=self.sw,
             ret_data=None,
         )
         # }}}
@@ -215,10 +285,7 @@ class NMRWindow(QMainWindow):
         filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
             -abs(
-                (
-                    self.echo_data.fromaxis("t2")
-                    - self.myconfig["tau_us"] * 1e-6
-                )
+                self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
             )
             / filter_timeconst
         )
@@ -231,9 +298,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set(
-                    (longest_dim,)
-                )
+                all_but_longest = set(range(len(myy.data.shape))) ^ set((
+                    longest_dim,
+                ))
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
@@ -326,15 +393,17 @@ class NMRWindow(QMainWindow):
         #     button
         self.bottomleft_vbox = QVBoxLayout()
         self.textbox_apo = QLineEdit()
+        self.textbox_plen = QLineEdit()
         self.combo_sw = QComboBox()
-        self.combo_sw.addItem("200")
-        self.combo_sw.addItem("24")
-        self.combo_sw.addItem("3.9")
+        for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
+            self.combo_sw.addItem(str(j))
         self.combo_sw.activated[str].connect(self.SW_changed)
         self.set_default_choices()
         self.bottomleft_vbox.addWidget(self.combo_sw)
-        self.textbox_apo.editingFinished.connect(self.on_textchange)
+        self.textbox_apo.editingFinished.connect(self.on_apo_edit)
+        self.textbox_plen.editingFinished.connect(self.on_plen_edit)
         self.bottomleft_vbox.addWidget(self.textbox_apo)
+        self.bottomleft_vbox.addWidget(self.textbox_plen)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -364,7 +433,7 @@ class NMRWindow(QMainWindow):
             (9819000, self.slider_min),
             (9825000, self.slider_max),
         ]:
-            self.on_textchange()
+            self.on_apo_edit()
             w.setValue(ini_val)
             w.setTracking(True)
             w.setTickPosition(QSlider.TicksBothSides)
@@ -389,9 +458,8 @@ class NMRWindow(QMainWindow):
         self.setCentralWidget(self.main_frame)
 
     def SW_changed(self, arg):
-        my_sw = {"200": 200.0, "24": 24.0, "3.9": 3.9}
-        self.myconfig["SW_kHz"] = my_sw[arg]
-        print("changing SW to", self.myconfig["SW_kHz"])
+        self.sw = np.round(float(arg), 1)
+        print("changing SW to", self.sw)
 
     def create_status_bar(self):
         self.status_text = QLabel("This is a demo")
@@ -456,8 +524,43 @@ class NMRWindow(QMainWindow):
 def main():
     myconfig = SpinCore_pp.configuration("active.ini")
     app = QApplication(sys.argv)
-    with xepr_from_module() as x:
-        tunwin = NMRWindow(x, myconfig)
-        tunwin.show()
-        app.exec_()
+    B0_from_carrier_G = (
+        myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
+    )
+    I_setting = B0_from_carrier_G * myconfig["current_v_field_A_G"]
+    with genesys("192.168.0.199") as g:
+        with prologix_connection() as pro_log:
+            with LakeShore475(pro_log) as h:
+                if not g.output:
+                    g.V_limit = V_limit
+                    g.I_limit = 0
+                    g.output = True
+                # {{{ ramp up the field
+                print("Ramping up the field")
+                for I in r_[
+                    r_[g.I_limit : I_setting : ramp_I_step], I_setting
+                ]:
+                    g.I_limit = I
+                    time.sleep(ramp_dt)
+                print(f"Settling for {settle_initial_s:.0f} s")
+                time.sleep(settle_initial_s)
+                # }}}
+                # {{{ now, adjust  current_v_field_A_G to get the field we
+                #     want, just once at the beginning
+                myconfig[
+                    "current_v_field_A_G"
+                ] *= B0_from_carrier_G / read_field_in_G(h)
+                g.I_limit = B0_from_carrier_G * myconfig["current_v_field_A_G"]
+                time.sleep(settle_initial_s)
+                # {{{ and adjust again, since this doesn't cost any significant
+                #     time
+                myconfig[
+                    "current_v_field_A_G"
+                ] *= B0_from_carrier_G / read_field_in_G(h)
+                # }}}
+                tunwin = NMRWindow(
+                    g, h, myconfig, ini_field=read_field_in_G(h)
+                )
+                tunwin.show()
+                app.exec_()
     myconfig.write()
