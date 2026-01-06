@@ -1,8 +1,9 @@
 ## coding: utf-8
 # ## Initialization
 #
-# To run on a different computer, run ``jupyter notebook --ip='*'`` copy and paste address and replace ``localhost`` with
-# ``jmfranck-pi2.syr.edu`` (if on the internet) or ``192.168.1.20`` (if on local network)
+# To run on a different computer, run ``jupyter notebook --ip='*'`` copy and
+# paste address and replace ``localhost`` with ``jmfranck-pi2.syr.edu`` (if on
+# the internet) or ``192.168.1.20`` (if on local network)
 from serial.tools.list_ports import comports
 from serial import Serial
 from numpy import r_
@@ -18,24 +19,32 @@ def generate_beep(f, dur):
 
 class Bridge12(Serial):
     def __init__(self, *args, **kwargs):
-        # Grab the port labeled as Arduino (since the Bridge12 microcontroller is an Arduino)
+        # Grab the port labeled as Arduino (since the Bridge12 microcontroller
+        # is an Arduino)
         cport = comports()
         if type(cport) is list and hasattr(cport[0], "device"):
-            portlist = [j.device for j in comports() if "Arduino Due" in j.description]
+            portlist = [
+                j.device for j in comports() if "Arduino Due" in j.description
+            ]
         elif type(next(cport)) is tuple:
             logger.debug("using fallback comport method")
             portlist = [j[0] for j in comports() if "Arduino Due" in j[1]]
         else:
             raise RuntimeError("Not sure how how to grab the USB ports!!!")
-        assert (
-            len(portlist) == 1
-        ), "I need to see exactly one Arduino Due hooked up to the Raspberry Pi"
+        assert len(portlist) == 1, (
+            "I need to see exactly one Arduino Due hooked up to the"
+            " Raspberry Pi"
+        )
         thisport = portlist[0]
         super().__init__(thisport, timeout=3, baudrate=115200)
         # this number represents the highest possible reasonable value for the
         # Rx power -- it is lowered as we observe the Tx values
         # 1/8/24 updated to give as a 10*dBm value
-        self.safe_rx_level_int = 180  # see https://jmfrancklab.slack.com/archives/CLMMYDD98/p1704996597531449?thread_ts=1704981852.441149&cid=CLMMYDD98
+        self.safe_rx_level_int = (
+            180  # see https://jmfrancklab.slack.com/archives/CLMMYDD98\
+            #          /p1704996597531449?thread_ts=1704981852.441149&\
+            #          cid=CLMMYDD98
+        )
         self.frq_sweep_10dBm_has_been_run = False
         self.tuning_curve_data = {}
         self._inside_with_block = False
@@ -46,7 +55,9 @@ class Bridge12(Serial):
         # time.sleep(5)
         def look_for(this_str):
             for j in range(1000):
-                a = self.read_until((this_str + "\r\n").encode("utf-8")).decode("utf-8")
+                a = self.read_until(
+                    (this_str + "\r\n").encode("utf-8")
+                ).decode("utf-8")
                 time.sleep(0.1)
                 logger.debug("look for " + this_str + " try" + str(j + 1))
                 if this_str in a:
@@ -112,7 +123,8 @@ class Bridge12(Serial):
             if result == setting:
                 return
         raise RuntimeError(
-            "After checking status 10 times, I can't get the waveguide to change"
+            "After checking status 10 times, I can't get the waveguide to"
+            " change"
         )
 
     def ampstatus_int_singletry(self):
@@ -145,7 +157,8 @@ class Bridge12(Serial):
             if result == setting:
                 return
         raise RuntimeError(
-            "After checking status 10 times, I can't get the amplifier to turn on/off"
+            "After checking status 10 times, I can't get the amplifier to turn"
+            " on/off"
         )
 
     def rfstatus_int_singletry(self):
@@ -177,7 +190,8 @@ class Bridge12(Serial):
             if result == setting:
                 return
         raise RuntimeError(
-            "After checking status 10 times, I can't get the mw power to turn on/off"
+            "After checking status 10 times, I can't get the mw power to turn"
+            " on/off"
         )
 
     def power_int_singletry(self):
@@ -206,11 +220,13 @@ class Bridge12(Serial):
         _ = self.readline()  # gobble the power updated statement
 
     def set_power(self, dBm):
-        """set *and check* power.  On successful completion, set `self.cur_pwr_int` to 10*(power in dBm).
+        """set *and check* power.  On successful completion, set
+        `self.cur_pwr_int` to 10*(power in dBm).
 
         Need to have 2 safeties for set_power:
 
-        1. When power is increased above 10dBm, the power is not allowed to increase by more than 3dBm above the current power.
+        1. When power is increased above 10dBm, the power is not allowed to
+           increase by more than 3dBm above the current power.
         2. When increasing the power, call the power reading function.
 
         Parameters
@@ -229,22 +245,29 @@ class Bridge12(Serial):
         )  # find closest 0.5 dBm, and round
         if setting > 400:
             raise ValueError(
-                "You are not allowed to use this function to set a power of greater than 40 dBm for safety reasons"
+                "You are not allowed to use this function to set a power of"
+                " greater than 40 dBm for safety reasons"
             )
         elif setting < 0:
             raise ValueError("Negative dBm -- not supported")
         elif setting > 100:
             if not self.frq_sweep_10dBm_has_been_run:
                 raise RuntimeError(
-                    "Before you try to set the power above 10 dBm, you must first run a tuning curve at 10 dBm!!!"
+                    "Before you try to set the power above 10 dBm, you must"
+                    " first run a tuning curve at 10 dBm!!!"
                 )
             if not hasattr(self, "cur_pwr_int"):
                 raise RuntimeError(
-                    "Before you try to set the power above 10 dBm, you must first set a lower power!!!"
+                    "Before you try to set the power above 10 dBm, you must"
+                    " first set a lower power!!!"
                 )
             if setting > 30 + self.cur_pwr_int:
                 raise RuntimeError(
-                    "Once you are above 10 dBm, you must raise the power in MAX 3 dB increments.  The power is currently %g, and you tried to set it to %g -- this is not allowed!\nNote that if you are running from the power control server, you shouldn't encounter this error!"
+                    "Once you are above 10 dBm, you must raise the power in"
+                    " MAX 3 dB increments.  The power is currently %g, and you"
+                    " tried to set it to %g -- this is not allowed!\nNote that"
+                    " if you are running from the power control server, you"
+                    " shouldn't encounter this error!"
                     % (self.cur_pwr_int / 10.0, setting / 10.0)
                 )
         self.write(b"power %d\r" % setting)
@@ -260,20 +283,19 @@ class Bridge12(Serial):
                 return
             time.sleep(10e-3)
         raise RuntimeError(
-            (
-                "After checking status 10 times, I can't get the"
-                "power to change: I'm trying to set to %d/10 dBm, but the Bridge12"
-                "keeps replying saying that it's set to %d/10"
-                "dBm"
-            )
-            % (setting, result)
+            "After checking status 10 times, I can't get the"
+            "power to change: I'm trying to set to %d/10 dBm, but the Bridge12"
+            "keeps replying saying that it's set to %d/10"
+            "dBm" % (setting, result)
         )
 
     def rxpowerdbm_float(self):
         """read the integer value for the Rx power -- loops three times to
         check a consistent Rx is being read.
 
-        If all three tries are above safe_rx_level_int, triggers a safety interlock."""
+        If all three tries are above safe_rx_level_int, triggers a safety
+        interlock.
+        """
         self.reset_input_buffer()
 
         def grab_consist_value():
@@ -290,8 +312,8 @@ class Bridge12(Serial):
                 else:
                     rx_try1, rx_try2 = rx_try2, rx_try3
             raise ValueError(
-                "I tried 20 times to grab a consistent power, and could not (most recent %f, %f, %f)"
-                % (rx_try1, rx_try2, rx_try3)
+                "I tried 20 times to grab a consistent power, and could not"
+                " (most recent %f, %f, %f)" % (rx_try1, rx_try2, rx_try3)
             )
 
         retval = grab_consist_value()
@@ -331,12 +353,12 @@ class Bridge12(Serial):
         """
         if hasattr(self, "freq_bounds"):
             assert Hz >= self.freq_bounds[0], (
-                "You are trying to set the frequency outside the frequency bounds, which are: "
-                + str(self.freq_bounds)
+                "You are trying to set the frequency outside the frequency"
+                " bounds, which are: " + str(self.freq_bounds)
             )
             assert Hz <= self.freq_bounds[1], (
-                "You are trying to set the frequency outside the frequency bounds, which are: "
-                + str(self.freq_bounds)
+                "You are trying to set the frequency outside the frequency"
+                " bounds, which are: " + str(self.freq_bounds)
             )
         setting = int(Hz / 1e3 + 0.5)
         self.write(b"freq %d\r" % (setting))
@@ -347,7 +369,8 @@ class Bridge12(Serial):
                     return
             raise RuntimeError(
                 "After checking status 10 times, I can't get the "
-                "frequency to change -- result is %d setting is %d" % (result, setting)
+                "frequency to change -- result is %d setting is %d"
+                % (result, setting)
             )
 
     def get_freq(self):
@@ -395,21 +418,30 @@ class Bridge12(Serial):
                 try:
                     retval = int(retval)
                     success = True
-                except:
+                except Exception:
                     print(
                         "WARNING (robust try",
                         j,
-                        '): B12 is spewing garbage!!: "' + retval.decode() + '"',
+                        '): B12 is spewing garbage!!: "'
+                        + retval.decode()
+                        + '"',
                     )
             if success:
                 return retval
             else:
-                self.reset_input_buffer()  # we want to be able to change the power using the MPS front panel,
-                #                           and when we do this, the MPS likes to spew garbage
-                #                           NOTE: I can check for stuff by looking at in_waiting,
-                #                                 but I need to remember that it takes time after a write
-                #                                 command for stuff to move into the buffer
-        raise ValueError("I tried running 10 times and couldn't get an integer!!!")
+                self.reset_input_buffer()  # we want to be able to change the
+                #                            power using the MPS front panel,
+                #                            and when we do this, the MPS likes
+                #                            to spew garbage
+                #                            NOTE: I can check for stuff by
+                #                                  looking at in_waiting, but I
+                #                                  need to remember that it
+                #                                  takes time after a write
+                #                                  command for stuff to move
+                #                                  into the buffer
+        raise ValueError(
+            "I tried running 10 times and couldn't get an integer!!!"
+        )
 
     def freq_sweep(self, freq, dummy_readings=1, fast_run=False):
         """Sweep over an array of frequencies.
@@ -428,17 +460,22 @@ class Bridge12(Serial):
         Returns
         =======
         rxvalues: array
-            An array of floats, same length as freq, containing the receiver (reflected) power in dBm at each frequency.
+            An array of floats, same length as freq, containing the receiver
+            (reflected) power in dBm at each frequency.
         txvalues: array
-            An array of floats, same length as freq, containing the transmitted power in dBm at each frequency.
+            An array of floats, same length as freq, containing the transmitted
+            power in dBm at each frequency.
         """
-        self.write(b"screen 2\r")  # change to the screen that shows the reflection
+        self.write(
+            b"screen 2\r"
+        )  # change to the screen that shows the reflection
         rxvalues = np.zeros(len(freq))
         txvalues = np.zeros(len(freq))
         if not self.frq_sweep_10dBm_has_been_run:
             if self.cur_pwr_int != 100:
                 raise ValueError(
-                    "You must run the frequency sweep for the first time at 10 dBm"
+                    "You must run the frequency sweep for the first time at"
+                    " 10 dBm"
                 )
         # FREQUENCY AND RXPOWER SWEEP
         for j in range(dummy_readings):
@@ -451,7 +488,8 @@ class Bridge12(Serial):
             _ = self.txpowerdbm_float()
             _ = (
                 self.rxpowerdbm_float()
-            )  # 1/8/24: didn't know why this was here, probably for safety interlock
+            )  # 1/8/24: didn't know why this was here, probably for safety
+            #            interlock
         self.reset_input_buffer()
         for j, f in enumerate(freq):
             generate_beep(500, 300)
@@ -461,7 +499,8 @@ class Bridge12(Serial):
         if self.cur_pwr_int == 100:
             self.frq_sweep_10dBm_has_been_run = True
             # reset the safe rx level to the top of the tuning curve at 10 dBm
-            # (this is the condition where we are reflecting 10 dBm onto the Rx diode)
+            # (this is the condition where we are reflecting 10 dBm onto the Rx
+            # diode)
             # self.safe_rx_level_int = int(10*rxvalues.max())
         sweep_name = "%gdBm" % (self.cur_pwr_int / 10.0)
         self.tuning_curve_data[sweep_name + "_tx"] = txvalues
@@ -485,8 +524,8 @@ class Bridge12(Serial):
         3.  Make sure that we actually see a *dip* in the middle.
 
             For this and the previous step, we use the middle of the middle of
-            the y-axis values (which we call the "midpoint") -- the dip is the stuff
-            that falls under the "midpoint"
+            the y-axis values (which we call the "midpoint") -- the dip is the
+            stuff that falls under the "midpoint"
         4.  Run a new frequency sweep over just the dip.
         5.  Call the zoom function to zoom in on the dip.
         """
@@ -499,13 +538,17 @@ class Bridge12(Serial):
                 self.set_amp(True)
                 freq = r_[ini_range[0] : ini_range[1] : ini_step]
                 logger.info(
-                    "ini range: " + str(ini_range) + "ini step: " + str(ini_step)
+                    "ini range: "
+                    + str(ini_range)
+                    + "ini step: "
+                    + str(ini_step)
                 )
                 logger.info("Did not find previous 10 dBm run, running now")
                 self.set_power(10.0)
                 rx, tx = self.freq_sweep(freq)
             rx_dBm, freq = [
-                self.tuning_curve_data["%gdBm_%s" % (10.0, j)] for j in ["rx", "freq"]
+                self.tuning_curve_data["%gdBm_%s" % (10.0, j)]
+                for j in ["rx", "freq"]
             ]
             rx_midpoint = (max(rx_dBm) + min(rx_dBm)) / 2.0
             # is the first rx_dBm higher than the midpoint (rx_dBm of
@@ -522,24 +565,30 @@ class Bridge12(Serial):
                 # flag an error so that we need
                 # to try to reengage the wg.
                 result = input(
-                    "Couldn't find the midpoint; maybe the wg didn't turn on completely. If you'd like me to try again type 'y', if not type 'n' or CTRL-C"
+                    "Couldn't find the midpoint; maybe the wg didn't turn on"
+                    " completely. If you'd like me to try again type 'y', if"
+                    " not type 'n' or CTRL-C"
                 )
                 if result.lower().startswith("y"):
                     wg_engaged = False
-                    self.frq_sweep_10dBm_has_been_run = False # we don't trust the 10dBm guy that was run
+                    self.frq_sweep_10dBm_has_been_run = (
+                        False  # we don't trust the 10dBm guy that was run
+                    )
                 else:
                     self.set_rf(False)
                     self.set_wg(False)
                     raise ValueError(
-                        "The reflection of the first point is the same or lower than the rx_dBm of the dip, which doesn't make sense -- check %gdBm_%s"
-                        % (10.0, rx_dBm)
+                        "The reflection of the first point is the same or"
+                        " lower than the rx_dBm of the dip, which doesn't make"
+                        " sense -- check %gdBm_%s" % (10.0, rx_dBm)
                     )
-        assert (
-            self.frq_sweep_10dBm_has_been_run
-        ), "I should have run the 10 dBm curve -- not sure what happened"
+        assert self.frq_sweep_10dBm_has_been_run, (
+            "I should have run the 10 dBm curve -- not sure what happened"
+        )
         over_diff = r_[
             0, np.diff(np.int32(over_bool))
-        ]  # should indicate whether this position has lifted over (+1) or dropped under (-1) the midpoint
+        ]  # should indicate whether this position has lifted over (+1) or
+        #    dropped under (-1) the midpoint
         over_idx = r_[0 : len(over_diff)]
         # store the indices at the start and stop of a dip
         start_dip = (
@@ -552,15 +601,20 @@ class Bridge12(Serial):
             stop_dip = r_[stop_dip, over_idx[-1]]  # end on a dip
         if len(stop_dip) != len(start_dip):
             raise ValueError(
-                "the dip starts and stops don't line up, and I'm not sure why!!"
+                "the dip starts and stops don't line up, and I'm not sure"
+                " why!!"
             )
         largest_dip_idx = (stop_dip - start_dip).argmax()
-        if (largest_dip_idx == len(start_dip) - 1) and (stop_dip[-1] == over_idx[-1]):
+        if (largest_dip_idx == len(start_dip) - 1) and (
+            stop_dip[-1] == over_idx[-1]
+        ):
             raise ValueError(
-                "The trace ends in the largest dip -- this is not allowed -- check %gdBm_%s"
-                % (10.0, "rx")
+                "The trace ends in the largest dip -- this is not allowed --"
+                " check %gdBm_%s" % (10.0, "rx")
             )
-        self.set_power(11.0)  # move to 11 dBm, just to distinguish the trace name
+        self.set_power(
+            11.0
+        )  # move to 11 dBm, just to distinguish the trace name
         self.freq_bounds = freq[
             r_[start_dip[largest_dip_idx], stop_dip[largest_dip_idx]]
         ]
@@ -573,33 +627,44 @@ class Bridge12(Serial):
 
     def zoom(self, dBm_increment=2, n_freq_steps=15):
         """
-        1.  Pull the last frequency sweep that was run, and fit it to a 2^nd^ order polynomial:
+        1.  Pull the last frequency sweep that was run, and fit it to a 2^nd^
+            order polynomial:
             :math:`rx(\\nu) = a+b\\nu+c\\nu^2`
-        2.  Use the polynomial to determine the center frequency (:math:`-\\frac{b}{2c}`).
-        3.  Find the roots of :math:`rx(\\nu)-rx_{target}`, where :math:`rx_{target}` gives
-            the rx reading, at the current power setting, that we predict will correspond to
-            the max "safe" level (`safe_rx`) of the rx *after* we have increased by :math:`dBm_{increment}`
-            -- *i.e.* this targets the result noted in step #4
-        4.  Run a new frequency sweep between the two frequencies where we predict :math:`rx(\\nu)` to be equal to :math:`rx_{safe}`.
-            **If everything went well, the new reflection profile will run over a more limited (zoomed) frequency range,
-            starting with a reflection profile corresponding to approximately `safe_rx`, falling to a minimum reflection
-            at `min_f`, and rise back to approximately `safe_rx`**
+        2.  Use the polynomial to determine the center frequency
+            (:math:`-\\frac{b}{2c}`).
+        3.  Find the roots of :math:`rx(\\nu)-rx_{target}`, where
+            :math:`rx_{target}` gives the rx reading, at the current power
+            setting, that we predict will correspond to the max "safe" level
+            (`safe_rx`) of the rx *after* we have increased by
+            :math:`dBm_{increment}` -- *i.e.* this targets the result noted in
+            step #4
+        4.  Run a new frequency sweep between the two frequencies where we
+            predict :math:`rx(\\nu)` to be equal to :math:`rx_{safe}`. **If
+            everything went well, the new reflection profile will run over a
+            more limited (zoomed) frequency range, starting with a reflection
+            profile corresponding to approximately `safe_rx`, falling to a
+            minimum reflection at `min_f`, and rise back to approximately
+            `safe_rx`**
 
         Return
         ======
         rx: array
-            the rx readings of the zoomed frequency sweep conducted at current power + dBm_increment
+            the rx readings of the zoomed frequency sweep conducted at current
+            power + dBm_increment
         tx: array
-            the tx readings of the zoomed frequency sweep conducted at current power + dBm_increment
+            the tx readings of the zoomed frequency sweep conducted at current
+            power + dBm_increment
         min_f: float
             the frequency at which the zoomed frequency sweep is minimized
         """
-        assert (
-            self.frq_sweep_10dBm_has_been_run
-        ), "You're trying to run zoom before you ran a frequency sweep at 10 dBm -- something is wonky!!!"
-        assert hasattr(
-            self, "freq_bounds"
-        ), "you probably haven't run lock_on_dip, which you need to do before zoom"
+        assert self.frq_sweep_10dBm_has_been_run, (
+            "You're trying to run zoom before you ran a frequency sweep at 10"
+            " dBm -- something is wonky!!!"
+        )
+        assert hasattr(self, "freq_bounds"), (
+            "you probably haven't run lock_on_dip, which you need to do before"
+            " zoom"
+        )
         # {{{ fit the mV values
         # start by pulling the data from the last tuning curve
         rx, tx, freq = [
@@ -609,13 +674,17 @@ class Bridge12(Serial):
         p = np.polyfit(freq, rx, 2)
         c, b, a = p
         # polynomial of form a+bx+cx^2
-        self.fit_data[self.last_sweep_name + "_func"] = lambda x: a + b * x + c * x**2
+        self.fit_data[self.last_sweep_name + "_func"] = (
+            lambda x: a + b * x + c * x**2
+        )
         self.fit_data[self.last_sweep_name + "_range"] = freq[r_[0, -1]]
-        # the following should be decided from doing algebra (I haven't double-checked them)
+        # the following should be decided from doing algebra (I haven't
+        # double-checked them)
         center = -b / 2 / c
         logger.info("Predicted center frequency: " + str(center * 1e-9))
         # }}}
-        # {{{ use the parabola fit to determine the new "safe" bounds for the next sweep
+        # {{{ use the parabola fit to determine the new "safe" bounds for the
+        #     next sweep
         safe_rx = 7.0  # dBm, setting based off of values seeing in tests
         a_new = a - (safe_rx - dBm_increment)  # following the
         #                                     docstring
@@ -625,13 +694,23 @@ class Bridge12(Serial):
         #                                     rx before stepping
         #                                     up in power
         safe_crossing = (
-            (-b + r_[-np.sqrt(b**2 - 4 * a_new * c), np.sqrt(b**2 - 4 * a_new * c)])
+            (
+                -b
+                + r_[
+                    -np.sqrt(b**2 - 4 * a_new * c),
+                    np.sqrt(b**2 - 4 * a_new * c),
+                ]
+            )
             / 2
             / c
         )
         safe_crossing.sort()
         start_f, stop_f = safe_crossing
-        info_str = "dB value should be %g at %g and %g" % (safe_rx, start_f, stop_f)
+        info_str = "dB value should be %g at %g and %g" % (
+            safe_rx,
+            start_f,
+            stop_f,
+        )
         if start_f < self.freq_bounds[0]:
             start_f = self.freq_bounds[0]
             info_str += ", leaving start_f at %g" % start_f
@@ -643,7 +722,8 @@ class Bridge12(Serial):
         # {{{ run the frequency sweep with the new limits
         freq = np.linspace(start_f, stop_f, n_freq_steps)
         self.set_power(dBm_increment + self.cur_pwr_int / 10.0)
-        # with the new time constant added for freq_sweep, should we eliminate fast_run?
+        # with the new time constant added for freq_sweep, should we eliminate
+        # fast_run?
         rx, tx = self.freq_sweep(freq, fast_run=True)
         # }}}
         min_f = freq[rx.argmin()]
@@ -679,7 +759,8 @@ class Bridge12(Serial):
             self.set_power(0)
         except Exception as e:
             print(
-                "error on standard shutdown during set_power -- running fallback shutdown"
+                "error on standard shutdown during set_power -- running"
+                " fallback shutdown"
             )
             print("original error:")
             print(e)
@@ -694,7 +775,8 @@ class Bridge12(Serial):
             self.set_amp(False)
         except Exception as e:
             print(
-                "error on standard shutdown during set_rf -- running fallback shutdown"
+                "error on standard shutdown during set_rf -- running fallback"
+                " shutdown"
             )
             print("original error:")
             print(e)
@@ -708,7 +790,8 @@ class Bridge12(Serial):
             self.set_wg(False)
         except Exception as e:
             print(
-                "error on standard shutdown during set_wg -- running fallback shutdown"
+                "error on standard shutdown during set_wg -- running fallback"
+                " shutdown"
             )
             print("original error:")
             print(e)
