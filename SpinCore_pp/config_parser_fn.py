@@ -11,7 +11,9 @@ class configuration(object):
     yaml_path = resources.files(__package__).joinpath("config_params.yaml")
     with resources.as_file(yaml_path) as registered_params_source:
         type_lookup = {"float": float, "int": int, "str": str}
-        with open(registered_params_source, "r") as param_file:
+        with open(
+            registered_params_source, "r", encoding="utf-8"
+        ) as param_file:
             loaded_params = yaml.safe_load(param_file)
     registered_params = {}
     for paramname in loaded_params.keys():
