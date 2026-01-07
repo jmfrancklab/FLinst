@@ -129,7 +129,7 @@ class power_control(object):
         if freq < 1e9:
             raise ValueError(
                 "You specified a value of less than 1 GHz, which"
-                "you almost certainly don't mean!!!"
+                " you almost certainly don't mean!!!"
             )
         self.send("SET_FREQ %f" % freq)
         return
