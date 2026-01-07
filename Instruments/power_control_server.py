@@ -9,7 +9,6 @@ from Instruments import (
     genesys,
 )
 import SpinCore_pp
-import logging
 import numpy as np
 
 IP = "0.0.0.0"
@@ -21,21 +20,14 @@ def read_field_in_G(h):
     return h.field.to("T").magnitude * 1e4
 
 
-def adjust_and_settle(B0_des_G, config_dict, h, gen):
+def adjust_field(B0_des_G, config_dict, h, gen):
     true_B0_G = read_field_in_G(h)
-    logging.info(
+    logging.debug(
         "adjusting current_v_field_A_G from",
         config_dict["current_v_field_A_G"],
     )
     config_dict["current_v_field_A_G"] *= B0_des_G / true_B0_G
-    logging.info(
-        "to",
-        config_dict["current_v_field_A_G"],
-        "and settling again for",
-        config_dict["settle_initial_s"],
-        "s",
-    )
-    time.sleep(config_dict["settle_initial_s"])
+    logging.debug("to", config_dict["current_v_field_A_G"])
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     gen.I_limit = I_setting
 
@@ -112,7 +104,8 @@ def main():
                                             f"SET_POWER to {args[1]}"
                                         )
                                         if not this_logobj.wg_has_been_flipped:
-                                            # {{{ then I need to turn everything on
+                                            # {{{ then I need to turn
+                                            #     everything on
                                             b.set_wg(True)
                                             b.set_rf(True)
                                             b.set_amp(True)
@@ -142,14 +135,15 @@ def main():
                                                     break
                                             nsecs += time.time()
                                             logging.debug(
-                                                f"took, {j}, tries and, {nsecs},"
-                                                " seconds"
+                                                f"took, {j}, tries and,"
+                                                f"{nsecs}, seconds"
                                             )
                                             while dBm_setting > last_power + 3:
                                                 last_power += 3
                                                 nsecs = -1 * time.time()
                                                 logging.info(
-                                                    f"SETTING TO... {last_power}"
+                                                    "SETTING TO..."
+                                                    f" {last_power}"
                                                 )
                                                 b.set_power(last_power)
                                                 logging.debug(
@@ -169,8 +163,8 @@ def main():
                                                     f" {nsecs}, seconds"
                                                 )
                                         logging.info(
-                                            "FINALLY - SETTING TO DESIRED POWER of"
-                                            " {dBm_setting}"
+                                            "FINALLY - SETTING TO DESIRED"
+                                            "POWER of {dBm_setting}"
                                         )
                                         nsecs = -1 * time.time()
                                         b.set_power(dBm_setting)
@@ -198,22 +192,29 @@ def main():
                                         current_power = b.power_float()
                                         if current_power > 10:
                                             raise ValueError(
-                                                "to manually set the power, you"
+                                                "to manually set the"
+                                                " frequency, you"
                                                 " must be at 10 dBm or less!"
+                                                " Otherwise, you risk leaving"
+                                                " the low-reflection dip, and"
+                                                " sending all your power back"
+                                                " at the amp!!"
                                             )
                                         b.set_freq(float(args[1]))
                                     case b"SET_FIELD":
-                                        B0_des_G = (
-                                            config_dict["carrierFreq_MHz"]
-                                            / config_dict["gamma_eff_mhz_g"]
-                                        )  # B in G
+                                        B0_des_G = float(args[1])  # B in G
                                         I_setting = (
                                             B0_des_G
                                             * config_dict[
                                                 "current_v_field_A_G"
                                             ]
                                         )
-                                        ramp_steps = I_setting * 2
+                                        # {{{ First, we ramp from whatever
+                                        #     our current is (zero or not)
+                                        #     to where we think we want to
+                                        #     be, allowing for the
+                                        #     possibility that it might be a
+                                        #     large change
                                         if I_setting > 25:
                                             raise ValueError(
                                                 "Current is too high."
@@ -226,37 +227,67 @@ def main():
                                                 print(
                                                     "The power supply is on."
                                                 )
-                                        except:
+                                        except Exception:
                                             raise TypeError(
                                                 "The power supply is not"
                                                 " connected."
                                             )
-                                        logging.info("Ramping up the field")
+                                        temp_I_meas = gen.I_meas
+                                        ramp_steps = int(
+                                            (I_setting - temp_I_meas) * 2
+                                        )
+                                        logging.info(
+                                            "Ramping the field from"
+                                            f" {gen.I_meas} to {I_setting}"
+                                        )
                                         for I in np.linspace(
-                                            gen.I_meas, I_setting, ramp_steps
+                                            temp_I_meas, I_setting, ramp_steps
                                         ):
                                             gen.I_limit = I
                                             time.sleep(config_dict["ramp_dt"])
+                                        if ramp_steps > 4:
+                                            time.sleep(
+                                                config_dict["settle_initial_s"]
+                                            )
                                         # }}}
                                         # {{{ now, adjust current_v_field_A_G
                                         #     to get the field we want,
                                         #     just once at the beginning
-                                        time.sleep(
-                                            config_dict["settle_initial_s"]
-                                        )
-                                        if (
-                                            abs(read_field_in_G(h) - B0_des_G)
-                                            > 0.8
-                                        ):
-                                            adjust_and_settle(B0_des_G)
+                                        # {{{ try to stabilize the field
+                                        #     within 0.8 G of our desired
+                                        #     value
+                                        num_field_matches = 0
+                                        for j in range(30):
+                                            time.sleep(config_dict["ramp_dt"])
+                                            if (
+                                                abs(
+                                                    read_field_in_G(h)
+                                                    - B0_des_G
+                                                )
+                                                > 0.8
+                                            ):
+                                                adjust_field(B0_des_G)
+                                                num_field_matches = 0
+                                            else:
+                                                num_field_matches += 1
+                                                if num_field_matches > 2:
+                                                    break
+                                        if num_field_matches < 3:
+                                            raise RuntimeError(
+                                                "I tried 30 times to get my"
+                                                " field to match within 0.8 G"
+                                                " three times in a row, and it"
+                                                " didn't work!"
+                                            )
+                                        # }}}
                                         true_B0_G = read_field_in_G(h)
                                         logging.info(
                                             "Your field is"
                                             f" {true_B0_G} G, and"
-                                            "the ratio of the field I want to the"
-                                            " one I get is"
-                                            f" {B0_des_G / true_B0_G}\nIn other"
-                                            " words, the discrepancy"
+                                            "the ratio of the field I want"
+                                            " to the one I get is"
+                                            f" {B0_des_G / true_B0_G}\nIn "
+                                            " other words, the discrepancy"
                                             f" is{true_B0_G - B0_des_G} G"
                                         )
                                         conn.send(
@@ -266,7 +297,8 @@ def main():
                                         )
                                     case _:
                                         raise ValueError(
-                                            "I don't understand this 2 component"
+                                            "I don't understand this 2"
+                                            " component"
                                             " command:" + str(args)
                                         )
                             elif len(args) == 1:
@@ -308,8 +340,8 @@ def main():
                                         )
                                     case _:
                                         raise ValueError(
-                                            "I don't understand this 1 component"
-                                            " command" + str(args)
+                                            "I don't understand this 1"
+                                            " component command" + str(args)
                                         )
                             return leave_open
 
@@ -330,21 +362,29 @@ def main():
                                     timelist.append(time.time())
                                     if oldtimeout is None:
                                         timelabels.append(
-                                            "set timeout to None on receiving command,"
+                                            "set timeout to None on"
+                                            " receiving command,"
                                             " '%s'" % (data)
                                         )
                                     else:
                                         timelabels.append(
-                                            "set timeout to %g on receiving command,"
-                                            " '%s'" % (oldtimeout, data)
+                                            "set timeout to %g on receiving"
+                                            " command, '%s'"
+                                            % (oldtimeout, data)
                                         )
                                     if len(data) > 0:
                                         for cmd in data.strip().split(b"\n"):
                                             timelist.append(time.time())
-                                            timelabels.append("about to process")
-                                            leave_open = process_cmd(cmd, this_logobj)
+                                            timelabels.append(
+                                                "about to process"
+                                            )
+                                            leave_open = process_cmd(
+                                                cmd, this_logobj
+                                            )
                                             timelist.append(time.time())
-                                            timelabels.append("processed %s" % cmd)
+                                            timelabels.append(
+                                                "processed %s" % cmd
+                                            )
                                     else:
                                         print("no data received")
                                         timelist.append(time.time())
@@ -355,8 +395,13 @@ def main():
                                             [
                                                 timelabels[j]
                                                 + " --> "
-                                                + str(timelist[j + 1] - timelist[j])
-                                                for j in range(len(timelist) - 1)
+                                                + str(
+                                                    timelist[j + 1]
+                                                    - timelist[j]
+                                                )
+                                                for j in range(
+                                                    len(timelist) - 1
+                                                )
                                             ]
                                             + [timelabels[-1]]
                                         )
