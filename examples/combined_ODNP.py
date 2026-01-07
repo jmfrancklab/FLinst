@@ -152,8 +152,8 @@ if os.path.exists(filename):
 # }}}
 # {{{run enhancement
 input(
-    "Plug the B12 in and start up the FLInst power control server"
-    "and set the magnetic field so we can continue"
+    "Plug the B12 in, start up the FLInst power control server"
+    "and turn the magnetic field on so we can continue"
 )
 with power_control() as p:
     # we do not dip lock or anything here, because we assume
