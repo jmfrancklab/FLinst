@@ -203,8 +203,9 @@ def main():
                                         b.set_freq(float(args[1]))
                                     case b"SET_FIELD":
                                         B0_des_G = float(args[1])  # B in G
-                                        # {{{ This block is for ramping down the
-                                        #     field to 0 and turning the PS off.
+                                        # {{{ This block is for ramping
+                                        # down the field to 0 and
+                                        # turning the PS off.
                                         if B0_des_G == 0:
                                             try:
                                                 I_initial = gen.I_meas
@@ -233,8 +234,8 @@ def main():
                                             #     our current is (zero or not)
                                             #     to where we think we want to
                                             #     be, allowing for the
-                                            #     possibility that it might be a
-                                            #     large change
+                                            #     possibility that it might be
+                                            #     a large change
                                             if I_setting > 25:
                                                 raise ValueError(
                                                     "Current is too high."
@@ -246,7 +247,8 @@ def main():
                                                     if gen.I_meas < 1:
                                                         gen.I_limit = 0
                                                     print(
-                                                        "The power supply is on."
+                                                        "The power supply"
+                                                        "is on."
                                                     )
                                             except Exception:
                                                 raise TypeError(
@@ -277,7 +279,8 @@ def main():
                                                     ]
                                                 )
                                             # }}}
-                                            # {{{ now, adjust current_v_field_A_G
+                                            # {{{ now, adjust
+                                            #     current_v_field_A_G
                                             #     to get the field we want,
                                             #     just once at the beginning
                                             # {{{ try to stabilize the field
@@ -303,10 +306,10 @@ def main():
                                                         break
                                             if num_field_matches < 3:
                                                 raise RuntimeError(
-                                                    "I tried 30 times to get my"
-                                                    " field to match within 0.8 G"
-                                                    " three times in a row, and it"
-                                                    " didn't work!"
+                                                    "I tried 30 times to get"
+                                                    " my field to match within"
+                                                    " 0.8 G three times in a"
+                                                    "row, and it didn't work!"
                                                 )
                                             # }}}
                                             true_B0_G = read_field_in_G(h)
