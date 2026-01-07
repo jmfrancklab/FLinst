@@ -253,8 +253,13 @@ def main():
                                                 ]
                                             )
                                         if B0_des_G == 0:
+                                            logging.debug("The PS is off.")
                                             gen.output = False
-                                            logging.info("The PS is off.")
+                                            conn.send(
+                                                ("0").encode(
+                                                    "ASCII"
+                                                )
+                                            )
                                         else:
                                             if ramp_steps > 4:
                                                 time.sleep(
