@@ -252,82 +252,83 @@ def main():
                                                     "magnet_settle_short"
                                                 ]
                                             )
-                                        if ramp_steps > 4:
-                                            time.sleep(
-                                                config_dict[
-                                                    "magnet_settle_long"
-                                                ]
-                                            )
-                                        # }}}
-                                        # {{{ now, adjust current_v_field_A_G
-                                        #     to get the field we want,
-                                        #     just once at the beginning
-                                        # {{{ try to stabilize the field
-                                        #     within 0.8 G of our desired
-                                        #     value
-                                        num_field_matches = 0
-                                        for j in range(30):
-                                            time.sleep(
-                                                config_dict[
-                                                    "magnet_settle_short"
-                                                ]
-                                            )
-                                            if (
-                                                abs(
-                                                    read_field_in_G(h)
-                                                    - B0_des_G
-                                                )
-                                                > 2.0
-                                            ):
-                                                time.sleep(
-                                                    config_dict[
-                                                        "magnet_settle_medium"
-                                                    ]
-                                                )
-                                            if (
-                                                abs(
-                                                    read_field_in_G(h)
-                                                    - B0_des_G
-                                                )
-                                                > 0.8
-                                            ):
-                                                adjust_field(
-                                                    B0_des_G,
-                                                    config_dict,
-                                                    h,
-                                                    gen,
-                                                )
-                                                num_field_matches = 0
-                                            else:
-                                                num_field_matches += 1
-                                                if num_field_matches > 2:
-                                                    break
-                                        if num_field_matches < 3:
-                                            raise RuntimeError(
-                                                "I tried 30 times to get my"
-                                                " field to match within 0.8 G"
-                                                " three times in a row, and it"
-                                                " didn't work!"
-                                            )
-                                        # }}}
                                         if B0_des_G == 0:
                                             gen.output = False
                                             logging.info("The PS is off.")
-                                        true_B0_G = read_field_in_G(h)
-                                        logging.info(
-                                            "Your field is"
-                                            f" {true_B0_G} G, and"
-                                            "the ratio of the field I want"
-                                            " to the one I get is"
-                                            f" {B0_des_G / true_B0_G}\nIn "
-                                            " other words, the discrepancy"
-                                            f" is{true_B0_G - B0_des_G} G"
-                                        )
-                                        conn.send(
-                                            ("%0.2f" % true_B0_G).encode(
-                                                "ASCII"
+                                        else:
+                                            if ramp_steps > 4:
+                                                time.sleep(
+                                                    config_dict[
+                                                        "magnet_settle_long"
+                                                    ]
+                                                )
+                                            # }}}
+                                            # {{{ now, adjust current_v_field_A_G
+                                            #     to get the field we want,
+                                            #     just once at the beginning
+                                            # {{{ try to stabilize the field
+                                            #     within 0.8 G of our desired
+                                            #     value
+                                            num_field_matches = 0
+                                            for j in range(30):
+                                                time.sleep(
+                                                    config_dict[
+                                                        "magnet_settle_short"
+                                                    ]
+                                                )
+                                                if (
+                                                    abs(
+                                                        read_field_in_G(h)
+                                                        - B0_des_G
+                                                    )
+                                                    > 2.0
+                                                ):
+                                                    time.sleep(
+                                                        config_dict[
+                                                            "magnet_settle_medium"
+                                                        ]
+                                                    )
+                                                if (
+                                                    abs(
+                                                        read_field_in_G(h)
+                                                        - B0_des_G
+                                                    )
+                                                    > 0.8
+                                                ):
+                                                    adjust_field(
+                                                        B0_des_G,
+                                                        config_dict,
+                                                        h,
+                                                        gen,
+                                                    )
+                                                    num_field_matches = 0
+                                                else:
+                                                    num_field_matches += 1
+                                                    if num_field_matches > 2:
+                                                        break
+                                            if num_field_matches < 3:
+                                                raise RuntimeError(
+                                                    "I tried 30 times to get my"
+                                                    " field to match within 0.8 G"
+                                                    " three times in a row, and it"
+                                                    " didn't work!"
+                                                )
+                                            # }}}
+                                            true_B0_G = read_field_in_G(h)
+                                            logging.info(
+                                                "Your field is"
+                                                f" {true_B0_G} G, and"
+                                                "the ratio of the field I want"
+                                                " to the one I get is"
+                                                f" {B0_des_G / true_B0_G}\nIn "
+                                                " other words, the discrepancy"
+                                                f" is{true_B0_G - B0_des_G} G"
                                             )
-                                        )
+                                            conn.send(
+                                                ("%0.2f" % true_B0_G).encode(
+                                                    "ASCII"
+                                                )
+                                            )
                                     case _:
                                         raise ValueError(
                                             "I don't understand this 2"
