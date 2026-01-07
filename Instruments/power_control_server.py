@@ -298,7 +298,7 @@ def main():
                                                     )
                                                     > 0.8
                                                 ):
-                                                    adjust_field(B0_des_G)
+                                                    adjust_field(B0_des_G, config_dict, h, gen)
                                                     num_field_matches = 0
                                                 else:
                                                     num_field_matches += 1
