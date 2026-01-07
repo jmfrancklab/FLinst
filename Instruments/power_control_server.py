@@ -290,9 +290,9 @@ def main():
                                             #     within 0.8 G of our desired
                                             #     value
                                             num_field_matches = 0
-                                            for j in range(30):
+                                            for j in range(10):
                                                 time.sleep(
-                                                    config_dict["ramp_dt"] * 10
+                                                    config_dict["settle_per_point_s"]
                                                 )
                                                 if (
                                                     abs(
