@@ -10,6 +10,7 @@ from Instruments import (
 )
 import SpinCore_pp
 import numpy as np
+from pyspecdata import strm
 
 IP = "0.0.0.0"
 PORT = 6002
@@ -23,11 +24,13 @@ def read_field_in_G(h):
 def adjust_field(B0_des_G, config_dict, h, gen):
     true_B0_G = read_field_in_G(h)
     logging.debug(
-        "adjusting current_v_field_A_G from",
-        config_dict["current_v_field_A_G"],
+        strm(
+            "adjusting current_v_field_A_G from",
+            config_dict["current_v_field_A_G"],
+        )
     )
     config_dict["current_v_field_A_G"] *= B0_des_G / true_B0_G
-    logging.debug("to", config_dict["current_v_field_A_G"])
+    logging.debug(strm("to", config_dict["current_v_field_A_G"]))
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     gen.I_limit = I_setting
 
@@ -289,16 +292,21 @@ def main():
                                             num_field_matches = 0
                                             for j in range(30):
                                                 time.sleep(
-                                                    config_dict["ramp_dt"]
+                                                    config_dict["ramp_dt"] * 10
                                                 )
                                                 if (
                                                     abs(
                                                         read_field_in_G(h)
                                                         - B0_des_G
                                                     )
-                                                    > 0.8
+                                                    > 1.2
                                                 ):
-                                                    adjust_field(B0_des_G, config_dict, h, gen)
+                                                    adjust_field(
+                                                        B0_des_G,
+                                                        config_dict,
+                                                        h,
+                                                        gen,
+                                                    )
                                                     num_field_matches = 0
                                                 else:
                                                     num_field_matches += 1
