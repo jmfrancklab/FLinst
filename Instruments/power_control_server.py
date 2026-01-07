@@ -206,135 +206,128 @@ def main():
                                         b.set_freq(float(args[1]))
                                     case b"SET_FIELD":
                                         B0_des_G = float(args[1])  # B in G
-                                        # {{{ This block is for ramping
-                                        # down the field to 0 and
-                                        # turning the PS off.
-                                        if B0_des_G == 0:
-                                            try:
-                                                I_initial = gen.I_meas
-                                            except Exception:
-                                                raise TypeError(
-                                                    "The power supply is not"
-                                                    " connected."
+                                        I_setting = (
+                                            B0_des_G
+                                            * config_dict[
+                                                "current_v_field_A_G"
+                                            ]
+                                        )
+                                        # {{{ First, we ramp from whatever
+                                        #     our current is (zero or not)
+                                        #     to where we think we want to
+                                        #     be, allowing for the
+                                        #     possibility that it might be a
+                                        #     large change
+                                        if I_setting > 25:
+                                            raise ValueError(
+                                                "Current is too high."
+                                            )
+                                        try:
+                                            if not gen.output:
+                                                gen.V_limit = 25.0
+                                                gen.output = True
+                                                gen.I_limit = 0
+                                                print(
+                                                    "The power supply is on."
                                                 )
-                                            for I in np.linspace(
-                                                I_initial,
-                                                0,
-                                                int(I_initial * 2),
-                                            ):
-                                                gen.I_limit = I
-                                            gen.output = False
-                                            logging.info("The PS is off.")
-                                        # }}}
-                                        else:
-                                            I_setting = (
-                                                B0_des_G
-                                                * config_dict[
-                                                    "current_v_field_A_G"
+                                        except Exception:
+                                            raise TypeError(
+                                                "The power supply is not"
+                                                " connected."
+                                            )
+                                        temp_I_meas = gen.I_meas
+                                        ramp_steps = int(
+                                            abs(I_setting - temp_I_meas) * 2
+                                        )
+                                        logging.info(
+                                            "Ramping the field from"
+                                            f" {gen.I_meas} to {I_setting}"
+                                        )
+                                        for I in np.linspace(
+                                            temp_I_meas, I_setting, ramp_steps
+                                        ):
+                                            gen.I_limit = I
+                                            time.sleep(
+                                                config_dict[
+                                                    "magnet_settle_short"
                                                 ]
                                             )
-                                            # {{{ First, we ramp from whatever
-                                            #     our current is (zero or not)
-                                            #     to where we think we want to
-                                            #     be, allowing for the
-                                            #     possibility that it might be
-                                            #     a large change
-                                            if I_setting > 25:
-                                                raise ValueError(
-                                                    "Current is too high."
-                                                )
-                                            try:
-                                                if not gen.output:
-                                                    gen.V_limit = 25.0
-                                                    gen.output = True
-                                                    if gen.I_meas < 1:
-                                                        gen.I_limit = 0
-                                                    print(
-                                                        "The power supply"
-                                                        "is on."
-                                                    )
-                                            except Exception:
-                                                raise TypeError(
-                                                    "The power supply is not"
-                                                    " connected."
-                                                )
-                                            temp_I_meas = gen.I_meas
-                                            ramp_steps = int(
-                                                (I_setting - temp_I_meas) * 2
+                                        if ramp_steps > 4:
+                                            time.sleep(
+                                                config_dict[
+                                                    "magnet_settle_long"
+                                                ]
                                             )
-                                            logging.info(
-                                                "Ramping the field from"
-                                                f" {gen.I_meas} to {I_setting}"
+                                        # }}}
+                                        # {{{ now, adjust current_v_field_A_G
+                                        #     to get the field we want,
+                                        #     just once at the beginning
+                                        # {{{ try to stabilize the field
+                                        #     within 0.8 G of our desired
+                                        #     value
+                                        num_field_matches = 0
+                                        for j in range(30):
+                                            time.sleep(
+                                                config_dict[
+                                                    "magnet_settle_short"
+                                                ]
                                             )
-                                            for I in np.linspace(
-                                                temp_I_meas,
-                                                I_setting,
-                                                ramp_steps,
+                                            if (
+                                                abs(
+                                                    read_field_in_G(h)
+                                                    - B0_des_G
+                                                )
+                                                > 2.0
                                             ):
-                                                gen.I_limit = I
-                                                time.sleep(
-                                                    config_dict["ramp_dt"]
-                                                )
-                                            if ramp_steps > 4:
                                                 time.sleep(
                                                     config_dict[
-                                                        "settle_initial_s"
+                                                        "magnet_settle_medium"
                                                     ]
                                                 )
-                                            # }}}
-                                            # {{{ now, adjust
-                                            #     current_v_field_A_G
-                                            #     to get the field we want,
-                                            #     just once at the beginning
-                                            # {{{ try to stabilize the field
-                                            #     within 0.8 G of our desired
-                                            #     value
-                                            num_field_matches = 0
-                                            for j in range(30):
-                                                time.sleep(
-                                                    config_dict["ramp_dt"] * 10
+                                            if (
+                                                abs(
+                                                    read_field_in_G(h)
+                                                    - B0_des_G
                                                 )
-                                                if (
-                                                    abs(
-                                                        read_field_in_G(h)
-                                                        - B0_des_G
-                                                    )
-                                                    > 1.2
-                                                ):
-                                                    adjust_field(
-                                                        B0_des_G,
-                                                        config_dict,
-                                                        h,
-                                                        gen,
-                                                    )
-                                                    num_field_matches = 0
-                                                else:
-                                                    num_field_matches += 1
-                                                    if num_field_matches > 2:
-                                                        break
-                                            if num_field_matches < 3:
-                                                raise RuntimeError(
-                                                    "I tried 30 times to get"
-                                                    " my field to match within"
-                                                    " 0.8 G three times in a"
-                                                    "row, and it didn't work!"
+                                                > 0.8
+                                            ):
+                                                adjust_field(
+                                                    B0_des_G,
+                                                    config_dict,
+                                                    h,
+                                                    gen,
                                                 )
-                                            # }}}
-                                            true_B0_G = read_field_in_G(h)
-                                            logging.info(
-                                                "Your field is"
-                                                f" {true_B0_G} G, and"
-                                                "the ratio of the field I want"
-                                                " to the one I get is"
-                                                f" {B0_des_G / true_B0_G}\nIn "
-                                                " other words, the discrepancy"
-                                                f" is{true_B0_G - B0_des_G} G"
+                                                num_field_matches = 0
+                                            else:
+                                                num_field_matches += 1
+                                                if num_field_matches > 2:
+                                                    break
+                                        if num_field_matches < 3:
+                                            raise RuntimeError(
+                                                "I tried 30 times to get my"
+                                                " field to match within 0.8 G"
+                                                " three times in a row, and it"
+                                                " didn't work!"
                                             )
-                                            conn.send(
-                                                ("%0.2f" % true_B0_G).encode(
-                                                    "ASCII"
-                                                )
+                                        # }}}
+                                        if B0_des_G == 0:
+                                            gen.output = False
+                                            logging.info("The PS is off.")
+                                        true_B0_G = read_field_in_G(h)
+                                        logging.info(
+                                            "Your field is"
+                                            f" {true_B0_G} G, and"
+                                            "the ratio of the field I want"
+                                            " to the one I get is"
+                                            f" {B0_des_G / true_B0_G}\nIn "
+                                            " other words, the discrepancy"
+                                            f" is{true_B0_G - B0_des_G} G"
+                                        )
+                                        conn.send(
+                                            ("%0.2f" % true_B0_G).encode(
+                                                "ASCII"
                                             )
+                                        )
                                     case _:
                                         raise ValueError(
                                             "I don't understand this 2"

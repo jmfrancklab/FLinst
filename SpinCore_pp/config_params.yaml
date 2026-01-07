@@ -186,17 +186,17 @@ adc_offset:
   description: |-
     SpinCore-specific ADC offset correction
     we believe this is a DC offset, but are not positive
-settle_initial_s:
+magnet_settle_long:
   type: float
   section: current_params
   default: 80.0
   description: Initial settling time in s when ramping up the current
-ramp_dt:
+magnet_settle_short:
   type: float
   section: current_params
   default: 0.05
   description: Time between current ramping steps in s
-settle_per_point_s:
+magnet_settle_medium:
   type: float
   section: current_params
   default: 10.0
