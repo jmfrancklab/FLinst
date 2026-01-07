@@ -11,13 +11,16 @@ and it provides the capability to start and stop the log.
 """
 
 import socket
-import sys
 import time
 import pickle
 
 IP = "127.0.0.1"
 # IP = "jmfrancklab-bruker.syr.edu"
 # IP = "128.230.29.95"
+# Previously we had set the IP using the
+# using sys.argv. It is fine to do that but
+# it should be done in the script level, not
+# in the package level.
 PORT = 6002
 short_sleep = 0.01
 slow_sleep = 0.5
@@ -124,8 +127,10 @@ class power_control(object):
             Frequency in Hz
         """
         if freq < 1e9:
-            raise ValueError("You specified a value of less than 1 GHz, which"
-                             "you almost certainly don't mean!!!")
+            raise ValueError(
+                "You specified a value of less than 1 GHz, which"
+                "you almost certainly don't mean!!!"
+            )
         self.send("SET_FREQ %f" % freq)
         return
 
