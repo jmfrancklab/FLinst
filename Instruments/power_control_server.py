@@ -243,7 +243,8 @@ def main():
                                                 if not gen.output:
                                                     gen.V_limit = 25.0
                                                     gen.output = True
-                                                    gen.I_limit = 0
+                                                    if gen.I_meas < 1:
+                                                        gen.I_limit = 0
                                                     print(
                                                         "The power supply is on."
                                                     )
