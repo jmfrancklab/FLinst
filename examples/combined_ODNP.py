@@ -149,16 +149,12 @@ if os.path.exists(filename):
     )
 # }}}
 # {{{
-# THIS PART IS REMOVED AND WILL BE DONE SEPERATELY
+# THIS PART WAS REMOVED AND WILL BE CHECKED SEPERATELY
 # Collect Thermals - serves as a control to compare the thermal of Ep to
 # ensure no microwaves were leaking
 # call A to run spin echo
 # }}}
 # {{{run enhancement
-input(
-    "Plug the B12 in, start up the FLInst power control server"
-    " and turn the magnetic field on so we can continue"
-)
 with power_control() as p:
     # we do not dip lock or anything here, because we assume
     # uw_dip_center_GHz stores the frequency of the center of the cavity
