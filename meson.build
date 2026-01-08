@@ -129,6 +129,7 @@ py.install_sources(files([
     'Instruments/microwave_tuning_gui.py',
     'Instruments/just_quit.py',
     'Instruments/hall_probe.py',
+    'Instruments/field_feedback.py',
     'Instruments/genesys.py',
 ]), subdir: 'Instruments')
 

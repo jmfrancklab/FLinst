@@ -8,31 +8,11 @@ from Instruments import (
     LakeShore475,
     genesys,
 )
+from Instruments.field_feedback import ramp_field
 import SpinCore_pp
-import numpy as np
-from pyspecdata import strm
 
 IP = "0.0.0.0"
 PORT = 6002
-
-
-def read_field_in_G(h):
-    "helper function to give the field in Gauss"
-    return h.field.to("T").magnitude * 1e4
-
-
-def adjust_field(B0_des_G, config_dict, h, gen):
-    true_B0_G = read_field_in_G(h)
-    logging.debug(
-        strm(
-            "adjusting current_v_field_A_G from",
-            config_dict["current_v_field_A_G"],
-        )
-    )
-    config_dict["current_v_field_A_G"] *= B0_des_G / true_B0_G
-    logging.debug(strm("to", config_dict["current_v_field_A_G"]))
-    I_setting = B0_des_G * config_dict["current_v_field_A_G"]
-    gen.I_limit = I_setting
 
 
 def main():
@@ -206,123 +186,8 @@ def main():
                                         b.set_freq(float(args[1]))
                                     case b"SET_FIELD":
                                         B0_des_G = float(args[1])  # B in G
-                                        I_setting = (
-                                            B0_des_G
-                                            * config_dict[
-                                                "current_v_field_A_G"
-                                            ]
-                                        )
-                                        # {{{ First, we ramp from whatever
-                                        #     our current is (zero or not)
-                                        #     to where we think we want to
-                                        #     be, allowing for the
-                                        #     possibility that it might be a
-                                        #     large change
-                                        if I_setting > 25:
-                                            raise ValueError(
-                                                "Current is too high."
-                                            )
-                                        try:
-                                            if not gen.output:
-                                                gen.V_limit = 25.0
-                                                gen.output = True
-                                                gen.I_limit = 0
-                                                h.calibrate_zero(h)
-                                                print(
-                                                    "The power supply is on."
-                                                )
-                                        except Exception:
-                                            raise TypeError(
-                                                "The power supply is not"
-                                                " connected."
-                                            )
-                                        temp_I_meas = gen.I_meas
-                                        ramp_steps = int(
-                                            abs(I_setting - temp_I_meas) * 2
-                                        )
-                                        logging.info(
-                                            "Ramping the field from"
-                                            f" {gen.I_meas} to {I_setting}"
-                                        )
-                                        for I in np.linspace(
-                                            temp_I_meas, I_setting, ramp_steps
-                                        ):
-                                            gen.I_limit = I
-                                            time.sleep(
-                                                config_dict[
-                                                    "magnet_settle_short"
-                                                ]
-                                            )
-                                        if ramp_steps > 4:
-                                            time.sleep(
-                                                config_dict[
-                                                    "magnet_settle_long"
-                                                ]
-                                            )
-                                        # }}}
-                                        # {{{ now, adjust current_v_field_A_G
-                                        #     to get the field we want,
-                                        #     just once at the beginning
-                                        # {{{ try to stabilize the field
-                                        #     within 0.8 G of our desired
-                                        #     value
-                                        num_field_matches = 0
-                                        for j in range(30):
-                                            time.sleep(
-                                                config_dict[
-                                                    "magnet_settle_short"
-                                                ]
-                                            )
-                                            if (
-                                                abs(
-                                                    read_field_in_G(h)
-                                                    - B0_des_G
-                                                )
-                                                > 2.0
-                                            ):
-                                                time.sleep(
-                                                    config_dict[
-                                                        "magnet_settle_medium"
-                                                    ]
-                                                )
-                                            if (
-                                                abs(
-                                                    read_field_in_G(h)
-                                                    - B0_des_G
-                                                )
-                                                > 0.8
-                                            ):
-                                                adjust_field(
-                                                    B0_des_G,
-                                                    config_dict,
-                                                    h,
-                                                    gen,
-                                                )
-                                                num_field_matches = 0
-                                            else:
-                                                num_field_matches += 1
-                                                if num_field_matches > 2:
-                                                    break
-                                        if num_field_matches < 3:
-                                            raise RuntimeError(
-                                                "I tried 30 times to get my"
-                                                " field to match within 0.8 G"
-                                                " three times in a row, and it"
-                                                " didn't work!"
-                                            )
-                                        # }}}
-                                        if B0_des_G == 0:
-                                            gen.output = False
-                                            logging.info("The PS is off.")
-                                        true_B0_G = read_field_in_G(h)
-                                        logging.info(
-                                            "Your field is"
-                                            f" {true_B0_G} G, and"
-                                            "the ratio of the field I want"
-                                            " to the one I get is"
-                                            f" {B0_des_G / true_B0_G}\nIn "
-                                            " other words, the discrepancy"
-                                            f" is{true_B0_G - B0_des_G} G"
+                                        true_B0_G = ramp_field(
+                                            B0_des_G, config_dict, h, gen
                                         )
                                         conn.send(
                                             ("%0.2f" % true_B0_G).encode(
@@ -368,7 +233,7 @@ def main():
                                     case b"MW_OFF":
                                         b.soft_shutdown()
                                     case b"GET_FIELD":
-                                        result = read_field_in_G(h)
+                                        result = h.field_in_G
                                         conn.send(
                                             ("%0.2f" % result).encode("ASCII")
                                         )

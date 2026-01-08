@@ -45,16 +45,12 @@ from Instruments import (
     LakeShore475,
     prologix_connection,
 )
+from Instruments.field_feedback import ramp_field
 
 V_limit = 25.0
 ramp_dt = 0.4
 ramp_I_step = 0.4
 settle_initial_s = 80
-
-
-def read_field_in_G(h):
-    "helper function to give the field in Gauss"
-    return h.field.to("T").magnitude * 1e4
 
 
 class NMRWindow(QMainWindow):
@@ -168,11 +164,9 @@ class NMRWindow(QMainWindow):
             there were two different commands, or for homebuilt, where we
             plan on using main field vs. B₀ shim)
         """
-        # {{{ if the field has been set before, pull our SETTING and
-        if hasattr(self, "prev_field"):
-            true_B0_G = read_field_in_G(self.h)
-            self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
-        # }}}
+        # Because we called ramp_field to set our initial field, our
+        # current_v_field_A_G has already been adjusted, so we don't need to
+        # readjust here
         if (
             hasattr(self, "prev_field")
             and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
@@ -193,8 +187,7 @@ class NMRWindow(QMainWindow):
             )
         else:
             # we enter this block if we've been asked to make a coarse step
-            self.g.I_limit = Field * self.myconfig["current_v_field_A_G"]
-            time.sleep(10)  # settle for 10 s
+            ramp_field(Field, self.myconfig, self.h, self.g)
             self.prev_field = (
                 Field  # prev_field is the last field that we *asked* for
             )
@@ -298,9 +291,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set((
-                    longest_dim,
-                ))
+                all_but_longest = set(range(len(myy.data.shape))) ^ set(
+                    (longest_dim,)
+                )
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
@@ -527,40 +520,11 @@ def main():
     B0_from_carrier_G = (
         myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
     )
-    I_setting = B0_from_carrier_G * myconfig["current_v_field_A_G"]
     with genesys("192.168.0.199") as g:
         with prologix_connection() as pro_log:
             with LakeShore475(pro_log) as h:
-                if not g.output:
-                    g.V_limit = V_limit
-                    g.I_limit = 0
-                    g.output = True
-                # {{{ ramp up the field
-                print("Ramping up the field")
-                for I in r_[
-                    r_[g.I_limit : I_setting : ramp_I_step], I_setting
-                ]:
-                    g.I_limit = I
-                    time.sleep(ramp_dt)
-                print(f"Settling for {settle_initial_s:.0f} s")
-                time.sleep(settle_initial_s)
-                # }}}
-                # {{{ now, adjust  current_v_field_A_G to get the field we
-                #     want, just once at the beginning
-                myconfig[
-                    "current_v_field_A_G"
-                ] *= B0_from_carrier_G / read_field_in_G(h)
-                g.I_limit = B0_from_carrier_G * myconfig["current_v_field_A_G"]
-                time.sleep(settle_initial_s)
-                # {{{ and adjust again, since this doesn't cost any significant
-                #     time
-                myconfig[
-                    "current_v_field_A_G"
-                ] *= B0_from_carrier_G / read_field_in_G(h)
-                # }}}
-                tunwin = NMRWindow(
-                    g, h, myconfig, ini_field=read_field_in_G(h)
-                )
+                ramp_field(B0_from_carrier_G, myconfig, h, g)
+                tunwin = NMRWindow(g, h, myconfig, ini_field=B0_from_carrier_G)
                 tunwin.show()
                 app.exec_()
     myconfig.write()

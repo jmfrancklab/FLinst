@@ -15,6 +15,7 @@ from .gigatronics import gigatronics
 from .gpib_eth import prologix_connection
 from .logobj import logobj
 from .hall_probe import LakeShore475
+from .field_feedback import adjust_field, ramp_field
 from .genesys import genesys
 
 __all__ += [
@@ -25,4 +26,6 @@ __all__ += [
     "power_control",
     "LakeShore475",
     "genesys",
+    "adjust_field",
+    "ramp_field"
 ]
