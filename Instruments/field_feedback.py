@@ -67,7 +67,10 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         raise ValueError("Current is too high.")
     try:
         if not gen.output:
-            h.calibrate_zero(h)
+            h.zero_probe()
+            print("Calibration for 40s")
+            time.sleep(40) #It takes 40s to calibrate
+            print("Calibration finished")
             gen.V_limit = 25.0
             gen.output = True
             gen.I_limit = 0
@@ -114,7 +117,8 @@ def ramp_field(B0_des_G, config_dict, h, gen):
             " didn't work!"
         )
     # }}}
-    if B0_des_G == 0:
+    if B0_des_G < 20:
+        gen.I_limit = 0
         gen.output = False
         logging.info("The PS is off.")
     true_B0_G = h.field_in_G
