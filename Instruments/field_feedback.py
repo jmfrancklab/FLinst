@@ -68,13 +68,13 @@ def ramp_field(B0_des_G, config_dict, h, gen):
     try:
         if not gen.output:
             h.zero_probe()
-            print("Calibration for 40s")
-            time.sleep(40) #It takes 40s to calibrate
-            print("Calibration finished")
+            logging.info("Calibration for 40s")
+            time.sleep(40)  # It takes 40s to calibrate
+            logging.info("Calibration finished")
             gen.V_limit = 25.0
             gen.output = True
             gen.I_limit = 0
-            print("The power supply is on.")
+            logging.info("The power supply is on.")
     except Exception:
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
@@ -95,9 +95,15 @@ def ramp_field(B0_des_G, config_dict, h, gen):
     num_field_matches = 0
     for j in range(30):
         time.sleep(config_dict["magnet_settle_short"])
-        if abs(h.field_in_G - B0_des_G) > 2.0:
+        field_discrepancy = abs(h.field_in_G - B0_des_G)
+        if field_discrepancy > 2.0:
             time.sleep(config_dict["magnet_settle_medium"])
-        if abs(h.field_in_G - B0_des_G) > 0.8:
+        if (
+            # as we approach lower fields, we encounter a no-current
+            # discrepancy that can't be calibrated out.
+            (B0_des_G < 100 and field_discrepancy > 5)
+            or (B0_des_G >= 20 and field_discrepancy > 0.8)
+        ):
             adjust_field(
                 B0_des_G,
                 config_dict,
