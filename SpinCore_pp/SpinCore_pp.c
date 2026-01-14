@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <pythread.h>
 
 #include "mrispinapi.h"
 
@@ -14,6 +15,46 @@
 
 #define ERROR_CATCH(arg) error_catch(arg,__LINE__)
 
+/*
+ * gui_pause_lock allows the Qt GUI thread to release the C-level pause()
+ * wait without resorting to platform-specific sleep calls.
+ */
+static volatile int gui_pause_enabled = 0;
+static volatile int gui_pause_ready = 0;
+static PyThread_type_lock gui_pause_lock = NULL;
+
+void set_gui_pause_enabled(int enabled)
+{
+    if (!enabled) {
+        if (gui_pause_enabled && gui_pause_lock != NULL && gui_pause_ready == 0) {
+            PyThread_release_lock(gui_pause_lock);
+        }
+        gui_pause_enabled = 0;
+        gui_pause_ready = 0;
+        return;
+    }
+    gui_pause_enabled = 1;
+    gui_pause_ready = 0;
+    if (gui_pause_lock == NULL) {
+        gui_pause_lock = PyThread_allocate_lock();
+    }
+    if (gui_pause_lock != NULL) {
+        PyThread_acquire_lock(gui_pause_lock, 0);
+    }
+}
+
+void set_gui_pause_ready(int ready)
+{
+    int previous = gui_pause_ready;
+    gui_pause_ready = ready;
+    if (!gui_pause_enabled || gui_pause_lock == NULL) {
+        return;
+    }
+    if (ready && !previous) {
+        PyThread_release_lock(gui_pause_lock);
+    }
+}
+
 char *get_time()
 {
     time_t ltime;
@@ -23,10 +64,17 @@ char *get_time()
 
 void pause(void)
 {
-    printf("Press enter to exit...");
-    // flushing input stream
-    fflush(stdin);
-    fgetc(stdin);
+    if (!gui_pause_enabled || gui_pause_lock == NULL) {
+        printf("Press enter to exit...");
+        // flushing input stream
+        fflush(stdin);
+        fgetc(stdin);
+        return;
+    }
+    Py_BEGIN_ALLOW_THREADS
+    PyThread_acquire_lock(gui_pause_lock, 1);
+    Py_END_ALLOW_THREADS
+    gui_pause_ready = 0;
 }
 
 DWORD error_catch(int error, int line_number)

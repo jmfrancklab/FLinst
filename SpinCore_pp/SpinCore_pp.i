@@ -3,6 +3,8 @@
 #define SWIG_FILE_WITH_INIT
 extern char *get_time();
 extern void pause(void);
+extern void set_gui_pause_enabled(int enabled);
+extern void set_gui_pause_ready(int ready);
 extern int configureTX(int adcOffset, double carrierFreq_MHz, double* tx_phases, int nPhases, double amplitude, unsigned int nPoints);
 extern double configureRX(double SW_kHz, unsigned int nPoints, unsigned int nScans, unsigned int nEchoes, unsigned int nPhaseSteps);
 extern int init_ppg();
@@ -18,6 +20,8 @@ extern void getData(int* output_array, int length, unsigned int nPoints, unsigne
 %include "numpy.i"
 extern char *get_time();
 extern void pause(void);
+extern void set_gui_pause_enabled(int enabled);
+extern void set_gui_pause_ready(int ready);
 %init %{
     import_array();
 %}
