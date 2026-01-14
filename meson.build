@@ -30,9 +30,10 @@ path_entries = [
 environment.set('PATH', ';'.join(path_entries))
 
 # Set necessary environment variables
-environment.set('conda_headers', 'C:/ProgramData/Anaconda3/include')
-environment.set('conda_libs', 'C:/ProgramData/Anaconda3/libs')
-environment.set('numpy', 'C:/ProgramData/Anaconda3/lib/site-packages/numpy/core/include')
+option('numpy', run_command(
+  py, ['-c', 'import numpy; print(numpy.get_include())'],
+  check: true
+).stdout().strip())
 
 # Ensure C++ flags are correctly applied
 env = environment()
