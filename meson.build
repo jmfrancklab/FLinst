@@ -9,9 +9,9 @@ if get_option('enable_spincore_pp')
 
   spincore_swig = custom_target(
       'SpinCore_pp_wrap',
-      output: 'SpinCore_pp_wrap.c',
+      output: ['SpinCore_pp_wrap.c', 'SpinCore_pp.py'],
       input: 'SpinCore_pp/SpinCore_pp.i',
-      command: [swig, '-python', '-o', '@OUTPUT@', '@INPUT@'],
+      command: [swig, '-python', '-o', 'SpinCore_pp_wrap.c', '@INPUT@'],
       build_by_default: true
   )
 endif
@@ -29,11 +29,14 @@ path_entries = [
 ]
 environment.set('PATH', ';'.join(path_entries))
 
-# Set necessary environment variables
-option('numpy', run_command(
-  py, ['-c', 'import numpy; print(numpy.get_include())'],
-  check: true
-).stdout().strip())
+# Set NumPy include directory (NumPy 2.x-safe)
+numpy_inc = get_option('numpy')
+if not fs.is_dir(numpy_inc)
+  numpy_inc = run_command(
+    py, ['-c', 'import numpy; print(numpy.get_include())'],
+    check: true
+  ).stdout().strip()
+endif
 
 # Ensure C++ flags are correctly applied
 env = environment()
@@ -47,7 +50,7 @@ if get_option('enable_spincore_pp')
   spincore_extension = py.extension_module(
       '_SpinCore_pp',
       sources: [spincore_swig, 'SpinCore_pp/SpinCore_pp.c'],
-      include_directories: [get_option('conda_headers'), inc_dirs, get_option('numpy')],
+      include_directories: [get_option('conda_headers'), inc_dirs, numpy_inc],
       install: true,
       dependencies: [declare_dependency(link_args: [
           '-L' + get_option('conda_libs'),
@@ -69,7 +72,6 @@ py.install_sources(files([
     'SpinCore_pp/see_powers.py',
     'SpinCore_pp/spincore_capture.py',
     'SpinCore_pp/proc_IR.py',
-    'SpinCore_pp/SpinCore_pp.py',
     'SpinCore_pp/save_data.py',
     'SpinCore_pp/bruker_sender.py',
     'SpinCore_pp/mplwidget.py',
