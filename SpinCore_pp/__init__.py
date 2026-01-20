@@ -1,3 +1,5 @@
+import os
+os.add_dll_directory(os.path.dirname(__file__))
 from .SpinCore_pp import (
     pause,
     configureRX,

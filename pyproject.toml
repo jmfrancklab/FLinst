@@ -16,7 +16,7 @@ dependencies = [
     "numpy",
     "h5py",
     "pyserial>=3.0",
-    "PyYAML"
+    "PyYAML",
 ]
 
 [tool.setuptools.package-data]
