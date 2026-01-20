@@ -67,6 +67,10 @@ class SerialInstrument (object):
         return retval.decode('utf-8')
     def read_binary(self, *args, **kwargs):
         retval = self.connection.read(*args, **kwargs)
+        j = 0
+        while j < 10 and len(args) == 1 and len(retval) < args[0]:
+            retval += self.connection.read(*args, **kwargs)
+            j += 1
         return retval
     def flush(self, timeout=1):
         """Flush the input (say we didn't read all of it, *etc.*)

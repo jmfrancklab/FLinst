@@ -247,8 +247,10 @@ class GDS_scope(SerialInstrument):
         self.read_binary(6)  # length of 550000
         data = self.read_binary(50001)
         assert data[-1] == 10, (
-            "data is not followed by newline!, rather it's %d" % data[-1]
+            "data is not followed by newline!, rather it's %d" % data[-1],
+            f"... length of data {len(data)}"
         )
+        print('length of data',len(data))
         data = data[:-1]
 
         # convert the binary string
