@@ -5,15 +5,7 @@ fs = import('fs')
 message('Enable SpinCore_pp set to: ' + get_option('enable_spincore_pp').to_string())
 if get_option('enable_spincore_pp')
   message('SpinCore_pp build enabled!')
-  swig = find_program('swig')
-
-  spincore_swig = custom_target(
-      'SpinCore_pp_wrap',
-      output: 'SpinCore_pp_wrap.c',
-      input: 'SpinCore_pp/SpinCore_pp.i',
-      command: [swig, '-python', '-o', '@OUTPUT@', '@INPUT@'],
-      build_by_default: true
-  )
+  subdir('SpinCore_pp')
 endif
 
 # Set environment variables correctly
@@ -29,33 +21,6 @@ path_entries = [
 ]
 environment.set('PATH', ';'.join(path_entries))
 
-# Set necessary environment variables
-environment.set('conda_headers', 'C:/ProgramData/Anaconda3/include')
-environment.set('conda_libs', 'C:/ProgramData/Anaconda3/libs')
-environment.set('numpy', 'C:/ProgramData/Anaconda3/lib/site-packages/numpy/core/include')
-
-# Ensure C++ flags are correctly applied
-env = environment()
-env.set('CXXFLAGS', '-shared -DMS_WIN64')
-
-# Define include directories using relative paths
-inc_dirs = include_directories('.')
-
-# Define the SWIG-based extension for SpinCore_pp
-if get_option('enable_spincore_pp')
-  spincore_extension = py.extension_module(
-      '_SpinCore_pp',
-      sources: [spincore_swig, 'SpinCore_pp/SpinCore_pp.c'],
-      include_directories: [get_option('conda_headers'), inc_dirs, get_option('numpy')],
-      install: true,
-      dependencies: [declare_dependency(link_args: [
-          '-L' + get_option('conda_libs'),
-          '-L' + meson.project_source_root(),
-          '-lmrispinapi64',
-      ])]
-  )
-endif
-
 # Install the pure Python packages
 py.install_sources(files([
     'SpinCore_pp/calibrate_clock_offset.py',
@@ -68,7 +33,6 @@ py.install_sources(files([
     'SpinCore_pp/see_powers.py',
     'SpinCore_pp/spincore_capture.py',
     'SpinCore_pp/proc_IR.py',
-    'SpinCore_pp/SpinCore_pp.py',
     'SpinCore_pp/save_data.py',
     'SpinCore_pp/bruker_sender.py',
     'SpinCore_pp/mplwidget.py',

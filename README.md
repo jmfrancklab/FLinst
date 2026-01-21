@@ -1,4 +1,4 @@
-# inst_notebooks
+# Franck Lab Instrumentation (FLinst)
 
 This repository provides a package (Instruments) that represents USB and GPIB-connected instruments as file-like objects and allows the collection of data in [pyspecdata](http://jmfrancklab.github.io/pyspecdata) nddata format.  Additionally, some code for jupyter-format notebooks using these classes is included.
 
@@ -11,6 +11,12 @@ Currently supported instruments include:
 * HP Microwave Frequency source
 * Gigatronics power meter
 * SpinCore pulse programming board
+
+## Note on installation
+
+We assume you've followed the development install of pySpecData (which is required).  This gives most of the installation packages you need.
+
+You will **also** need: ``conda install -y -c conda-forge gxx_win-64 swig`` to provide the mingw c++ compiler.
 
 ## note on SpinCore package:
 

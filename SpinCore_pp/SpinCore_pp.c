@@ -14,6 +14,10 @@
 
 #define ERROR_CATCH(arg) error_catch(arg,__LINE__)
 
+static int adc_offset_configureBoard(int adc_offset);
+static int adc_offset_programBoard(void);
+static int adc_offset_readData(int adc_offset, double* peak);
+
 char *get_time()
 {
     time_t ltime;
@@ -488,7 +492,7 @@ int adc_offset_configureBoard(int adc_offset)
 	
 	return 0;
 }
-int adc_offset_programBoard( )
+int adc_offset_programBoard( void )
 {
     ERROR_CATCH(spmri_start_programming());
     ppg_element("delay", 1.0, 0);

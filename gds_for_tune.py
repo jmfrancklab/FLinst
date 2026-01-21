@@ -5,6 +5,7 @@ import time
 #from serial.tools.list_ports import comports
 #import serial
 from scipy import signal
+from FLInst import GDS_scope
 
 fl = figlist_var()
 
