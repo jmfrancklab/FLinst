@@ -34,10 +34,10 @@ class power_control(object):
     do_quit = False
 
     def __init__(self, ip=IP, port=PORT):
-        print("target IP:", IP)
-        print("target port:", PORT)
+        print("target IP:", ip)
+        print("target port:", port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((IP, PORT))
+        self.sock.connect((ip, port))
 
     def __enter__(self):
         return self
