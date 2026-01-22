@@ -26,15 +26,37 @@ class Bridge12(Serial):
         if type(cport) is list and hasattr(cport[0], "device"):
             portlist = [
                 j.device for j in comports() if "Arduino Due" in j.description
-            ]
+            ] 
+            if len(portlist) == 0:
+                portlist = [
+                        j.device for j in comports() if "2A03:003D" in j.usb_info()
+                        ] # "2A03:003D" stands for Arduino Due Vendor ID:Device ID
         elif type(next(cport)) is tuple:
             logger.debug("using fallback comport method")
             portlist = [j[0] for j in comports() if "Arduino Due" in j[1]]
         else:
             raise RuntimeError("Not sure how how to grab the USB ports!!!")
         assert len(portlist) == 1, (
-            "I need to see exactly one Arduino Due hooked up to the"
-            " Raspberry Pi"
+            f"I need to see exactly one Arduino Due, but I see {len(portlist)}  Here is what I see for the portlist instead: "
+            + str(
+                [
+                    (
+                        j.description,
+                        j.device,
+                        j.interface,
+                        j.location,
+                        j.manufacturer,
+                        j.name,
+                        j.pid,
+                        j.product,
+                        j.serial_number,
+                        "USB DESCR:",j.usb_description(),
+                        "USB INFO:",j.usb_info(),
+                        j.vid,
+                    )
+                    for j in comports()
+                ]
+            )
         )
         thisport = portlist[0]
         super().__init__(thisport, timeout=3, baudrate=115200)
@@ -357,13 +379,11 @@ class Bridge12(Serial):
         if hasattr(self, "freq_bounds"):
             assert Hz >= self.freq_bounds[0], (
                 "You are trying to set the frequency outside the frequency"
-                " bounds, which are: "
-                + str(self.freq_bounds)
+                " bounds, which are: " + str(self.freq_bounds)
             )
             assert Hz <= self.freq_bounds[1], (
                 "You are trying to set the frequency outside the frequency"
-                " bounds, which are: "
-                + str(self.freq_bounds)
+                " bounds, which are: " + str(self.freq_bounds)
             )
         setting = int(Hz / 1e3 + 0.5)
         self.write(b"freq %d\r" % (setting))

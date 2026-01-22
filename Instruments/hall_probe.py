@@ -95,7 +95,6 @@ class LakeShore475(gpib_eth):
         """
         Perform a zero calibration.
         """
-        self._has_been_zeroed = True
         self.write("CALZERO")
 
     @property
@@ -117,7 +116,7 @@ class LakeShore475(gpib_eth):
         if not self._has_been_zeroed:
             warnings.warn(
                 "The field has not been zeroed! You should call the"
-                "calibrate_zero() method before turning on the magnet!"
+                "zero_probe() method before turning on the magnet!"
             )
         resp = self.respond("RDGFIELD?")
         try:
@@ -168,6 +167,7 @@ class LakeShore475(gpib_eth):
 
     def zero_probe(self):
         """Re-zero the probe before measurements."""
+        self._has_been_zeroed = True
         self.write("ZPROBE")
 
     @property

@@ -48,7 +48,7 @@ tuning_offset_jumps:
   default: 5
   description: |-
     How many points to jump when checking the tune.  Currently used by GDS for tune to scan frequencies.
-current_v_field_a_g:
+current_v_field_A_G:
   type: float
   section: acq_params
   default: null
