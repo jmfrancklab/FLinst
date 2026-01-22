@@ -99,7 +99,9 @@ with GDS_scope() as g:
         print("about to change frequency to", thiscarrier)
         if j == 0:
             print(
-                "***this is the center frequency -- adjust while this waveform is up.  Do not touch the tuning during collection of the other waveforms!***"
+                "***this is the center frequency -- adjust while this "
+                "waveform is up.  Do not touch the tuning during "
+                "collection of the other waveforms!***"
             )
         SpinCore_pp.tune(thiscarrier)
         print("changed frequency")
