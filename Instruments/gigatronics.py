@@ -2,6 +2,7 @@ from pylab import *
 from .gpib_eth import gpib_eth
 import time
 
+
 class gigatronics(gpib_eth):
     def __init__(self, prologix_instance=None, address=13):
         super().__init__(prologix_instance, address)
@@ -10,7 +11,7 @@ class gigatronics(gpib_eth):
         except TimeoutError:
             raise TimeoutError(
                 "I am not getting a response from the"
-                f" Gigatronics!!\nFirst, check to make sure it's on!!!"
+                " Gigatronics!!\nFirst, check to make sure it's on!!!"
             )
         print(idstring[0])
         print(idstring[1])
@@ -28,12 +29,13 @@ class gigatronics(gpib_eth):
     def read_power(self):
         try:
             retval = float(self.readline())
-        except:
+        except Exception:
             retval = -999.9
         counter = 0
         while (counter < 4) & (retval == -999.9):
             print("reading...")
-            # self.write(self.gpibaddress,'RS')# "reset" which apparently takes a reading
+            # self.write(self.gpibaddress,'RS')# "reset" which
+            # apparently takes a reading
             tempstr = self.readline()
             if len(tempstr) > 0:
                 retval = float(tempstr)
