@@ -1,4 +1,3 @@
-from pylab import *
 from .gpib_eth import gpib_eth
 import time
 
