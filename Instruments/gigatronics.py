@@ -47,10 +47,4 @@ class gigatronics(gpib_eth):
         return retval
 
     def close(self):
-        # self.write(self.gpibaddress,'DE')         # Display Enable
-
-        ##        self.write(self.gpibaddress,'HP')# if we don't do this, the display freezes
-        ##        self.write(self.gpibaddress,'RP')# no longer output only mode
-        ##        self.write(self.gpibaddress,'FP')# turn off "fast mode"??
-        ##        self.write(self.gpibaddress,'R0')# switch back to high res
         super().close()
