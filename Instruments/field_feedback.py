@@ -30,7 +30,7 @@ def adjust_field(B0_des_G, config_dict, h, gen):
             config_dict["current_v_field_A_G"],
         )
     )
-    config_dict["current_v_field_A_G"] *= B0_des_G / true_B0_G
+    config_dict["current_v_field_A_G"] = gen.I_meas / true_B0_G
     logging.debug(strm("to", config_dict["current_v_field_A_G"]))
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     gen.I_limit = I_setting
@@ -68,7 +68,7 @@ def ramp_field(B0_des_G, config_dict, h, gen):
     try:
         if not gen.output:
             h.zero_probe()
-            logging.info("Calibration for 40s")
+            logging.info("Zero calibration of hall probe for 40s")
             time.sleep(40)  # It takes 40s to calibrate
             logging.info("Calibration finished")
             gen.V_limit = 25.0
@@ -101,7 +101,7 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         if (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            (B0_des_G < 100 and field_discrepancy > 5)
+            (B0_des_G < 20 and field_discrepancy > 5)
             or (B0_des_G >= 20 and field_discrepancy > 0.8)
         ):
             adjust_field(
@@ -112,6 +112,11 @@ def ramp_field(B0_des_G, config_dict, h, gen):
             )
             num_field_matches = 0
         else:
+            logging.info(
+                "You are trying to adjust the field in an intermediate region."
+                "This will be handled by shimstack later. I am leaving field "
+                "as is."
+            )
             num_field_matches += 1
             if num_field_matches > 2:
                 break
@@ -128,7 +133,7 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         gen.output = False
         logging.info("The PS is off.")
     true_B0_G = h.field_in_G
-    logging.info(
+    logging.debug(
         "Your field is"
         f" {true_B0_G} G, and"
         "the ratio of the field I want"

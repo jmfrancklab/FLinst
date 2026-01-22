@@ -31,6 +31,88 @@ from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import power_control
 from datetime import datetime
 
+
+def IR_measurement(
+    vd_list_us,
+    nPoints,
+    config_dict,
+    IR_ph1_cyc,
+    IR_ph2_cyc,
+    FIR_rep,
+    IR_postproc,
+    IR_pathway,
+    phase_cycling,
+    T1_node_names,
+    node_index,
+    target_directory,
+    filename,
+    final_log,
+):
+    ini_time = time.time()
+    vd_data = None
+    for vd_idx, vd in enumerate(vd_list_us):
+        # call B to run_IR
+        vd_data = run_IR(
+            nPoints=nPoints,
+            nEchoes=config_dict["nEchoes"],
+            indirect_idx=vd_idx,
+            indirect_len=len(vd_list_us),
+            ph1_cyc=IR_ph1_cyc,
+            ph2_cyc=IR_ph2_cyc,
+            amplitude=config_dict["amplitude"],
+            vd=vd,
+            plen=config_dict["beta_90_s_sqrtW"],
+            deblank_us=config_dict["deblank_us"],
+            nScans=config_dict["nScans"],
+            adcOffset=config_dict["adc_offset"],
+            carrierFreq_MHz=config_dict["carrierFreq_MHz"],
+            tau_us=config_dict["tau_us"],
+            repetition_us=FIR_rep,
+            SW_kHz=config_dict["SW_kHz"],
+            ret_data=vd_data,
+        )
+    vd_data.set_prop("start_time", ini_time)
+    vd_data.set_prop("stop_time", time.time())
+    vd_data.set_prop("acq_params", config_dict.asdict())
+    vd_data.set_prop("postproc_type", IR_postproc)
+    vd_data.set_prop("coherence_pathway", IR_pathway)
+    vd_data.rename("indirect", "vd")
+    vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
+    if phase_cycling:
+        vd_data.chunk(
+            "t",
+            ["ph2", "ph1", "t2"],
+            [len(IR_ph2_cyc), len(IR_ph1_cyc), -1],
+        )
+        vd_data.setaxis("ph1", IR_ph1_cyc / 4)
+        vd_data.setaxis("ph2", IR_ph2_cyc / 4)
+    else:
+        vd_data.rename("t", "t2")
+    vd_data.set_units("t2", "s")
+    vd_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+    vd_data.name(T1_node_names[node_index])
+    nodename = vd_data.name()
+    with h5py.File(
+        os.path.normpath(os.path.join(target_directory, filename))
+    ) as fp:
+        tempcounter = 1
+        orig_nodename = nodename
+        while nodename in fp.keys():
+            nodename = "%s_temp_%d" % (orig_nodename, tempcounter)
+            final_log.append(
+                "this nodename already exists, so I will call it          "
+                "          {nodename}"
+            )
+            vd_data.name(nodename)
+            tempcounter += 1
+    # hdf5_write should be outside the h5py.File with block, since it opens
+    # the file itself
+    vd_data.hdf5_write(filename, directory=target_directory)
+    print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
+    print(("Name of saved data", vd_data.name()))
+    return vd_data
+
+
 final_log = []
 
 logger = psd.init_logging(level="debug")
@@ -195,6 +277,25 @@ with power_control() as p:
             time_axis_coords = DNP_data.getaxis("indirect")
         time_axis_coords[j]["start_times"] = DNP_ini_time
         time_axis_coords[j]["stop_times"] = DNP_thermal_done
+
+    # T1 measurement while the mw power is off
+    logger.debug("Starting T1s")
+    IR_measurement(
+        vd_list_us=vd_list_us,
+        nPoints=nPoints,
+        config_dict=config_dict,
+        IR_ph1_cyc=IR_ph1_cyc,
+        IR_ph2_cyc=IR_ph2_cyc,
+        FIR_rep=FIR_rep,
+        IR_postproc=IR_postproc,
+        IR_pathway=IR_pathway,
+        phase_cycling=phase_cycling,
+        T1_node_names=["FIR_noPower"],
+        node_index=0,
+        target_directory=target_directory,
+        filename=filename,
+        final_log=final_log,
+    )
     power_settings_dBm = zeros_like(dB_settings)
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
@@ -312,68 +413,22 @@ with power_control() as p:
             raise ValueError("After 10 tries, the power has still not settled")
         time.sleep(5)
         meter_power = p.get_power_setting()
-        ini_time = time.time()
-        vd_data = None
-        for vd_idx, vd in enumerate(vd_list_us):
-            # call B to run_IR
-            vd_data = run_IR(
-                nPoints=nPoints,
-                nEchoes=config_dict["nEchoes"],
-                indirect_idx=vd_idx,
-                indirect_len=len(vd_list_us),
-                ph1_cyc=IR_ph1_cyc,
-                ph2_cyc=IR_ph2_cyc,
-                amplitude=config_dict["amplitude"],
-                vd=vd,
-                plen=config_dict["beta_90_s_sqrtW"],
-                deblank_us=config_dict["deblank_us"],
-                nScans=config_dict["nScans"],
-                adcOffset=config_dict["adc_offset"],
-                carrierFreq_MHz=config_dict["carrierFreq_MHz"],
-                tau_us=config_dict["tau_us"],
-                repetition_us=FIR_rep,
-                SW_kHz=config_dict["SW_kHz"],
-                ret_data=vd_data,
-            )
-        vd_data.set_prop("start_time", ini_time)
-        vd_data.set_prop("stop_time", time.time())
-        vd_data.set_prop("acq_params", config_dict.asdict())
-        vd_data.set_prop("postproc_type", IR_postproc)
-        vd_data.set_prop("coherence_pathway", IR_pathway)
-        vd_data.rename("indirect", "vd")
-        vd_data.setaxis("vd", vd_list_us * 1e-6).set_units("vd", "s")
-        if phase_cycling:
-            vd_data.chunk(
-                "t",
-                ["ph2", "ph1", "t2"],
-                [len(IR_ph2_cyc), len(IR_ph1_cyc), -1],
-            )
-            vd_data.setaxis("ph1", IR_ph1_cyc / 4)
-            vd_data.setaxis("ph2", IR_ph2_cyc / 4)
-        else:
-            vd_data.rename("t", "t2")
-        vd_data.set_units("t2", "s")
-        vd_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-        vd_data.name(T1_node_names[j])
-        nodename = vd_data.name()
-        with h5py.File(
-            os.path.normpath(os.path.join(target_directory, filename))
-        ) as fp:
-            tempcounter = 1
-            orig_nodename = nodename
-            while nodename in fp.keys():
-                nodename = "%s_temp_%d" % (orig_nodename, tempcounter)
-                final_log.append(
-                    "this nodename already exists, so I will call it          "
-                    "          {nodename}"
-                )
-                vd_data.name(nodename)
-                tempcounter += 1
-        # hdf5_write should be outside the h5py.File with block, since it opens
-        # the file itself
-        vd_data.hdf5_write(filename, directory=target_directory)
-        print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-        print(("Name of saved data", vd_data.name()))
+        IR_measurement(
+            vd_list_us=vd_list_us,
+            nPoints=nPoints,
+            config_dict=config_dict,
+            IR_ph1_cyc=IR_ph1_cyc,
+            IR_ph2_cyc=IR_ph2_cyc,
+            FIR_rep=FIR_rep,
+            IR_postproc=IR_postproc,
+            IR_pathway=IR_pathway,
+            phase_cycling=phase_cycling,
+            T1_node_names=T1_node_names,
+            node_index=j,
+            target_directory=target_directory,
+            filename=filename,
+            final_log=final_log,
+        )
     this_log = p.stop_log()
 # }}}
 config_dict.write()
