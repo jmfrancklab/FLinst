@@ -6,7 +6,13 @@ import time
 class gigatronics(gpib_eth):
     def __init__(self, prologix_instance=None, address=13):
         super().__init__(prologix_instance, address)
-        idstring = self.respond("*IDN?", lines=2)  # Check ID command
+        try:
+            idstring = self.respond("*IDN?", lines=2)  # Check ID command
+        except TimeoutError:
+            raise TimeoutError(
+                "I am not getting a response from the"
+                f" Gigatronics!!\nFirst, check to make sure it's on!!!"
+            )
         print(idstring[0])
         print(idstring[1])
         if idstring[0][0:4] == "GIGA":
