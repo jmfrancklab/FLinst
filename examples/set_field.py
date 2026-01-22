@@ -14,7 +14,7 @@ from SpinCore_pp import configuration
 
 config_dict = configuration("active.ini")
 with power_control() as p:
-    if len(sys.argv) < 2:
+    if len(sys.argv) == 1:
         B_field = (
             config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
         )
@@ -26,6 +26,8 @@ with power_control() as p:
         )
         p.set_field(B_field)
 
-    else:
+    if len(sys.argv) == 2:
         B_field = float(sys.argv[1])
         p.set_field(B_field)
+    else:
+        raise ValueError("You entered an extra argument.")
