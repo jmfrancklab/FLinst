@@ -2,7 +2,6 @@ from pylab import *
 from .gpib_eth import gpib_eth
 import time
 
-
 class gigatronics(gpib_eth):
     def __init__(self, prologix_instance=None, address=13):
         super().__init__(prologix_instance, address)
