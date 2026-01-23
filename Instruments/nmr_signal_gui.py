@@ -14,16 +14,17 @@ from numpy import r_
 import numpy as np
 import time
 import sys
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QLabel,
     QVBoxLayout,
     QWidget,
 )  # QtWidgets is for GUI components
-from PyQt5.QtCore import Qt  # QtCore is for core non-GUI functionalities
-from PyQt5.QtGui import QIcon  # QtGui is for handling icons and images
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt  # QtCore is for core non-GUI functionalities
+from PySide6.QtGui import QIcon  # QtGui is for handling icons and images
+from PySide6.QtGui import QAction  # QAction moved to QtGui in Qt6
+from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
     QLineEdit,
@@ -32,13 +33,12 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QSlider,
     QHBoxLayout,
-    QAction,
 )
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
 from pyspecdata import gammabar_H
 import pyspecdata as psp
-import matplotlib.backends.backend_qt5agg as mplqt5
+import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
 from Instruments import (
     genesys,
@@ -46,11 +46,6 @@ from Instruments import (
     prologix_connection,
 )
 from Instruments.field_feedback import ramp_field
-
-V_limit = 25.0
-ramp_dt = 0.4
-ramp_I_step = 0.4
-settle_initial_s = 80
 
 
 class NMRWindow(QMainWindow):
@@ -363,7 +358,7 @@ class NMRWindow(QMainWindow):
         #
         self.dpi = 100
         self.fig = Figure((5.0, 4.0), dpi=self.dpi)
-        self.canvas = mplqt5.FigureCanvasQTAgg(self.fig)
+        self.canvas = mplqt6.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self.main_frame)
         # {{{ need both of these to get background of figure transparent,
         #     rather than white
@@ -379,7 +374,7 @@ class NMRWindow(QMainWindow):
         # Bind the 'pick' event
         self.canvas.mpl_connect("pick_event", self.on_pick)
         # Create the navigation toolbar, tied to the canvas
-        self.mpl_toolbar = mplqt5.NavigationToolbar2QT(
+        self.mpl_toolbar = mplqt6.NavigationToolbar2QT(
             self.canvas, self.main_frame
         )
         # {{{ bottom left with SW, apo, and acquire
@@ -526,5 +521,5 @@ def main():
                 ramp_field(B0_from_carrier_G, myconfig, h, g)
                 tunwin = NMRWindow(g, h, myconfig, ini_field=B0_from_carrier_G)
                 tunwin.show()
-                app.exec_()
+                app.exec()
     myconfig.write()
