@@ -385,7 +385,7 @@ class NMRWindow(QMainWindow):
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
-        self.combo_sw.activated[str].connect(self.SW_changed)
+        self.combo_sw.currentTextChanged.connect(self.SW_changed)
         self.set_default_choices()
         self.bottomleft_vbox.addWidget(self.combo_sw)
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
