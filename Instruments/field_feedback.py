@@ -103,7 +103,7 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         # TODO ☐: I edited the flow of the following a little.
         #         Unfortunately, this does mean that we need a quick test
         #         that you can still set the field as desired.
-        if field_discrepancy < config_dict["tolerance_Hz"]*e-5/config_dict["gamma_eff_mhz_g"]:
+        if field_discrepancy < config_dict["tolerance_Hz"]*1e-05/config_dict["gamma_eff_mhz_g"]:
             logging.info("your match to the desired field is within "
                          "tolerance!")
             num_field_matches += 1
