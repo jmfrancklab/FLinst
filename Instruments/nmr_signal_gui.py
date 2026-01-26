@@ -47,6 +47,7 @@ from Instruments import (
 )
 from Instruments.field_feedback import ramp_field
 
+# All power supply parameters are now controlled by the config_dict
 
 class NMRWindow(QMainWindow):
     def __init__(

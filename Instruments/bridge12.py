@@ -183,8 +183,8 @@ class Bridge12(Serial):
             if result == setting:
                 return
         raise RuntimeError(
-            "After checking status 10 times, I can't get the amplifier "
-            "to turn on/off"
+            "After checking status 10 times, I can't get the amplifier to turn"
+            " on/off"
         )
 
     def rfstatus_int_singletry(self):
@@ -238,8 +238,8 @@ class Bridge12(Serial):
     def calit_power(self, dBm):
         """This bypasses all safeties of the bridge12 and is to be used ONLY
         for running a calibration curve -- this is because we are not actually
-        measuring any amplified output power, we are only looking at TX OUT.
-        TX IN should not lead to anything. Be sure these are the operational
+        measuring any amplified output power, we are only looking at TX OUT. TX
+        IN should not lead to anything. Be sure these are the operational
         conditions before proceeding."""
         setting = int(10 * round(dBm * 2) / 2.0 + 0.5)
         self.write(b"power %d\r" % setting)
@@ -605,13 +605,13 @@ class Bridge12(Serial):
                     self.set_rf(False)
                     self.set_wg(False)
                     raise ValueError(
-                        "The reflection of the first point is the same or "
-                        "lower than the rx_dBm of the dip, which doesn't make"
+                        "The reflection of the first point is the same or"
+                        " lower than the rx_dBm of the dip, which doesn't make"
                         " sense -- check %gdBm_%s" % (10.0, rx_dBm)
                     )
-        assert self.frq_sweep_10dBm_has_been_run, (
-            "I should have run the 10 dBm curve -- not sure what happened"
-        )
+        assert (
+            self.frq_sweep_10dBm_has_been_run
+        ), "I should have run the 10 dBm curve -- not sure what happened"
         over_diff = r_[
             0, np.diff(np.int32(over_bool))
         ]  # should indicate whether this position has lifted over (+1) or
@@ -689,8 +689,8 @@ class Bridge12(Serial):
             " dBm -- something is wonky!!!"
         )
         assert hasattr(self, "freq_bounds"), (
-            "you probably haven't run lock_on_dip, which you need to do "
-            "before zoom"
+            "you probably haven't run lock_on_dip, which you need to do before"
+            " zoom"
         )
         # {{{ fit the mV values
         #     start by pulling the data from the last tuning curve

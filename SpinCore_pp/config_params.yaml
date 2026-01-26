@@ -25,6 +25,13 @@ SW_kHz:
   section: acq_params
   default: null
   description: spectral width of data acquisition in kHz
+tolerance_Hz:
+  type: float
+  section: acq_params
+  default: 10.0
+  description: |
+    How close to our target field is good enough, assuming we are able to
+    adjust our field with arbitrary precision
 acq_time_ms:
   type: float
   section: acq_params
