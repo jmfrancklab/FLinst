@@ -5,7 +5,7 @@ from .afg import AFG
 from .bridge12 import Bridge12
 from .power_control import power_control
 
-__all__ = ["SerialInstrument", "GDS_scope", "AFG", "Bridge12"]
+__all__ = ["SerialInstrument", "GDS_scope", "AFG", "Bridge12", "power_control"]
 # except:
 #    print "warning! serial (USB) instruments not available!"
 #    __all__ = []
@@ -19,13 +19,13 @@ from .field_feedback import adjust_field, ramp_field
 from .genesys import genesys
 
 __all__ += [
-    "HP8672A",
     "HP6623A",
-    "gigatronics",
-    "prologix_connection",
-    "power_control",
+    "HP8672A",
     "LakeShore475",
-    "genesys",
     "adjust_field",
-    "ramp_field"
+    "genesys",
+    "gigatronics",
+    "logobj"
+    "prologix_connection",
+    "ramp_field",
 ]
