@@ -28,7 +28,7 @@ with power_control() as p:
             "as an argument on the command line)"
         )
         p.set_field(B_field)
-    if len(sys.argv) == 2:
+    elif len(sys.argv) == 2:
         B_field = float(sys.argv[1])
         p.set_field(B_field)
     else:
