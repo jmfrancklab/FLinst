@@ -40,9 +40,9 @@ class SerialInstrument(object):
             self.connection = serial.Serial(
                 self.id_instrument(textidn), **kwargs
             )
-            assert self.connection.isOpen(), (
-                "For some reason, I couldn't open the connection!"
-            )
+            assert (
+                self.connection.isOpen()
+            ), "For some reason, I couldn't open the connection!"
             logger.debug(
                 "opened serial connection, and set to connection attribute"
             )
@@ -107,7 +107,8 @@ class SerialInstrument(object):
         message_len : int
 
             If present, read a message of a specified number
-            of bytes.if not present, return a text line (readline).
+            of bytes.
+            If not present, return a text line (readline).
         """
         message_len = None
         if "message_len" in kwargs:
@@ -133,7 +134,7 @@ class SerialInstrument(object):
                     s.timeout = 0.1
                     assert s.isOpen(), (
                         "For some reason, I couldn't open"
-                        "the connection for %s!" % str(port_id)
+                        " the connection for %s!" % str(port_id)
                     )
                     s.write(("*idn?\n").encode("utf-8"))
                     result = s.readline().decode("utf-8")
@@ -192,7 +193,7 @@ class SerialInstrument(object):
             except ValueError:
                 raise ValueError(
                     "I got a response that I couln't convert to a"
-                    "floating point number:\n\t" + response
+                    " floating point number:\n\t" + response
                 )
             if response == 0 and value == 0:
                 return response
@@ -295,7 +296,7 @@ class SerialInstrument(object):
                 except SerialException:
                     print("port appears to be open already?")
                     pass  # on windows this is triggered if the
-                    # port is already open
+                    #       port is already open
         print("this is the port dictionary that I generate:", port_dict)
         for port_id, result in port_dict.items():
             if textidn in result:

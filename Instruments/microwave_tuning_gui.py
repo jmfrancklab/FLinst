@@ -7,7 +7,6 @@ then use this:
 https://www.pythonguis.com/tutorials/pyqt-layouts/
 which is a good layout reference
 
-JF updated to plot a sine wave
 AG updated code to refactor to qt6 wity ChatGPT
 """
 

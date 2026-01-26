@@ -33,8 +33,6 @@ class gigatronics(gpib_eth):
         counter = 0
         while (counter < 4) & (retval == -999.9):
             print("reading...")
-            # self.write(self.gpibaddress,'RS')# "reset" which
-            # apparently takes a reading
             tempstr = self.readline()
             if len(tempstr) > 0:
                 retval = float(tempstr)
