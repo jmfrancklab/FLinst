@@ -100,9 +100,6 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         field_discrepancy = abs(h.field_in_G - B0_des_G)
         if field_discrepancy > 2.0:
             time.sleep(config_dict["magnet_settle_medium"])
-        # TODO ☐: I edited the flow of the following a little.
-        #         Unfortunately, this does mean that we need a quick test
-        #         that you can still set the field as desired.
         if (
             field_discrepancy
             < config_dict["tolerance_Hz"]
