@@ -151,13 +151,14 @@ class NMRWindow(QMainWindow):
             return
         if event.inaxes != self.axes:
             return
-        if self.centerline is None or event.xdata is None:
+        if self.centerline is None:
             return
-        line_x = self.centerline.get_xdata()[0]
-        x0, x1 = self.axes.get_xlim()
-        tol = 0.02 * abs(x1 - x0)
-        if abs(event.xdata - line_x) < tol:
-            self._dragging_center = True
+        if event.button != 1:
+            return
+        contains, _ = self.centerline.contains(event)
+        if not contains:
+            return
+        self._dragging_center = True
 
     def on_center_motion(self, event):
         if not self._dragging_center:
@@ -376,6 +377,7 @@ class NMRWindow(QMainWindow):
         self.centerline = self.axes.axvline(
             x=centerfrq, ls=":", color="r", alpha=0.25
         )
+        self.centerline.set_picker(5)
         pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
             signal, color="r", label="abs of signal - noise", alpha=0.75
