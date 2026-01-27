@@ -40,6 +40,7 @@ from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from Instruments import (
     genesys,
     LakeShore475,
@@ -141,6 +142,11 @@ class NMRWindow(QMainWindow):
         # It carries lots of information, of which we're using
         # only a small amount here.
         #
+        if (
+            isinstance(event.artist, Line2D)
+            and event.artist is self.centerline
+        ):
+            return
         box_points = event.artist.get_bbox().get_points()
         msg = "You've clicked on a bar with coords:\n %s" % box_points
 
@@ -386,19 +392,23 @@ class NMRWindow(QMainWindow):
         # }}}
         noise = noise["t2":centerfrq]
         signal = signal["t2":centerfrq]
-        if signal > 3 * noise:
-            Field = (
-                self.myconfig["carrierFreq_MHz"]
-                / self.myconfig["gamma_eff_MHz_G"]
-            )
-            self.myconfig["gamma_eff_MHz_G"] -= centerfrq * 1e-6 / Field
-            self.myconfig.write()
-        else:
-            print(
-                "*" * 5
-                + "warning! SNR looks bad! I'm not adjusting γ!!!"
-                + "*" * 5
-            )  # this is not yet tested!
+        if self.autogamma_cb.isChecked():
+            if signal > 3 * noise:
+                Field = (
+                    self.myconfig["carrierFreq_MHz"]
+                    / self.myconfig["gamma_eff_MHz_G"]
+                )
+                self.myconfig["gamma_eff_MHz_G"] -= centerfrq * 1e-6 / Field
+                self.myconfig.write()
+                self.textbox_gamma.setText(
+                    "%g" % self.myconfig["gamma_eff_MHz_G"]
+                )
+            else:
+                print(
+                    "*" * 5
+                    + "warning! SNR looks bad! I'm not adjusting γ!!!"
+                    + "*" * 5
+                )  # this is not yet tested!
         self.canvas.draw()
         return
 
@@ -468,6 +478,10 @@ class NMRWindow(QMainWindow):
         self.dragcenter_cb.setChecked(False)
         self.dragcenter_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.dragcenter_cb)
+        self.autogamma_cb = QCheckBox("Auto &Gamma")
+        self.autogamma_cb.setChecked(True)
+        self.autogamma_cb.stateChanged.connect(self.regen_plots)
+        self.boxes_vbox.addWidget(self.autogamma_cb)
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
