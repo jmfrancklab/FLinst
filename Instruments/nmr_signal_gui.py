@@ -49,6 +49,7 @@ from Instruments.field_feedback import ramp_field
 
 # All power supply parameters are now controlled by the config_dict
 
+
 class NMRWindow(QMainWindow):
     def __init__(
         self, mygenesys, myLakeShore475, myconfig, parent=None, ini_field=None
@@ -103,8 +104,10 @@ class NMRWindow(QMainWindow):
     def set_default_choices(self):
         self.textbox_apo.setText("10 ms")
         self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
+        self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
         self.textbox_apo.setMinimumWidth(10)
         self.textbox_plen.setMinimumWidth(10)
+        self.textbox_gamma.setMinimumWidth(10)
         self.sw = 200
 
     def on_apo_edit(self):
@@ -120,6 +123,12 @@ class NMRWindow(QMainWindow):
         thetext = self.textbox_plen.text()
         print("you changed your pulse length to", thetext, "s sqrt(W)")
         self.myconfig["beta_90_s_sqrtW"] = float(thetext)
+        return
+
+    def on_gamma_edit(self):
+        thetext = self.textbox_gamma.text()
+        print("you changed gamma_eff_MHz_G to", thetext)
+        self.myconfig["gamma_eff_MHz_G"] = float(thetext)
         return
 
     def on_pick(self, event):
@@ -383,6 +392,7 @@ class NMRWindow(QMainWindow):
         self.bottomleft_vbox = QVBoxLayout()
         self.textbox_apo = QLineEdit()
         self.textbox_plen = QLineEdit()
+        self.textbox_gamma = QLineEdit()
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
@@ -391,8 +401,10 @@ class NMRWindow(QMainWindow):
         self.bottomleft_vbox.addWidget(self.combo_sw)
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
         self.textbox_plen.editingFinished.connect(self.on_plen_edit)
+        self.textbox_gamma.editingFinished.connect(self.on_gamma_edit)
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
+        self.bottomleft_vbox.addWidget(self.textbox_gamma)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
