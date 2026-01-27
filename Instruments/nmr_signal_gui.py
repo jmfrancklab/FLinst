@@ -69,6 +69,9 @@ class NMRWindow(QMainWindow):
 
         self.create_menu()
         self.create_main_frame()
+        self.centerline = None
+        self.centerfrq_override = None
+        self._dragging_center = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -142,6 +145,35 @@ class NMRWindow(QMainWindow):
         msg = "You've clicked on a bar with coords:\n %s" % box_points
 
         QMessageBox.information(self, "Click!", msg)
+
+    def on_center_press(self, event):
+        if not self.dragcenter_cb.isChecked():
+            return
+        if event.inaxes != self.axes:
+            return
+        if self.centerline is None or event.xdata is None:
+            return
+        line_x = self.centerline.get_xdata()[0]
+        x0, x1 = self.axes.get_xlim()
+        tol = 0.02 * abs(x1 - x0)
+        if abs(event.xdata - line_x) < tol:
+            self._dragging_center = True
+
+    def on_center_motion(self, event):
+        if not self._dragging_center:
+            return
+        if event.inaxes != self.axes or event.xdata is None:
+            return
+        self.centerfrq_override = event.xdata
+        self.centerline.set_xdata([event.xdata, event.xdata])
+        self.canvas.draw_idle()
+
+    def on_center_release(self, event):
+        if not self._dragging_center:
+            return
+        self._dragging_center = False
+        if self.centerfrq_override is not None:
+            self.regen_plots()
 
     def set_field_conditional(
         self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
@@ -336,7 +368,14 @@ class NMRWindow(QMainWindow):
                         alpha=0.2,
                     )
         centerfrq = signal.C.argmax("t2").item()
-        self.axes.axvline(x=centerfrq, ls=":", color="r", alpha=0.25)
+        if (
+            self.dragcenter_cb.isChecked()
+            and self.centerfrq_override is not None
+        ):
+            centerfrq = self.centerfrq_override
+        self.centerline = self.axes.axvline(
+            x=centerfrq, ls=":", color="r", alpha=0.25
+        )
         pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
             signal, color="r", label="abs of signal - noise", alpha=0.75
@@ -383,6 +422,10 @@ class NMRWindow(QMainWindow):
         self.axes = self.fig.add_subplot(111)
         # Bind the 'pick' event
         self.canvas.mpl_connect("pick_event", self.on_pick)
+        # Bind the dragging event
+        self.canvas.mpl_connect("button_press_event", self.on_center_press)
+        self.canvas.mpl_connect("motion_notify_event", self.on_center_motion)
+        self.canvas.mpl_connect("button_release_event", self.on_center_release)
         # Create the navigation toolbar, tied to the canvas
         self.mpl_toolbar = mplqt6.NavigationToolbar2QT(
             self.canvas, self.main_frame
@@ -419,6 +462,10 @@ class NMRWindow(QMainWindow):
         self.fmode_cb.setChecked(False)
         self.fmode_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.fmode_cb)
+        self.dragcenter_cb = QCheckBox("Drag &Center")
+        self.dragcenter_cb.setChecked(False)
+        self.dragcenter_cb.stateChanged.connect(self.regen_plots)
+        self.boxes_vbox.addWidget(self.dragcenter_cb)
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
