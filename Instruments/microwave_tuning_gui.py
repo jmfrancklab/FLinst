@@ -81,17 +81,7 @@ class TuningWindow(qt6w.QMainWindow):
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
 
     def on_power_edit(self):
-        thetext = self.textbox_power.text()
-        try:
-            power_dbm = float(thetext)
-        except ValueError:
-            qt6w.QMessageBox.warning(
-                self,
-                "Invalid power",
-                f"'{thetext}' is not a valid number.",
-            )
-            return
-
+        power_dbm = self.textbox_power.value()
         if power_dbm > 35.0:
             qt6w.QMessageBox.warning(
                 self,
@@ -100,18 +90,26 @@ class TuningWindow(qt6w.QMainWindow):
             )
             return
 
-        reply = qt6w.QMessageBox.question(
-            self,
-            "Confirm power change",
-            f"I am setting the power to {power_dbm} dBm. Are you sure?",
-            qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
-            qt6w.QMessageBox.No,
-        )
-        if reply != qt6w.QMessageBox.Yes:
-            return
+        # Only show confirmation if change > 3 dBm
+        if not hasattr(self, "_last_power_dbm"):
+            self._last_power_dbm = power_dbm
+
+        if abs(power_dbm - self._last_power_dbm) > 3.0:
+            reply = qt6w.QMessageBox.question(
+                self,
+                "Confirm power change",
+                f"I am setting the power to {power_dbm} dBm. Are you sure?",
+                qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
+                qt6w.QMessageBox.No,
+            )
+            if reply != qt6w.QMessageBox.Yes:
+                # Revert to previous value
+                self.textbox_power.setValue(self._last_power_dbm)
+                return
 
         print("you changed MW power to", power_dbm, "dBm")
         self.B12.set_power(power_dbm)
+        self._last_power_dbm = power_dbm
         return
 
     def orig_zoom_limits(self):
@@ -333,8 +331,11 @@ class TuningWindow(qt6w.QMainWindow):
 
         # {{{ box to set MW power
         self.power_label = qt6w.QLabel("MW Power (dBm)")
-        self.textbox_power = qt6w.QLineEdit()
-        self.textbox_power.setText("10.0")
+        self.textbox_power = qt6w.QDoubleSpinBox()
+        self.textbox_power.setDecimals(2)
+        self.textbox_power.setRange(-100.0, 35.0)
+        self.textbox_power.setSingleStep(0.5)
+        self.textbox_power.setValue(10.0)
         self.textbox_power.editingFinished.connect(self.on_power_edit)
         self.textboxes_vbox.addWidget(self.power_label)
         self.textboxes_vbox.addWidget(self.textbox_power)
