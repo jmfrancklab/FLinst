@@ -100,12 +100,15 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         field_discrepancy = abs(h.field_in_G - B0_des_G)
         if field_discrepancy > 2.0:
             time.sleep(config_dict["magnet_settle_medium"])
-        # TODO ☐: I edited the flow of the following a little.
-        #         Unfortunately, this does mean that we need a quick test
-        #         that you can still set the field as desired.
-        if field_discrepancy < config_dict["tolerance_Hz"]:
-            logging.info("your match to the desired field is within "
-                         "tolerance!")
+        if (
+            field_discrepancy
+            < config_dict["tolerance_Hz"]
+            * 1e-6
+            / config_dict["gamma_eff_mhz_g"]
+        ):
+            logging.info(
+                "your match to the desired field is within tolerance!"
+            )
             num_field_matches += 1
             if num_field_matches > 2:
                 break
@@ -122,10 +125,9 @@ def ramp_field(B0_des_G, config_dict, h, gen):
                 gen,
             )
             num_field_matches = 0
-        elif (
-            (B0_des_G < 20 and field_discrepancy <= 5)
-            or (B0_des_G >= 20 and field_discrepancy >= 0.8)
-        ):
+        else:
+            # if it's not within tolerance, and it's not asking for a big
+            # step, then it's asking for an intermediate step
             logging.info(
                 "You are trying to adjust the field in an intermediate region."
                 "This will be handled by shimstack later. I am leaving field "
@@ -134,11 +136,6 @@ def ramp_field(B0_des_G, config_dict, h, gen):
             num_field_matches += 1
             if num_field_matches > 2:
                 break
-        else:
-            raise ValueError("I've encountered a condition where B0_des_G"
-                             f" = {B0_des_G} and field_discrepancy ="
-                             f" {field_discrepancy}.  I don't know what to"
-                             "do about this!!")
     if num_field_matches < 3:
         raise RuntimeError(
             "I tried 30 times to get my"
