@@ -11,15 +11,16 @@ and it provides the capability to start and stop the log.
 """
 
 import socket
-import sys
 import time
 import pickle
 
 IP = "127.0.0.1"
 # IP = "jmfrancklab-bruker.syr.edu"
 # IP = "128.230.29.95"
-if len(sys.argv) > 1:
-    IP = sys.argv[1]
+# Previously we had set the IP using the
+# using sys.argv. It is fine to do that but
+# it should be done in the script level, not
+# in the package level.
 PORT = 6002
 short_sleep = 0.01
 slow_sleep = 0.5
@@ -33,10 +34,10 @@ class power_control(object):
     do_quit = False
 
     def __init__(self, ip=IP, port=PORT):
-        print("target IP:", IP)
-        print("target port:", PORT)
+        print("target IP:", ip)
+        print("target port:", port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((IP, PORT))
+        self.sock.connect((ip, port))
 
     def __enter__(self):
         return self
@@ -96,6 +97,26 @@ class power_control(object):
         self.sock.send(msg.encode("ASCII") + b"\n")
         return
 
+    def set_field(self, field):
+        """Sets the field of the magnet,
+        which is controlled by the Genesys
+        with feedback from the LakeShore475.
+
+        Parameters
+        ==========
+        field : float
+            Field in G
+
+        Returns
+        =======
+        field : float
+            Measured field in G
+        """
+        self.send("SET_FIELD %f" % field)
+        retval = self.get()
+        retval = float(retval)
+        return retval
+
     def set_freq(self, freq):
         """Sets the frequency of the Bridge12
         To use this, you must be at 10 dBm or less!
@@ -105,6 +126,11 @@ class power_control(object):
         freq : float
             Frequency in Hz
         """
+        if freq < 1e9:
+            raise ValueError(
+                "You specified a value of less than 1 GHz, which"
+                " you almost certainly don't mean!!!"
+            )
         self.send("SET_FREQ %f" % freq)
         return
 
@@ -123,6 +149,12 @@ class power_control(object):
         )
         self.send("DIP_LOCK %0.3f %0.3f" % (start_f, stop_f))
         retval = self.get(n_slow_tries=10)
+        retval = float(retval)
+        return retval
+
+    def get_field(self):
+        self.send("GET_FIELD")
+        retval = self.get()
         retval = float(retval)
         return retval
 

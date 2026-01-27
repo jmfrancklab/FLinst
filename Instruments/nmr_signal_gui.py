@@ -14,16 +14,17 @@ from numpy import r_
 import numpy as np
 import time
 import sys
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QLabel,
     QVBoxLayout,
     QWidget,
 )  # QtWidgets is for GUI components
-from PyQt5.QtCore import Qt  # QtCore is for core non-GUI functionalities
-from PyQt5.QtGui import QIcon  # QtGui is for handling icons and images
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt  # QtCore is for core non-GUI functionalities
+from PySide6.QtGui import QIcon  # QtGui is for handling icons and images
+from PySide6.QtGui import QAction  # QAction moved to QtGui in Qt6
+from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
     QLineEdit,
@@ -32,30 +33,21 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QSlider,
     QHBoxLayout,
-    QAction,
 )
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
 from pyspecdata import gammabar_H
 import pyspecdata as psp
-import matplotlib.backends.backend_qt5agg as mplqt5
+import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
 from Instruments import (
     genesys,
     LakeShore475,
     prologix_connection,
 )
+from Instruments.field_feedback import ramp_field
 
-V_limit = 25.0
-ramp_dt = 0.4
-ramp_I_step = 0.4
-settle_initial_s = 80
-
-
-def read_field_in_G(h):
-    "helper function to give the field in Gauss"
-    return h.field.to("T").magnitude * 1e4
-
+# All power supply parameters are now controlled by the config_dict
 
 class NMRWindow(QMainWindow):
     def __init__(
@@ -168,11 +160,9 @@ class NMRWindow(QMainWindow):
             there were two different commands, or for homebuilt, where we
             plan on using main field vs. B₀ shim)
         """
-        # {{{ if the field has been set before, pull our SETTING and
-        if hasattr(self, "prev_field"):
-            true_B0_G = read_field_in_G(self.h)
-            self.myconfig["current_v_field_A_G"] *= self.prev_field / true_B0_G
-        # }}}
+        # Because we called ramp_field to set our initial field, our
+        # current_v_field_A_G has already been adjusted, so we don't need to
+        # readjust here
         if (
             hasattr(self, "prev_field")
             and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
@@ -193,8 +183,7 @@ class NMRWindow(QMainWindow):
             )
         else:
             # we enter this block if we've been asked to make a coarse step
-            self.g.I_limit = Field * self.myconfig["current_v_field_A_G"]
-            time.sleep(10)  # settle for 10 s
+            ramp_field(Field, self.myconfig, self.h, self.g)
             self.prev_field = (
                 Field  # prev_field is the last field that we *asked* for
             )
@@ -298,9 +287,9 @@ class NMRWindow(QMainWindow):
             myy = args[0]
             longest_dim = np.argmax(myy.data.shape)
             if len(myy.data.shape) > 1:
-                all_but_longest = set(range(len(myy.data.shape))) ^ set((
-                    longest_dim,
-                ))
+                all_but_longest = set(range(len(myy.data.shape))) ^ set(
+                    (longest_dim,)
+                )
                 all_but_longest = list(all_but_longest)
             else:
                 all_but_longest = []
@@ -370,7 +359,7 @@ class NMRWindow(QMainWindow):
         #
         self.dpi = 100
         self.fig = Figure((5.0, 4.0), dpi=self.dpi)
-        self.canvas = mplqt5.FigureCanvasQTAgg(self.fig)
+        self.canvas = mplqt6.FigureCanvasQTAgg(self.fig)
         self.canvas.setParent(self.main_frame)
         # {{{ need both of these to get background of figure transparent,
         #     rather than white
@@ -386,7 +375,7 @@ class NMRWindow(QMainWindow):
         # Bind the 'pick' event
         self.canvas.mpl_connect("pick_event", self.on_pick)
         # Create the navigation toolbar, tied to the canvas
-        self.mpl_toolbar = mplqt5.NavigationToolbar2QT(
+        self.mpl_toolbar = mplqt6.NavigationToolbar2QT(
             self.canvas, self.main_frame
         )
         # {{{ bottom left with SW, apo, and acquire
@@ -397,7 +386,7 @@ class NMRWindow(QMainWindow):
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
-        self.combo_sw.activated[str].connect(self.SW_changed)
+        self.combo_sw.currentTextChanged.connect(self.SW_changed)
         self.set_default_choices()
         self.bottomleft_vbox.addWidget(self.combo_sw)
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
@@ -527,40 +516,11 @@ def main():
     B0_from_carrier_G = (
         myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
     )
-    I_setting = B0_from_carrier_G * myconfig["current_v_field_A_G"]
     with genesys("192.168.0.199") as g:
         with prologix_connection() as pro_log:
             with LakeShore475(pro_log) as h:
-                if not g.output:
-                    g.V_limit = V_limit
-                    g.I_limit = 0
-                    g.output = True
-                # {{{ ramp up the field
-                print("Ramping up the field")
-                for I in r_[
-                    r_[g.I_limit : I_setting : ramp_I_step], I_setting
-                ]:
-                    g.I_limit = I
-                    time.sleep(ramp_dt)
-                print(f"Settling for {settle_initial_s:.0f} s")
-                time.sleep(settle_initial_s)
-                # }}}
-                # {{{ now, adjust  current_v_field_A_G to get the field we
-                #     want, just once at the beginning
-                myconfig[
-                    "current_v_field_A_G"
-                ] *= B0_from_carrier_G / read_field_in_G(h)
-                g.I_limit = B0_from_carrier_G * myconfig["current_v_field_A_G"]
-                time.sleep(settle_initial_s)
-                # {{{ and adjust again, since this doesn't cost any significant
-                #     time
-                myconfig[
-                    "current_v_field_A_G"
-                ] *= B0_from_carrier_G / read_field_in_G(h)
-                # }}}
-                tunwin = NMRWindow(
-                    g, h, myconfig, ini_field=read_field_in_G(h)
-                )
+                ramp_field(B0_from_carrier_G, myconfig, h, g)
+                tunwin = NMRWindow(g, h, myconfig, ini_field=B0_from_carrier_G)
                 tunwin.show()
-                app.exec_()
+                app.exec()
     myconfig.write()

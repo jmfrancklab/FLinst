@@ -1,6 +1,7 @@
 from .gpib_eth import gpib_eth
 from .log_inst import logger
 from pint import UnitRegistry, Quantity
+import warnings
 
 ureg = UnitRegistry()
 
@@ -50,6 +51,7 @@ class LakeShore475(gpib_eth):
             0 -- set instrument to IEEE Terms = CR LF
         """
         super().__init__(prologix_instance, address, eos=eos)
+        self._has_been_zeroed = False
         idstring = self.respond("*IDN?")
         if idstring.startswith("LSCI,MODEL475"):
             logger.debug(
@@ -111,6 +113,11 @@ class LakeShore475(gpib_eth):
         - **Assignment**: Not supported.
         - **Deletion**: Not supported.
         """
+        if not self._has_been_zeroed:
+            warnings.warn(
+                "The field has not been zeroed! You should call the"
+                "zero_probe() method before turning on the magnet!"
+            )
         resp = self.respond("RDGFIELD?")
         try:
             value = float(resp)
@@ -160,6 +167,7 @@ class LakeShore475(gpib_eth):
 
     def zero_probe(self):
         """Re-zero the probe before measurements."""
+        self._has_been_zeroed = True
         self.write("ZPROBE")
 
     @property
@@ -442,6 +450,11 @@ class LakeShore475(gpib_eth):
     @hold.setter
     def hold(self, value: bool):
         self.write(f"HOLD {1 if value else 0}")
+
+    @property
+    def field_in_G(self):
+        "helper function to give the field in Gauss as a simple float"
+        return self.field.to("T").magnitude * 1e4
 
     @property
     def relay_state(self):

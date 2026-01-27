@@ -25,6 +25,13 @@ SW_kHz:
   section: acq_params
   default: null
   description: spectral width of data acquisition in kHz
+tolerance_Hz:
+  type: float
+  section: acq_params
+  default: 10.0
+  description: |
+    How close to our target field is good enough, assuming we are able to
+    adjust our field with arbitrary precision
 acq_time_ms:
   type: float
   section: acq_params
@@ -48,7 +55,7 @@ tuning_offset_jumps:
   default: 5
   description: |-
     How many points to jump when checking the tune.  Currently used by GDS for tune to scan frequencies.
-current_v_field_a_g:
+current_v_field_A_G:
   type: float
   section: acq_params
   default: null
@@ -186,17 +193,17 @@ adc_offset:
   description: |-
     SpinCore-specific ADC offset correction
     we believe this is a DC offset, but are not positive
-settle_initial_s:
+magnet_settle_long:
   type: float
   section: current_params
   default: 80.0
   description: Initial settling time in s when ramping up the current
-ramp_dt:
+magnet_settle_short:
   type: float
   section: current_params
   default: 0.05
   description: Time between current ramping steps in s
-settle_per_point_s:
+magnet_settle_medium:
   type: float
   section: current_params
   default: 10.0

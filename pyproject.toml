@@ -16,7 +16,7 @@ dependencies = [
     "numpy",
     "h5py",
     "pyserial>=3.0",
-    "PyYAML"
+    "PyYAML",
 ]
 
 [tool.setuptools.package-data]
@@ -30,7 +30,7 @@ FLInst = "Instruments.cmd:cmd"
 
 [tool.black]
 line-length = 79
-target-version = ['py36', 'py37', 'py38', 'py39']
+target-version = ['py311']
 preview = true
 
 [tool.mesonpy]

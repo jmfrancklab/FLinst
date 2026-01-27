@@ -27,6 +27,7 @@ class prologix_connection(object):
         self.current_eos = None
         self.opened_port = None
         self.opened_ip = None
+        self.requested_ip = ip
         self.socket = None
         self.open(ip, port)
         return
@@ -129,9 +130,16 @@ class gpib_eth(object):
     def readandchop(self):  # unique to the ethernet one
         self.setaddr()
         self.socket.settimeout(5)
-        retval = self.socket.recv(1024).decode(
-            "utf-8"
-        )  # get rid of dos newline
+        try:
+            retval = self.socket.recv(1024).decode(
+                "utf-8"
+            )  # get rid of dos newline
+        except TimeoutError:
+            raise TimeoutError(
+                "I hit a timeout when trying to receive -- ip is"
+                f" {self.prologix_instance.requested_ip}, GPIB address"
+                f" {self.address}"
+            )
         while (retval[-1] == "\r") or (
             retval[-1] == "\n"
         ):  # there should be a function for this (i.e. chop, etc)!

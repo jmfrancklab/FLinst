@@ -79,7 +79,7 @@ def apply_cycles(ppg_in,list_of_cycles_found):
     if found_cycle:
         logging.debug(strm("found phase cycle named",cycle_name))
         all_cycles = [ppg_element[3] for ppg_element in ppg_in if (((ppg_element[0] == 'pulse' or ppg_element[0] == 'pulse_TTL') and ppg_element[2] == cycle_name) if len(ppg_element)>3 else False )]
-        maxlen = max(map(len,all_cycles))
+        maxlen = max([len(j) for j in all_cycles])
         list_of_cycles_found = [(cycle_name,maxlen)] + list(list_of_cycles_found)
         logging.debug("LIST OF CYCLES FOUND NOW")
         ppg_out = []
@@ -94,7 +94,8 @@ def apply_cycles(ppg_in,list_of_cycles_found):
                     ppg_out.append(ppg_elem)
         del ppg_in
         logging.debug("***")
-        logging.debug(strm("AFTER CYCLING:\n",'\n'.join(map(str,ppg_out))))
+        logging.debug(strm("AFTER CYCLING:\n",
+            "\n".join(list(map(str,ppg_out)))))
         return apply_cycles(ppg_out,list_of_cycles_found)
     else:
         logging.debug("***")
