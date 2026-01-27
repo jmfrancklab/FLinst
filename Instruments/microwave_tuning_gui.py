@@ -80,6 +80,40 @@ class TuningWindow(qt6w.QMainWindow):
         """
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
 
+    def on_power_edit(self):
+        thetext = self.textbox_power.text()
+        try:
+            power_dbm = float(thetext)
+        except ValueError:
+            qt6w.QMessageBox.warning(
+                self,
+                "Invalid power",
+                f"'{thetext}' is not a valid number.",
+            )
+            return
+
+        if power_dbm > 35.0:
+            qt6w.QMessageBox.warning(
+                self,
+                "Power too high",
+                "Power must be 35 dBm or less.",
+            )
+            return
+
+        reply = qt6w.QMessageBox.question(
+            self,
+            "Confirm power change",
+            f"I am setting the power to {power_dbm} dBm. Are you sure?",
+            qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
+            qt6w.QMessageBox.No,
+        )
+        if reply != qt6w.QMessageBox.Yes:
+            return
+
+        print("you changed MW power to", power_dbm, "dBm")
+        self.B12.set_power(power_dbm)
+        return
+
     def orig_zoom_limits(self):
         myconfig = SpinCore_pp.configuration("active.ini")
         # Typical tuning curve is centered on 9.8193 GHz with a width of
@@ -295,6 +329,15 @@ class TuningWindow(qt6w.QMainWindow):
         self.textbox2 = qt6w.QLineEdit()
 
         self.orig_zoom_limits()
+        # }}}
+
+        # {{{ box to set MW power
+        self.power_label = qt6w.QLabel("MW Power (dBm)")
+        self.textbox_power = qt6w.QLineEdit()
+        self.textbox_power.setText("10.0")
+        self.textbox_power.editingFinished.connect(self.on_power_edit)
+        self.textboxes_vbox.addWidget(self.power_label)
+        self.textboxes_vbox.addWidget(self.textbox_power)
         # }}}
 
         # {{{ buttons
