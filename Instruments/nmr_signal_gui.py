@@ -40,6 +40,7 @@ from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from Instruments import (
     genesys,
     LakeShore475,
@@ -48,6 +49,7 @@ from Instruments import (
 from Instruments.field_feedback import ramp_field
 
 # All power supply parameters are now controlled by the config_dict
+
 
 class NMRWindow(QMainWindow):
     def __init__(
@@ -68,6 +70,9 @@ class NMRWindow(QMainWindow):
 
         self.create_menu()
         self.create_main_frame()
+        self.centerline = None
+        self.centerfrq_override = None
+        self._dragging_center = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -103,8 +108,10 @@ class NMRWindow(QMainWindow):
     def set_default_choices(self):
         self.textbox_apo.setText("10 ms")
         self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
+        self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
         self.textbox_apo.setMinimumWidth(10)
         self.textbox_plen.setMinimumWidth(10)
+        self.textbox_gamma.setMinimumWidth(10)
         self.sw = 200
 
     def on_apo_edit(self):
@@ -122,6 +129,12 @@ class NMRWindow(QMainWindow):
         self.myconfig["beta_90_s_sqrtW"] = float(thetext)
         return
 
+    def on_gamma_edit(self):
+        thetext = self.textbox_gamma.text()
+        print("you changed gamma_eff_MHz_G to", thetext)
+        self.myconfig["gamma_eff_MHz_G"] = float(thetext)
+        return
+
     def on_pick(self, event):
         # The event received here is of the type
         # matplotlib.backend_bases.PickEvent
@@ -129,10 +142,53 @@ class NMRWindow(QMainWindow):
         # It carries lots of information, of which we're using
         # only a small amount here.
         #
+        if (
+            isinstance(event.artist, Line2D)
+            and event.artist is self.centerline
+        ):
+            return
         box_points = event.artist.get_bbox().get_points()
         msg = "You've clicked on a bar with coords:\n %s" % box_points
 
         QMessageBox.information(self, "Click!", msg)
+
+    def on_center_press(self, event):
+        if not self.dragcenter_cb.isChecked():
+            return
+        if event.inaxes != self.axes:
+            return
+        if self.centerline is None:
+            return
+        if self.centerline.axes is None:
+            return
+        if self.centerline.figure is None:
+            return
+        if event.button != 1:
+            return
+        if event.xdata is None:
+            return
+        line_x = self.centerline.get_xdata()[0]
+        x0, x1 = self.axes.get_xlim()
+        tol = 0.03 * abs(x1 - x0)
+        if abs(event.xdata - line_x) > tol:
+            return
+        self._dragging_center = True
+
+    def on_center_motion(self, event):
+        if not self._dragging_center:
+            return
+        if event.inaxes != self.axes or event.xdata is None:
+            return
+        self.centerfrq_override = event.xdata
+        self.centerline.set_xdata([event.xdata, event.xdata])
+        self.canvas.draw_idle()
+
+    def on_center_release(self, event):
+        if not self._dragging_center:
+            return
+        self._dragging_center = False
+        if self.centerfrq_override is not None:
+            self.regen_plots()
 
     def set_field_conditional(
         self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
@@ -327,7 +383,15 @@ class NMRWindow(QMainWindow):
                         alpha=0.2,
                     )
         centerfrq = signal.C.argmax("t2").item()
-        self.axes.axvline(x=centerfrq, ls=":", color="r", alpha=0.25)
+        if (
+            self.dragcenter_cb.isChecked()
+            and self.centerfrq_override is not None
+        ):
+            centerfrq = self.centerfrq_override
+        self.centerline = self.axes.axvline(
+            x=centerfrq, ls=":", color="r", alpha=0.25
+        )
+        self.centerline.set_picker(5)
         pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
             signal, color="r", label="abs of signal - noise", alpha=0.75
@@ -336,19 +400,23 @@ class NMRWindow(QMainWindow):
         # }}}
         noise = noise["t2":centerfrq]
         signal = signal["t2":centerfrq]
-        if signal > 3 * noise:
-            Field = (
-                self.myconfig["carrierFreq_MHz"]
-                / self.myconfig["gamma_eff_MHz_G"]
-            )
-            self.myconfig["gamma_eff_MHz_G"] -= centerfrq * 1e-6 / Field
-            self.myconfig.write()
-        else:
-            print(
-                "*" * 5
-                + "warning! SNR looks bad! I'm not adjusting γ!!!"
-                + "*" * 5
-            )  # this is not yet tested!
+        if self.autogamma_cb.isChecked():
+            if signal > 3 * noise:
+                Field = (
+                    self.myconfig["carrierFreq_MHz"]
+                    / self.myconfig["gamma_eff_MHz_G"]
+                )
+                self.myconfig["gamma_eff_MHz_G"] -= centerfrq * 1e-6 / Field
+                self.myconfig.write()
+                self.textbox_gamma.setText(
+                    "%g" % self.myconfig["gamma_eff_MHz_G"]
+                )
+            else:
+                print(
+                    "*" * 5
+                    + "warning! SNR looks bad! I'm not adjusting γ!!!"
+                    + "*" * 5
+                )  # this is not yet tested!
         self.canvas.draw()
         return
 
@@ -374,6 +442,10 @@ class NMRWindow(QMainWindow):
         self.axes = self.fig.add_subplot(111)
         # Bind the 'pick' event
         self.canvas.mpl_connect("pick_event", self.on_pick)
+        # Bind the dragging event
+        self.canvas.mpl_connect("button_press_event", self.on_center_press)
+        self.canvas.mpl_connect("motion_notify_event", self.on_center_motion)
+        self.canvas.mpl_connect("button_release_event", self.on_center_release)
         # Create the navigation toolbar, tied to the canvas
         self.mpl_toolbar = mplqt6.NavigationToolbar2QT(
             self.canvas, self.main_frame
@@ -383,6 +455,7 @@ class NMRWindow(QMainWindow):
         self.bottomleft_vbox = QVBoxLayout()
         self.textbox_apo = QLineEdit()
         self.textbox_plen = QLineEdit()
+        self.textbox_gamma = QLineEdit()
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
@@ -391,8 +464,10 @@ class NMRWindow(QMainWindow):
         self.bottomleft_vbox.addWidget(self.combo_sw)
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
         self.textbox_plen.editingFinished.connect(self.on_plen_edit)
+        self.textbox_gamma.editingFinished.connect(self.on_gamma_edit)
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
+        self.bottomleft_vbox.addWidget(self.textbox_gamma)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -407,6 +482,14 @@ class NMRWindow(QMainWindow):
         self.fmode_cb.setChecked(False)
         self.fmode_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.fmode_cb)
+        self.dragcenter_cb = QCheckBox("Drag &Center")
+        self.dragcenter_cb.setChecked(False)
+        self.dragcenter_cb.stateChanged.connect(self.regen_plots)
+        self.boxes_vbox.addWidget(self.dragcenter_cb)
+        self.autogamma_cb = QCheckBox("Auto &Gamma")
+        self.autogamma_cb.setChecked(True)
+        self.autogamma_cb.stateChanged.connect(self.regen_plots)
+        self.boxes_vbox.addWidget(self.autogamma_cb)
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
