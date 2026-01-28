@@ -159,10 +159,18 @@ class NMRWindow(QMainWindow):
             return
         if self.centerline is None:
             return
+        if self.centerline.axes is None:
+            return
+        if self.centerline.figure is None:
+            return
         if event.button != 1:
             return
-        contains, _ = self.centerline.contains(event)
-        if not contains:
+        if event.xdata is None:
+            return
+        line_x = self.centerline.get_xdata()[0]
+        x0, x1 = self.axes.get_xlim()
+        tol = 0.03 * abs(x1 - x0)
+        if abs(event.xdata - line_x) > tol:
             return
         self._dragging_center = True
 
