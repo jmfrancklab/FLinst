@@ -90,14 +90,14 @@ def IR_measurement(
     vd_data.name(T1_node_names[node_index])
     nodename = vd_data.name()
     with h5py.File(
-        os.path.normpath(os.path.join(target_directory, filename))
+        os.path.normpath(os.path.join(target_directory, filename)),"a"
     ) as fp:
         tempcounter = 1
         orig_nodename = nodename
         while nodename in fp.keys():
             nodename = "%s_temp_%d" % (orig_nodename, tempcounter)
             final_log.append(
-                "this nodename already exists, so I will call it          "
+                f"this nodename already exists, so I will call it          "
                 "          {nodename}"
             )
             vd_data.name(nodename)
