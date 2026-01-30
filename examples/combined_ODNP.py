@@ -31,8 +31,6 @@ from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import power_control
 from datetime import datetime
 
-# TODO ☐: This looks good to me, and just needs to be run and tested in order
-#         to merge the PR
 
 def IR_measurement(
     vd_list_us,
@@ -90,7 +88,7 @@ def IR_measurement(
     vd_data.name(T1_node_names[node_index])
     nodename = vd_data.name()
     with h5py.File(
-        os.path.normpath(os.path.join(target_directory, filename)),"a"
+        os.path.normpath(os.path.join(target_directory, filename)), "a"
     ) as fp:
         tempcounter = 1
         orig_nodename = nodename
@@ -108,6 +106,7 @@ def IR_measurement(
     print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(("Name of saved data", vd_data.name()))
     return
+
 
 final_log = []
 
@@ -307,8 +306,10 @@ with power_control() as p:
             if abs(p.get_power_setting() - this_dB) < 1:
                 break
         if abs(p.get_power_setting() - this_dB) > 1:
-            raise ValueError("After 10 tries, B12 is still not reporting "
-                             "that the correct power has been set")
+            raise ValueError(
+                "After 10 tries, B12 is still not reporting "
+                "that the correct power has been set"
+            )
         time.sleep(5)
         power_settings_dBm[j] = p.get_power_setting()
         time_axis_coords[j + n_thermal_scans]["start_times"] = time.time()
