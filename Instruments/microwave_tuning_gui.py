@@ -81,35 +81,13 @@ class TuningWindow(qt6w.QMainWindow):
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
 
     def on_power_edit(self):
-        power_dbm = self.textbox_power.value()
-        if power_dbm > 35.0:
-            qt6w.QMessageBox.warning(
-                self,
-                "Power too high",
-                "Power must be 35 dBm or less.",
-            )
-            return
-
-        # Only show confirmation if change > 3 dBm
-        if not hasattr(self, "_last_power_dbm"):
-            self._last_power_dbm = power_dbm
-
-        if abs(power_dbm - self._last_power_dbm) > 3.0:
-            reply = qt6w.QMessageBox.question(
-                self,
-                "Confirm power change",
-                f"I am setting the power to {power_dbm} dBm. Are you sure?",
-                qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
-                qt6w.QMessageBox.No,
-            )
-            if reply != qt6w.QMessageBox.Yes:
-                # Revert to previous value
-                self.textbox_power.setValue(self._last_power_dbm)
-                return
-
+        power_dbm = self.spinbox_power.value()
         print("you changed MW power to", power_dbm, "dBm")
-        self.B12.set_power(power_dbm)
-        self._last_power_dbm = power_dbm
+        if (
+            not hasattr(self, "previous_power_dbm")
+            or not power_dbm == self.previous_power_dbm
+        ):
+            self.previous_power_dbm = power_dbm
         return
 
     def orig_zoom_limits(self):
@@ -190,8 +168,12 @@ class TuningWindow(qt6w.QMainWindow):
         self.x.append(
             np.r_[self.slider_min.value() : self.slider_max.value() : 15j]
         )
+        # Sweep in new MW power
+        self.B12.set_power(self.spinbox_power.value())
         temp, tx = self.B12.freq_sweep(self.x[-1] * 1e3)
         self.line_data.append(temp)
+        # Set back to previous MW power
+        self.B12.set_power(self.previous_power_dbm)
         if hasattr(self, "interpdata"):
             delattr(self, "interpdata")
             delattr(self, "dip_frq_GHz")
@@ -214,6 +196,7 @@ class TuningWindow(qt6w.QMainWindow):
         if self.fmode:
             if not self._already_fmode:
                 self.B12.set_freq(self.dip_frq_GHz * 1e9)
+                self.B12.set_power(self.spinbox_power.value())
                 self._already_fmode = True
             #    if hasattr(self, 'frq_log'):
             #        del self.frq_log
@@ -331,14 +314,14 @@ class TuningWindow(qt6w.QMainWindow):
 
         # {{{ box to set MW power
         self.power_label = qt6w.QLabel("MW Power (dBm)")
-        self.textbox_power = qt6w.QDoubleSpinBox()
-        self.textbox_power.setDecimals(2)
-        self.textbox_power.setRange(-100.0, 35.0)
-        self.textbox_power.setSingleStep(0.5)
-        self.textbox_power.setValue(10.0)
-        self.textbox_power.editingFinished.connect(self.on_power_edit)
+        self.spinbox_power = qt6w.QDoubleSpinBox()
+        self.spinbox_power.setDecimals(1)
+        self.spinbox_power.setRange(0, 40.0)
+        self.spinbox_power.setSingleStep(1.0)
+        self.spinbox_power.setValue(10.0)
+        self.spinbox_power.editingFinished.connect(self.on_power_edit)
         self.textboxes_vbox.addWidget(self.power_label)
-        self.textboxes_vbox.addWidget(self.textbox_power)
+        self.textboxes_vbox.addWidget(self.spinbox_power)
         # }}}
 
         # {{{ buttons

@@ -71,8 +71,10 @@ class NMRWindow(QMainWindow):
         self.create_menu()
         self.create_main_frame()
         self.centerline = None
-        self.centerfrq_override = None
+        # The axvline marks the expected zero-offset position based on gamma.
+        self.centerfrq_target = None
         self._dragging_center = False
+        self._updating_gamma = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -130,27 +132,90 @@ class NMRWindow(QMainWindow):
         return
 
     def on_gamma_edit(self):
+        if self._updating_gamma:
+            return
         thetext = self.textbox_gamma.text()
         print("you changed gamma_eff_MHz_G to", thetext)
-        self.myconfig["gamma_eff_MHz_G"] = float(thetext)
+        self._set_gamma_value(float(thetext), update_centerline=True)
         return
 
-    def on_pick(self, event):
-        # The event received here is of the type
-        # matplotlib.backend_bases.PickEvent
-        #
-        # It carries lots of information, of which we're using
-        # only a small amount here.
-        #
+    def on_center_press(self, event):
         if (
-            isinstance(event.artist, Line2D)
-            and event.artist is self.centerline
+            event.inaxes != self.axes  # Click is in the correct axes
+            or self.centerline is None  # Centerline exist
+            or self.centerline.axes is None  # Line is attached to axes
+            or self.centerline.figure is None  # Line is attached to figure
+            or event.xdata is None  # xdata exists
+            or event.button != 1  # Ignore non-left mouse clicks
         ):
             return
-        box_points = event.artist.get_bbox().get_points()
-        msg = "You've clicked on a bar with coords:\n %s" % box_points
 
-        QMessageBox.information(self, "Click!", msg)
+        line_x = self.centerline.get_xdata()[0]
+        x0, x1 = self.axes.get_xlim()
+        tol = 0.03 * abs(x1 - x0)
+        if abs(event.xdata - line_x) > tol:
+            return
+        self._dragging_center = True
+
+    # Setting target centerline position.
+    def _update_centerline(self, centerfrq):
+        self.centerfrq_target = centerfrq
+        if self.centerline is not None:
+            self.centerline.set_xdata([centerfrq, centerfrq])
+        self.canvas.draw_idle()
+
+    # Computing new gamma from centerline offset.
+    def _update_gamma_from_center_offset(self, centerfrq):
+        old_gamma = self.myconfig["gamma_eff_MHz_G"]
+        Field = self.myconfig["carrierFreq_MHz"] / old_gamma
+        new_gamma = old_gamma - centerfrq * 1e-6 / Field
+        self._set_gamma_value(new_gamma, update_centerline=False)
+
+    # Computing new centerline from gamma change.
+    def _update_center_from_gamma_change(self, old_gamma, new_gamma):
+        Field = self.myconfig["carrierFreq_MHz"] / old_gamma
+        centerfrq = (old_gamma - new_gamma) * Field * 1e6
+        self._update_centerline(centerfrq)
+
+    # Setting gamma value manually (via textbox) and
+    # updating centerline if needed.
+    def _set_gamma_value(self, new_gamma, update_centerline):
+        if self._updating_gamma:
+            return
+        self._updating_gamma = True
+        try:
+            old_gamma = self.myconfig["gamma_eff_MHz_G"]
+            self.myconfig["gamma_eff_MHz_G"] = float(new_gamma)
+            self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
+            if (
+                update_centerline
+                and self.myconfig["gamma_eff_MHz_G"] != old_gamma
+            ):
+                self._update_center_from_gamma_change(
+                    old_gamma, self.myconfig["gamma_eff_MHz_G"]
+                )
+        finally:
+            self._updating_gamma = False
+
+    def on_center_motion(self, event):
+        if not self._dragging_center:
+            return
+        if event.inaxes != self.axes or event.xdata is None:
+            return
+        self._update_centerline(event.xdata)
+
+    def on_center_release(self, event):
+        if not self._dragging_center:
+            return
+        self._dragging_center = False
+        if event.inaxes != self.axes or event.xdata is None:
+            if self.centerfrq_target is None:
+                return
+            centerfrq = self.centerfrq_target
+        else:
+            centerfrq = event.xdata
+        self._update_centerline(centerfrq)
+        self._update_gamma_from_center_offset(centerfrq)
 
     def on_center_press(self, event):
         if not self.dragcenter_cb.isChecked():
@@ -383,11 +448,8 @@ class NMRWindow(QMainWindow):
                         alpha=0.2,
                     )
         centerfrq = signal.C.argmax("t2").item()
-        if (
-            self.dragcenter_cb.isChecked()
-            and self.centerfrq_override is not None
-        ):
-            centerfrq = self.centerfrq_override
+        if self.centerfrq_target is not None:
+            centerfrq = self.centerfrq_target
         self.centerline = self.axes.axvline(
             x=centerfrq, ls=":", color="r", alpha=0.25
         )
@@ -400,23 +462,22 @@ class NMRWindow(QMainWindow):
         # }}}
         noise = noise["t2":centerfrq]
         signal = signal["t2":centerfrq]
-        if self.autogamma_cb.isChecked():
-            if signal > 3 * noise:
-                Field = (
-                    self.myconfig["carrierFreq_MHz"]
-                    / self.myconfig["gamma_eff_MHz_G"]
-                )
-                self.myconfig["gamma_eff_MHz_G"] -= centerfrq * 1e-6 / Field
-                self.myconfig.write()
-                self.textbox_gamma.setText(
-                    "%g" % self.myconfig["gamma_eff_MHz_G"]
-                )
-            else:
-                print(
-                    "*" * 5
-                    + "warning! SNR looks bad! I'm not adjusting γ!!!"
-                    + "*" * 5
-                )  # this is not yet tested!
+        if signal > 3 * noise:
+            Field = (
+                self.myconfig["carrierFreq_MHz"]
+                / self.myconfig["gamma_eff_MHz_G"]
+            )
+            new_gamma = (
+                self.myconfig["gamma_eff_MHz_G"] - centerfrq * 1e-6 / Field
+            )
+            self._set_gamma_value(new_gamma, update_centerline=False)
+            self.myconfig.write()
+        else:
+            print(
+                "*" * 5
+                + "warning! SNR looks bad! I'm not adjusting γ!!!"
+                + "*" * 5
+            )  # this is not yet tested!
         self.canvas.draw()
         return
 
@@ -478,18 +539,6 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
-        self.fmode_cb = QCheckBox("Const &Frq &Mode")
-        self.fmode_cb.setChecked(False)
-        self.fmode_cb.stateChanged.connect(self.regen_plots)
-        self.boxes_vbox.addWidget(self.fmode_cb)
-        self.dragcenter_cb = QCheckBox("Drag &Center")
-        self.dragcenter_cb.setChecked(False)
-        self.dragcenter_cb.stateChanged.connect(self.regen_plots)
-        self.boxes_vbox.addWidget(self.dragcenter_cb)
-        self.autogamma_cb = QCheckBox("Auto &Gamma")
-        self.autogamma_cb.setChecked(True)
-        self.autogamma_cb.stateChanged.connect(self.regen_plots)
-        self.boxes_vbox.addWidget(self.autogamma_cb)
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
