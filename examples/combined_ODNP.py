@@ -47,8 +47,8 @@ def IR_measurement(
     filename,
     final_log,
 ):
-    ini_time = time.time()
     vd_data = None
+    ini_time = time.time()
     for vd_idx, vd in enumerate(vd_list_us):
         vd_data = run_IR(
             nPoints=nPoints,
@@ -69,8 +69,9 @@ def IR_measurement(
             SW_kHz=config_dict["SW_kHz"],
             ret_data=vd_data,
         )
+    done_time = time.time()
     vd_data.set_prop("start_time", ini_time)
-    vd_data.set_prop("stop_time", time.time())
+    vd_data.set_prop("stop_time", done_time)
     vd_data.set_prop("acq_params", config_dict.asdict())
     vd_data.set_prop("postproc_type", IR_postproc)
     vd_data.set_prop("coherence_pathway", IR_pathway)
@@ -95,8 +96,7 @@ def IR_measurement(
         while nodename in fp.keys():
             nodename = "%s_temp_%d" % (orig_nodename, tempcounter)
             final_log.append(
-                f"this nodename already exists, so I will call it          "
-                "          {nodename}"
+                f"this nodename already exists, so I will call it {nodename}"
             )
             vd_data.name(nodename)
             tempcounter += 1
