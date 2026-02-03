@@ -217,27 +217,6 @@ class NMRWindow(QMainWindow):
         self._update_centerline(centerfrq)
         self._update_gamma_from_center_offset(centerfrq)
 
-    def on_center_press(self, event):
-        if not self.dragcenter_cb.isChecked():
-            return
-        if event.inaxes != self.axes:
-            return
-        if self.centerline is None:
-            return
-        if self.centerline.axes is None:
-            return
-        if self.centerline.figure is None:
-            return
-        if event.button != 1:
-            return
-        if event.xdata is None:
-            return
-        line_x = self.centerline.get_xdata()[0]
-        x0, x1 = self.axes.get_xlim()
-        tol = 0.03 * abs(x1 - x0)
-        if abs(event.xdata - line_x) > tol:
-            return
-        self._dragging_center = True
 
     def on_center_motion(self, event):
         if not self._dragging_center:
@@ -501,8 +480,6 @@ class NMRWindow(QMainWindow):
         # work.
         #
         self.axes = self.fig.add_subplot(111)
-        # Bind the 'pick' event
-        self.canvas.mpl_connect("pick_event", self.on_pick)
         # Bind the dragging event
         self.canvas.mpl_connect("button_press_event", self.on_center_press)
         self.canvas.mpl_connect("motion_notify_event", self.on_center_motion)
