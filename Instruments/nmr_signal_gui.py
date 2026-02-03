@@ -40,6 +40,7 @@ from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from Instruments import (
     genesys,
     LakeShore475,
@@ -218,6 +219,23 @@ class NMRWindow(QMainWindow):
         new_gamma = self._update_gamma_from_center_offset(centerfrq)
         if new_gamma is not None:
             self.textbox_gamma.setText("%g" % new_gamma)
+
+
+    def on_center_motion(self, event):
+        if not self._dragging_center:
+            return
+        if event.inaxes != self.axes or event.xdata is None:
+            return
+        self.centerfrq_override = event.xdata
+        self.centerline.set_xdata([event.xdata, event.xdata])
+        self.canvas.draw_idle()
+
+    def on_center_release(self, event):
+        if not self._dragging_center:
+            return
+        self._dragging_center = False
+        if self.centerfrq_override is not None:
+            self.regen_plots()
 
     def set_field_conditional(
         self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
@@ -465,8 +483,6 @@ class NMRWindow(QMainWindow):
         # work.
         #
         self.axes = self.fig.add_subplot(111)
-        # Bind the 'pick' event
-        self.canvas.mpl_connect("pick_event", self.on_pick)
         # Bind the dragging event
         self.canvas.mpl_connect("button_press_event", self.on_center_press)
         self.canvas.mpl_connect("motion_notify_event", self.on_center_motion)
