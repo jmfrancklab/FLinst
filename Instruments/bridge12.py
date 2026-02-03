@@ -245,14 +245,15 @@ class Bridge12(Serial):
         self.write(b"power %d\r" % setting)
         _ = self.readline()  # gobble the power updated statement
 
-    def set_power(self, dBm):
+    def set_power(self, dBm, bypass_increment_limit=False):
         """set *and check* power.  On successful completion, set
         `self.cur_pwr_int` to 10*(power in dBm).
 
         Need to have 2 safeties for set_power:
 
         1. When power is increased above 10 dBm, the power is not allowed to
-           increase by more than 3 dBm above the current power.
+           increase by more than 3 dBm above the current power, unless
+           bypass_increment_limit is True.
         2. When increasing the power, call the power reading function.
 
         Parameters
@@ -283,7 +284,9 @@ class Bridge12(Serial):
                     "Before you try to set the power above 10 dBm, you must"
                     " first set a lower power!!!"
                 )
-            if setting > 30 + self.cur_pwr_int:
+            if (not bypass_increment_limit) and (
+                setting > 30 + self.cur_pwr_int
+            ):
                 raise RuntimeError(
                     "Once you are above 10 dBm, you must raise the power in"
                     " MAX 3 dB increments.  The power is currently %g, and you"

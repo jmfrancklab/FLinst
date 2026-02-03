@@ -187,19 +187,11 @@ class TuningWindow(qt6w.QMainWindow):
                 # Revert to previous value
                 self.textbox_power.setValue(self._last_power_dbm)
                 return
-            for power_val in np.linspace(
-                prev_sweep_power_dbm + 3,
-                requested_power_dbm,
-                int(power_diff / 3) + 1,
-            ):
-                self.B12.set_power(power_val)
-        else:
-            self.B12.set_power(requested_power_dbm)
+        self.B12.set_power(requested_power_dbm, bypass_increment_limit=True)
         self.generate_data()
         self.regen_plots()
-        self.B12.set_power(prev_sweep_power_dbm)
-        if not requested_power_dbm == prev_sweep_power_dbm:
-            self.last_sweep_power_dbm = requested_power_dbm
+        self.B12.set_power(prev_sweep_power_dbm, bypass_increment_limit=True)
+        self.last_sweep_power_dbm = requested_power_dbm
         return
 
     def regen_plots(self):
