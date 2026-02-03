@@ -83,7 +83,11 @@ class TuningWindow(qt6w.QMainWindow):
     def on_power_edit(self):
         power_dbm = self.spinbox_power.value()
         print("you changed MW power to", power_dbm, "dBm")
-        self.B12.set_power(power_dbm)
+        if (
+            not hasattr(self, "previous_power_dbm")
+            or not power_dbm == self.previous_power_dbm
+        ):
+            self.previous_power_dbm = power_dbm
         return
 
     def orig_zoom_limits(self):
@@ -164,8 +168,12 @@ class TuningWindow(qt6w.QMainWindow):
         self.x.append(
             np.r_[self.slider_min.value() : self.slider_max.value() : 15j]
         )
+        # Sweep in new MW power
+        self.B12.set_power(self.spinbox_power.value())
         temp, tx = self.B12.freq_sweep(self.x[-1] * 1e3)
         self.line_data.append(temp)
+        # Set back to previous MW power
+        self.B12.set_power(self.previous_power_dbm)
         if hasattr(self, "interpdata"):
             delattr(self, "interpdata")
             delattr(self, "dip_frq_GHz")
@@ -188,6 +196,7 @@ class TuningWindow(qt6w.QMainWindow):
         if self.fmode:
             if not self._already_fmode:
                 self.B12.set_freq(self.dip_frq_GHz * 1e9)
+                self.B12.set_power(self.spinbox_power.value())
                 self._already_fmode = True
             #    if hasattr(self, 'frq_log'):
             #        del self.frq_log
