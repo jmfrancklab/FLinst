@@ -423,23 +423,22 @@ class NMRWindow(QMainWindow):
         # }}}
         noise = noise["t2":centerfrq]
         signal = signal["t2":centerfrq]
-        if self.autogamma_cb.isChecked():
-            if signal > 3 * noise:
-                Field = (
-                    self.myconfig["carrierFreq_MHz"]
-                    / self.myconfig["gamma_eff_MHz_G"]
-                )
-                new_gamma = (
-                    self.myconfig["gamma_eff_MHz_G"] - centerfrq * 1e-6 / Field
-                )
-                self._set_gamma_value(new_gamma, update_centerline=False)
-                self.myconfig.write()
-            else:
-                print(
-                    "*" * 5
-                    + "warning! SNR looks bad! I'm not adjusting γ!!!"
-                    + "*" * 5
-                )  # this is not yet tested!
+        if signal > 3 * noise:
+            Field = (
+                self.myconfig["carrierFreq_MHz"]
+                / self.myconfig["gamma_eff_MHz_G"]
+            )
+            new_gamma = (
+                self.myconfig["gamma_eff_MHz_G"] - centerfrq * 1e-6 / Field
+            )
+            self._set_gamma_value(new_gamma, update_centerline=False)
+            self.myconfig.write()
+        else:
+            print(
+                "*" * 5
+                + "warning! SNR looks bad! I'm not adjusting γ!!!"
+                + "*" * 5
+            )  # this is not yet tested!
         self.canvas.draw()
         return
 
@@ -501,14 +500,6 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
-        self.fmode_cb = QCheckBox("Const &Frq &Mode")
-        self.fmode_cb.setChecked(False)
-        self.fmode_cb.stateChanged.connect(self.regen_plots)
-        self.boxes_vbox.addWidget(self.fmode_cb)
-        self.autogamma_cb = QCheckBox("Auto &Gamma")
-        self.autogamma_cb.setChecked(True)
-        self.autogamma_cb.stateChanged.connect(self.regen_plots)
-        self.boxes_vbox.addWidget(self.autogamma_cb)
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
