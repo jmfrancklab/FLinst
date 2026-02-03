@@ -40,7 +40,6 @@ from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
 from Instruments import (
     genesys,
     LakeShore475,
@@ -189,11 +188,15 @@ class NMRWindow(QMainWindow):
         self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
         if update_centerline:
             field_before_change = self.myconfig["carrierFreq_MHz"] / old_gamma
-            field_after_change = self.myconfig["carrierFreq_MHz"] / self.myconfig['gamma_eff_MHz_G']
+            field_after_change = (
+                self.myconfig["carrierFreq_MHz"]
+                / self.myconfig["gamma_eff_MHz_G"]
+            )
             self._update_centerline(
-                    (field_before_change - field_after_change) * self.myconfig['gamma_eff_MHz_G']
-                    * 1e6
-                    )
+                (field_before_change - field_after_change)
+                * self.myconfig["gamma_eff_MHz_G"]
+                * 1e6
+            )
         self._updating_gamma = False
 
     def on_center_motion(self, event):
