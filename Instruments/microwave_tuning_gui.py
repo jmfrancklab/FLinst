@@ -164,12 +164,8 @@ class TuningWindow(qt6w.QMainWindow):
         self.x.append(
             np.r_[self.slider_min.value() : self.slider_max.value() : 15j]
         )
-        # Sweep in new MW power
-        self.B12.set_power(self.spinbox_power.value())
         temp, tx = self.B12.freq_sweep(self.x[-1] * 1e3)
         self.line_data.append(temp)
-        # Set back to previous MW power
-        self.B12.set_power(self.previous_power_dbm)
         if hasattr(self, "interpdata"):
             delattr(self, "interpdata")
             delattr(self, "dip_frq_GHz")
@@ -178,11 +174,32 @@ class TuningWindow(qt6w.QMainWindow):
     def on_recapture(self):
         requested_power_dbm = self.spinbox_power.value()
         prev_sweep_power_dbm = self.last_sweep_power_dbm
-        self.B12.set_power(requested_power_dbm)
+        power_diff = requested_power_dbm - prev_sweep_power_dbm
+        if power_diff > 3.0:
+            reply = qt6w.QMessageBox.question(
+                self,
+                "Confirm power change",
+                f"I am setting the power to {power_dbm} dBm. Are you sure?",
+                qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
+                qt6w.QMessageBox.No,
+            )
+            if reply != qt6w.QMessageBox.Yes:
+                # Revert to previous value
+                self.textbox_power.setValue(self._last_power_dbm)
+                return
+            for power_val in np.linspace(
+                prev_sweep_power_dbm + 3,
+                requested_power_dbm,
+                int(power_diff / 3) + 1,
+            ):
+                self.B12.set_power(power_val)
+        else:
+            self.B12.set_power(requested_power_dbm)
         self.generate_data()
         self.regen_plots()
         self.B12.set_power(prev_sweep_power_dbm)
-        self.last_sweep_power_dbm = requested_power_dbm
+        if not requested_power_dbm == prev_sweep_power_dbm:
+            self.last_sweep_power_dbm = requested_power_dbm
         return
 
     def regen_plots(self):
