@@ -169,6 +169,7 @@ class NMRWindow(QMainWindow):
         Field = self.myconfig["carrierFreq_MHz"] / old_gamma
         new_gamma = old_gamma - centerfrq * 1e-6 / Field
         self._set_gamma_value(new_gamma, update_centerline=False)
+        return new_gamma
 
     # Computing new centerline from gamma change.
     def _update_center_from_gamma_change(self, old_gamma, new_gamma):
@@ -214,7 +215,9 @@ class NMRWindow(QMainWindow):
         else:
             centerfrq = event.xdata
         self._update_centerline(centerfrq)
-        self._update_gamma_from_center_offset(centerfrq)
+        new_gamma = self._update_gamma_from_center_offset(centerfrq)
+        if new_gamma is not None:
+            self.textbox_gamma.setText("%g" % new_gamma)
 
     def set_field_conditional(
         self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
