@@ -86,7 +86,6 @@ def IR_measurement(
     vd_data.setaxis("nScans", "#")
     vd_data.name(node_name)
     nodename = vd_data.name()
-    # JF reviewed to here -- finish from here
     with h5py.File(
         os.path.normpath(os.path.join(target_directory, filename)), "a"
     ) as fp:
@@ -105,7 +104,6 @@ def IR_measurement(
     print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(("Name of saved data", vd_data.name()))
     return
-
 
 final_log = []
 
@@ -218,8 +216,8 @@ if os.path.exists(filename):
         % filename
     )
 # }}}
-# Collection of thermals WAS REMOVED AND WILL BE CHECKED SEPERATELY
-# serves as a control to compare the thermal of Ep to ensure no
+# Collection of thermals with B12 off WAS REMOVED AND WILL BE CHECKED
+# SEPERATELY serves as a control to compare the thermal of Ep to ensure no
 # microwaves were leaking call A to run spin echo
 # {{{run enhancement
 with power_control() as p:
@@ -307,6 +305,7 @@ with power_control() as p:
             raise ValueError(
                 "After 10 tries, B12 is still not reporting "
                 "that the correct power has been set"
+                f"I want {p.get_power_setting()} and am getting {this_dB}"
             )
         time.sleep(5)
         power_settings_dBm[j] = p.get_power_setting()
