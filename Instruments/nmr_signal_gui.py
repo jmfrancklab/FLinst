@@ -135,37 +135,18 @@ class NMRWindow(QMainWindow):
         self.myconfig["gamma_eff_MHz_G"] = float(thetext)
         return
 
-    def on_pick(self, event):
-        # The event received here is of the type
-        # matplotlib.backend_bases.PickEvent
-        #
-        # It carries lots of information, of which we're using
-        # only a small amount here.
-        #
-        if (
-            isinstance(event.artist, Line2D)
-            and event.artist is self.centerline
-        ):
-            return
-        box_points = event.artist.get_bbox().get_points()
-        msg = "You've clicked on a bar with coords:\n %s" % box_points
-
-        QMessageBox.information(self, "Click!", msg)
-
     def on_center_press(self, event):
-        if not self.dragcenter_cb.isChecked():
-            return
         if event.inaxes != self.axes:
             return
-        if self.centerline is None:
+        if (
+            self.centerline
+            or self.centerline.axes
+            or self.centerline.figure
+            or event.xdata
+        ) is None:
             return
-        if self.centerline.axes is None:
-            return
-        if self.centerline.figure is None:
-            return
+        # In order to ignore left mouse clicks
         if event.button != 1:
-            return
-        if event.xdata is None:
             return
         line_x = self.centerline.get_xdata()[0]
         x0, x1 = self.axes.get_xlim()
