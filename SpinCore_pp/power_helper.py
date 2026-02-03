@@ -117,7 +117,8 @@ dp\sqrt{1+\frac{df}{dp}}`
             " \nwe can delete this figure after we are good with everything"
             " else",
         )
-    W_settings = length_data.fromaxis("p").data
+    W_settings = length_data.fromaxis("p").data.real # to make sure that dtype
+    #                                                  is real
     rdB_settings = np.ones_like(W_settings)
     for x in range(len(W_settings)):
         if x == 0:
