@@ -31,18 +31,16 @@ from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import power_control
 from datetime import datetime
 
-
 def IR_measurement(
     vd_list_us,
     nPoints,
     config_dict,
     IR_ph1_cyc,
     IR_ph2_cyc,
-    FIR_rep,
+    FIR_rep_us,
     IR_postproc,
     IR_pathway,
-    T1_node_names,
-    node_index,
+    node_name,
     target_directory,
     filename,
     final_log,
@@ -65,7 +63,7 @@ def IR_measurement(
             adcOffset=config_dict["adc_offset"],
             carrierFreq_MHz=config_dict["carrierFreq_MHz"],
             tau_us=config_dict["tau_us"],
-            repetition_us=FIR_rep,
+            repetition_us=FIR_rep_us,
             SW_kHz=config_dict["SW_kHz"],
             ret_data=vd_data,
         )
@@ -85,9 +83,10 @@ def IR_measurement(
     vd_data.setaxis("ph1", IR_ph1_cyc / 4)
     vd_data.setaxis("ph2", IR_ph2_cyc / 4)
     vd_data.set_units("t2", "s")
-    vd_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    vd_data.name(T1_node_names[node_index])
+    vd_data.setaxis("nScans", "#")
+    vd_data.name(node_name)
     nodename = vd_data.name()
+    # JF reviewed to here -- finish from here
     with h5py.File(
         os.path.normpath(os.path.join(target_directory, filename)), "a"
     ) as fp:
@@ -148,7 +147,7 @@ vd_list_us = (
     )
     * 1e6
 )  # convert to microseconds
-FIR_rep = (
+FIR_rep_us = (
     2
     * (
         1.0
@@ -159,7 +158,7 @@ FIR_rep = (
     )
     * 1e6
 )
-config_dict["FIR_rep"] = FIR_rep
+config_dict["FIR_rep_us"] = FIR_rep_us
 # }}}
 # {{{Power settings
 dB_settings = Ep_spacing_from_phalf(
@@ -270,11 +269,10 @@ with power_control() as p:
         config_dict=config_dict,
         IR_ph1_cyc=IR_ph1_cyc,
         IR_ph2_cyc=IR_ph2_cyc,
-        FIR_rep=FIR_rep,
+        FIR_rep_us=FIR_rep_us,
         IR_postproc=IR_postproc,
         IR_pathway=IR_pathway,
-        T1_node_names=["FIR_noPower"],
-        node_index=0,
+        node_name="FIR_noPower",
         target_directory=target_directory,
         filename=filename,
         final_log=final_log,
@@ -401,11 +399,10 @@ with power_control() as p:
             config_dict=config_dict,
             IR_ph1_cyc=IR_ph1_cyc,
             IR_ph2_cyc=IR_ph2_cyc,
-            FIR_rep=FIR_rep,
+            FIR_rep_us=FIR_rep_us,
             IR_postproc=IR_postproc,
             IR_pathway=IR_pathway,
-            T1_node_names=T1_node_names,
-            node_index=j,
+            node_name=T1_node_names[j],
             target_directory=target_directory,
             filename=filename,
             final_log=final_log,

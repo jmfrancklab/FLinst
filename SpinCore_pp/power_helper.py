@@ -117,14 +117,15 @@ dp\sqrt{1+\frac{df}{dp}}`
             " \nwe can delete this figure after we are good with everything"
             " else",
         )
-    W_settings = length_data.fromaxis("p").data
+    W_settings = length_data.fromaxis("p").data.real # to make sure that dtype
+    #                                                  is real
     rdB_settings = np.ones_like(W_settings)
     for x in range(len(W_settings)):
         if x == 0:
             rdB_settings[x] = 0.0
         else:
             rdB_settings[x] = (
-                round(10 * (np.log10(abs(W_settings[x])) + 3.0) / min_dBm_step)
+                round(10 * (np.log10(W_settings[x]) + 3.0) / min_dBm_step)
                 * min_dBm_step
             )
     dB_settings = np.unique(rdB_settings)
