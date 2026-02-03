@@ -184,19 +184,14 @@ class NMRWindow(QMainWindow):
         if self._updating_gamma:
             return
         self._updating_gamma = True
-        try:
-            old_gamma = self.myconfig["gamma_eff_MHz_G"]
-            self.myconfig["gamma_eff_MHz_G"] = float(new_gamma)
-            self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
-            if (
-                update_centerline
-                and self.myconfig["gamma_eff_MHz_G"] != old_gamma
-            ):
-                self._update_center_from_gamma_change(
-                    old_gamma, self.myconfig["gamma_eff_MHz_G"]
-                )
-        finally:
-            self._updating_gamma = False
+        old_gamma = self.myconfig["gamma_eff_MHz_G"]
+        self.myconfig["gamma_eff_MHz_G"] = float(new_gamma)
+        self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
+        if update_centerline and self.myconfig["gamma_eff_MHz_G"] != old_gamma:
+            self._update_center_from_gamma_change(
+                old_gamma, self.myconfig["gamma_eff_MHz_G"]
+            )
+        self._updating_gamma = False
 
     def on_center_motion(self, event):
         if not self._dragging_center:
@@ -219,23 +214,6 @@ class NMRWindow(QMainWindow):
         new_gamma = self._update_gamma_from_center_offset(centerfrq)
         if new_gamma is not None:
             self.textbox_gamma.setText("%g" % new_gamma)
-
-
-    def on_center_motion(self, event):
-        if not self._dragging_center:
-            return
-        if event.inaxes != self.axes or event.xdata is None:
-            return
-        self.centerfrq_override = event.xdata
-        self.centerline.set_xdata([event.xdata, event.xdata])
-        self.canvas.draw_idle()
-
-    def on_center_release(self, event):
-        if not self._dragging_center:
-            return
-        self._dragging_center = False
-        if self.centerfrq_override is not None:
-            self.regen_plots()
 
     def set_field_conditional(
         self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
