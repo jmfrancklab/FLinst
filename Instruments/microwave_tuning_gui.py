@@ -44,6 +44,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.setInterval(100)  # .1 seconds
         self.timer.timeout.connect(self.opt_update_frq)
         self.timer.start(1000)
+        self.last_sweep_power_dbm = self.spinbox_power.value()
         self.on_recapture()
         # self._n_times_run = 0
 
@@ -83,11 +84,6 @@ class TuningWindow(qt6w.QMainWindow):
     def on_power_edit(self):
         power_dbm = self.spinbox_power.value()
         print("you changed MW power to", power_dbm, "dBm")
-        if (
-            not hasattr(self, "previous_power_dbm")
-            or not power_dbm == self.previous_power_dbm
-        ):
-            self.previous_power_dbm = power_dbm
         return
 
     def orig_zoom_limits(self):
@@ -180,8 +176,13 @@ class TuningWindow(qt6w.QMainWindow):
         return
 
     def on_recapture(self):
+        requested_power_dbm = self.spinbox_power.value()
+        prev_sweep_power_dbm = self.last_sweep_power_dbm
+        self.B12.set_power(requested_power_dbm)
         self.generate_data()
         self.regen_plots()
+        self.B12.set_power(prev_sweep_power_dbm)
+        self.last_sweep_power_dbm = requested_power_dbm
         return
 
     def regen_plots(self):
