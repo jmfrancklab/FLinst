@@ -40,7 +40,6 @@ from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
 from Instruments import (
     genesys,
     LakeShore475,
