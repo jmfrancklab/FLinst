@@ -118,7 +118,7 @@ concentration:
   section: sample_params
   default: null
   description: concentration of spin label in the sample in M
-FIR_rep:
+FIR_rep_us:
   type: float
   section: odnp_params
   default: null
