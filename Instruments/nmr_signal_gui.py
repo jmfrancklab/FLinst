@@ -133,10 +133,11 @@ class NMRWindow(QMainWindow):
 
     def on_gamma_edit(self):
         if self._updating_gamma:
+            # inside set_gamma_value, and we don't want infinite recursion
             return
         thetext = self.textbox_gamma.text()
         print("you changed gamma_eff_MHz_G to", thetext)
-        self._set_gamma_value(float(thetext), update_centerline=True)
+        self.set_gamma_value(float(thetext), update_centerline=True)
         return
 
     def on_center_press(self, event):
@@ -169,28 +170,30 @@ class NMRWindow(QMainWindow):
         old_gamma = self.myconfig["gamma_eff_MHz_G"]
         Field = self.myconfig["carrierFreq_MHz"] / old_gamma
         new_gamma = old_gamma - centerfrq * 1e-6 / Field
-        self._set_gamma_value(new_gamma, update_centerline=False)
+        self.set_gamma_value(new_gamma)
         return new_gamma
-
-    # Computing new centerline from gamma change.
-    def _update_center_from_gamma_change(self, old_gamma, new_gamma):
-        Field = self.myconfig["carrierFreq_MHz"] / old_gamma
-        centerfrq = (old_gamma - new_gamma) * Field * 1e6
-        self._update_centerline(centerfrq)
 
     # Setting gamma value manually (via textbox) and
     # updating centerline if needed.
-    def _set_gamma_value(self, new_gamma, update_centerline):
+    def set_gamma_value(self, new_gamma, update_centerline=False):
+        """change gamma_eff_MHz_G for upcoming signal acquisition, and move the
+        centerline (axvline) to the position on the spectrum that will be
+        resonant with carrierFreq_MHz after we change the field
+        """
         if self._updating_gamma:
+            # inside set_gamma_value, and we don't want infinite recursion
             return
         self._updating_gamma = True
         old_gamma = self.myconfig["gamma_eff_MHz_G"]
         self.myconfig["gamma_eff_MHz_G"] = float(new_gamma)
         self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
-        if update_centerline and self.myconfig["gamma_eff_MHz_G"] != old_gamma:
-            self._update_center_from_gamma_change(
-                old_gamma, self.myconfig["gamma_eff_MHz_G"]
-            )
+        if update_centerline:
+            field_before_change = self.myconfig["carrierFreq_MHz"] / old_gamma
+            field_after_change = self.myconfig["carrierFreq_MHz"] / self.myconfig['gamma_eff_MHz_G']
+            self._update_centerline(
+                    (field_before_change - field_after_change) * self.myconfig['gamma_eff_MHz_G']
+                    * 1e6
+                    )
         self._updating_gamma = False
 
     def on_center_motion(self, event):
@@ -410,6 +413,7 @@ class NMRWindow(QMainWindow):
         centerfrq = signal.C.argmax("t2").item()
         if self.centerfrq_target is not None:
             centerfrq = self.centerfrq_target
+        print(f"DIAGNOSTIC I find center frequency at {centerfrq}")
         self.centerline = self.axes.axvline(
             x=centerfrq, ls=":", color="r", alpha=0.25
         )
@@ -430,7 +434,7 @@ class NMRWindow(QMainWindow):
             new_gamma = (
                 self.myconfig["gamma_eff_MHz_G"] - centerfrq * 1e-6 / Field
             )
-            self._set_gamma_value(new_gamma, update_centerline=False)
+            self.set_gamma_value(new_gamma)
             self.myconfig.write()
         else:
             print(
