@@ -71,7 +71,6 @@ class NMRWindow(QMainWindow):
         self.create_main_frame()
         self.centerline = None
         # The axvline marks the expected zero-offset position based on gamma.
-        self.centerfrq_target = None
         self._dragging_center = False
         self._updating_gamma = False
         self.create_status_bar()
@@ -142,33 +141,39 @@ class NMRWindow(QMainWindow):
     def on_center_press(self, event):
         if (
             event.inaxes != self.axes  # Click is in the correct axes
-            or self.centerline is None  # Centerline exist
-            or self.centerline.axes is None  # Line is attached to axes
-            or self.centerline.figure is None  # Line is attached to figure
+            or self.centerfrq_Hz is None # centerline not set up properly
             or event.xdata is None  # xdata exists
             or event.button != 1  # Ignore non-left mouse clicks
         ):
             return
 
-        line_x = self.centerline.get_xdata()[0]
-        x0, x1 = self.axes.get_xlim()
-        tol = 0.03 * abs(x1 - x0)
-        if abs(event.xdata - line_x) > tol:
+        tol = 0.03 * abs(np.diff(self.axes.get_xlim()).item())
+        if abs(event.xdata - self.centerfrq_Hz) > tol:
             return
         self._dragging_center = True
 
     # Setting target centerline position.
-    def _update_centerline(self, centerfrq):
-        self.centerfrq_target = centerfrq
+    @propery
+    def centerfrq_Hz(self):
+        if (self.centerline is None  # Centerline dosn't exist
+        or self.centerline.axes is None  # Line isn't attached to axes
+        or self.centerline.figure is None  # Line isn't attached to figure
+            ):
+            return None
+        return self.centerline.get_xdata()[0]
+    @centerfrq_Hz.setter
+    def centerfrq_Hz(self, centerfrq_Hz):
         if self.centerline is not None:
-            self.centerline.set_xdata([centerfrq, centerfrq])
+            self.centerline.set_xdata([centerfrq_Hz, centerfrq_Hz])
         self.canvas.draw_idle()
+        return
 
     # Computing new gamma from centerline offset.
-    def _update_gamma_from_center_offset(self, centerfrq):
-        old_gamma = self.myconfig["gamma_eff_MHz_G"]
-        Field = self.myconfig["carrierFreq_MHz"] / old_gamma
-        new_gamma = old_gamma - centerfrq * 1e-6 / Field
+    def update_gamma_from_center_offset(self):
+        """use the position of the center line to determine a new value for
+        gamma"""
+        old_field_G = self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"] 
+        new_gamma = self.myconfig["gamma_eff_MHz_G"] - self.centerfrq_Hz * 1e-6 / old_field_G
         self.set_gamma_value(new_gamma)
         return new_gamma
 
@@ -187,13 +192,13 @@ class NMRWindow(QMainWindow):
         self.myconfig["gamma_eff_MHz_G"] = float(new_gamma)
         self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
         if update_centerline:
-            field_before_change = self.myconfig["carrierFreq_MHz"] / old_gamma
-            field_after_change = (
+            field_before_change_G = self.myconfig["carrierFreq_MHz"] / old_gamma
+            field_after_change_G = (
                 self.myconfig["carrierFreq_MHz"]
                 / self.myconfig["gamma_eff_MHz_G"]
             )
-            self._update_centerline(
-                (field_before_change - field_after_change)
+            self.centerfrq_Hz = (
+                (field_before_change_G - field_after_change_G)
                 * self.myconfig["gamma_eff_MHz_G"]
                 * 1e6
             )
@@ -204,20 +209,23 @@ class NMRWindow(QMainWindow):
             return
         if event.inaxes != self.axes or event.xdata is None:
             return
-        self._update_centerline(event.xdata)
+        # TODO ☐: check the following, which doesn't do quite the same as what
+        #         you did before -- this should update the line position, but
+        #         it might be slow
+        self.centerfrq_Hz = event.xdata
 
     def on_center_release(self, event):
         if not self._dragging_center:
             return
         self._dragging_center = False
         if event.inaxes != self.axes or event.xdata is None:
-            if self.centerfrq_target is None:
+            if self.centerfrq_Hz is None:
                 return
-            centerfrq = self.centerfrq_target
+            drag_final_x = self.centerfrq_Hz
         else:
-            centerfrq = event.xdata
-        self._update_centerline(centerfrq)
-        new_gamma = self._update_gamma_from_center_offset(centerfrq)
+            drag_final_x = event.xdata
+        self.centerfrq_Hz = drag_final_x
+        new_gamma = self.update_gamma_from_center_offset()
         if new_gamma is not None:
             self.textbox_gamma.setText("%g" % new_gamma)
 
@@ -355,17 +363,19 @@ class NMRWindow(QMainWindow):
     def regen_plots(self):
         """Redraws the figure"""
         self.axes.clear()
+        # {{{ TODO ☐: this is signal processing -- we need to move it elsewhere
+        #     (see next TODO)
         self.echo_data.ft("ph1", unitary=True)
         self.echo_data.ft("t2", shift=True)
         self.echo_data.ift("t2")
-        filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
             -abs(
                 self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
             )
-            / filter_timeconst
+            / self.apo_time_const
         )
         self.echo_data.ft("t2")
+        # }}}
 
         # {{{ pull essential parts of plotting routine
         #    from pyspecdata -- these are pulled from
@@ -392,6 +402,7 @@ class NMRWindow(QMainWindow):
             self.axes.set_xlabel(myxlabel)
 
         # }}}
+        # {{{ TODO ☐: this is also signal processing
         if "nScans" in self.echo_data.dimlabels:
             if int(psp.ndshape(self.echo_data)["nScans"]) > 1:
                 multiscan_copy = self.echo_data.C
@@ -400,6 +411,7 @@ class NMRWindow(QMainWindow):
         else:
             many_scans = False
         noise = self.echo_data["ph1", r_[0, 2, 3]].run(np.std, "ph1")
+        # }}}
         signal = abs(self.echo_data["ph1", 1])
         signal -= noise
         for j in self.echo_data.getaxis("ph1"):
@@ -413,38 +425,32 @@ class NMRWindow(QMainWindow):
                         label=f"Δp=1, scan {k}",
                         alpha=0.2,
                     )
-        centerfrq = signal.C.argmax("t2").item()
-        if self.centerfrq_target is not None:
-            centerfrq = self.centerfrq_target
-        print(f"DIAGNOSTIC I find center frequency at {centerfrq}")
+        # {{{ TODO ☐: Here is the key, and why I want to separate the signal
+        #             processing.  The following automatically calculates the
+        #             centerline from the signal.  It should be done, along
+        #             with the signal processing.  **Immediately after the
+        #             signal acquisition finishes** and **at no other time**.
+        centerfrq_auto_Hz = signal.C.argmax("t2").item()
+        print(f"DIAGNOSTIC I find signal max at {centerfrq_auto_Hz}")
         self.centerline = self.axes.axvline(
-            x=centerfrq, ls=":", color="r", alpha=0.25
+            x=centerfrq_auto_Hz, ls=":", color="r", alpha=0.25
         )
+        # TODO ☐: I don't know what the following does. Please add explanatory comment
         self.centerline.set_picker(5)
+        # }}}
         pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
             signal, color="r", label="abs of signal - noise", alpha=0.75
         )
         self.axes.legend()
         # }}}
-        noise = noise["t2":centerfrq]
-        signal = signal["t2":centerfrq]
-        if signal > 3 * noise:
-            Field = (
-                self.myconfig["carrierFreq_MHz"]
-                / self.myconfig["gamma_eff_MHz_G"]
-            )
-            new_gamma = (
-                self.myconfig["gamma_eff_MHz_G"] - centerfrq * 1e-6 / Field
-            )
-            self.set_gamma_value(new_gamma)
-            self.myconfig.write()
-        else:
-            print(
-                "*" * 5
-                + "warning! SNR looks bad! I'm not adjusting γ!!!"
-                + "*" * 5
-            )  # this is not yet tested!
+        noise = noise["t2":centerfrq_Hz]
+        signal = signal["t2":centerfrq_Hz]
+
+        # TODO ☐: JF deleted code that was equivalent to
+        #         update_gamma_from_center_offset --> that should also be done
+        #         immediately after finding centerfrq_Hz 
+        self.myconfig.write()
         self.canvas.draw()
         return
 
