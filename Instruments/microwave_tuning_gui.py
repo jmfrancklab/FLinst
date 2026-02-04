@@ -179,7 +179,7 @@ class TuningWindow(qt6w.QMainWindow):
             reply = qt6w.QMessageBox.question(
                 self,
                 "Confirm power change",
-                f"I am setting the power to {power_dbm} dBm. Are you sure?",
+                f"I am setting the power to {requested_power_dbm} dBm. Are you sure?",
                 qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
                 qt6w.QMessageBox.No,
             )
