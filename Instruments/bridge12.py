@@ -245,15 +245,14 @@ class Bridge12(Serial):
         self.write(b"power %d\r" % setting)
         _ = self.readline()  # gobble the power updated statement
 
-    def set_power(self, dBm, bypass_increment_limit=False):
+    def set_power(self, dBm):
         """set *and check* power.  On successful completion, set
         `self.cur_pwr_int` to 10*(power in dBm).
 
         Need to have 2 safeties for set_power:
 
         1. When power is increased above 10 dBm, the power is not allowed to
-           increase by more than 3 dBm above the current power, unless
-           bypass_increment_limit is True.
+           increase by more than 3 dBm above the current power.
         2. When increasing the power, call the power reading function.
 
         Parameters
@@ -284,9 +283,7 @@ class Bridge12(Serial):
                     "Before you try to set the power above 10 dBm, you must"
                     " first set a lower power!!!"
                 )
-            if (not bypass_increment_limit) and (
-                setting > 30 + self.cur_pwr_int
-            ):
+            if setting > 30 + self.cur_pwr_int:
                 raise RuntimeError(
                     "Once you are above 10 dBm, you must raise the power in"
                     " MAX 3 dB increments.  The power is currently %g, and you"
@@ -612,9 +609,9 @@ class Bridge12(Serial):
                         " lower than the rx_dBm of the dip, which doesn't make"
                         " sense -- check %gdBm_%s" % (10.0, rx_dBm)
                     )
-        assert (
-            self.frq_sweep_10dBm_has_been_run
-        ), "I should have run the 10 dBm curve -- not sure what happened"
+        assert self.frq_sweep_10dBm_has_been_run, (
+            "I should have run the 10 dBm curve -- not sure what happened"
+        )
         over_diff = r_[
             0, np.diff(np.int32(over_bool))
         ]  # should indicate whether this position has lifted over (+1) or
@@ -704,8 +701,8 @@ class Bridge12(Serial):
         p = np.polyfit(freq, rx, 2)
         c, b, a = p
         # polynomial of form a+bx+cx^2
-        self.fit_data[self.last_sweep_name + "_func"] = (
-            lambda x: a + b * x + c * x**2
+        self.fit_data[self.last_sweep_name + "_func"] = lambda x: (
+            a + b * x + c * x**2
         )
         self.fit_data[self.last_sweep_name + "_range"] = freq[r_[0, -1]]
         # the following should be decided from doing algebra (I haven't

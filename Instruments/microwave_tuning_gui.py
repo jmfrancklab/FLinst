@@ -44,7 +44,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.setInterval(100)  # .1 seconds
         self.timer.timeout.connect(self.opt_update_frq)
         self.timer.start(1000)
-        self.last_sweep_power_dbm = self.spinbox_power.value()
+        self.last_sweep_power_dbm = None
         self.on_recapture()
         # self._n_times_run = 0
 
@@ -82,8 +82,7 @@ class TuningWindow(qt6w.QMainWindow):
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
 
     def on_power_edit(self):
-        power_dbm = self.spinbox_power.value()
-        print("you changed MW power to", power_dbm, "dBm")
+        print("you changed MW power to", self.spinbox_power.value(), "dBm")
         return
 
     def orig_zoom_limits(self):
@@ -172,14 +171,21 @@ class TuningWindow(qt6w.QMainWindow):
         return
 
     def on_recapture(self):
-        requested_power_dbm = self.spinbox_power.value()
-        prev_sweep_power_dbm = self.last_sweep_power_dbm
-        power_diff = requested_power_dbm - prev_sweep_power_dbm
+        power_diff = self.spinbox_power.value() - (
+            self.last_sweep_power_dbm
+            if self.last_sweep_power_dbm is not None
+            else self.spinbox_power.value()
+        )
+        """
+        In the future, we can choose threshold of a "reasonable reflection"
+        value based on the current curve and limits and adjust the value of
+        the reasonable power increment steps.
+        """
         if power_diff > 3.0:
             reply = qt6w.QMessageBox.question(
                 self,
                 "Confirm power change",
-                f"I am setting the power to {requested_power_dbm}"
+                f"I am setting the power to {self.spinbox_power.value()}"
                 "dBm. Are you sure?",
                 qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
                 qt6w.QMessageBox.No,
@@ -188,11 +194,15 @@ class TuningWindow(qt6w.QMainWindow):
                 # Revert to previous value
                 self.textbox_power.setValue(self._last_power_dbm)
                 return
-        self.B12.set_power(requested_power_dbm, bypass_increment_limit=True)
+        for power_val in np.linspace(
+            self.spinbox_power.value() - power_diff,
+            self.spinbox_power.value(),
+            int(power_diff / 3) + 1,
+        ):
+            self.B12.set_power(power_val)
         self.generate_data()
         self.regen_plots()
-        self.B12.set_power(prev_sweep_power_dbm, bypass_increment_limit=True)
-        self.last_sweep_power_dbm = requested_power_dbm
+        self.last_sweep_power_dbm = self.spinbox_power.value()
         return
 
     def regen_plots(self):
