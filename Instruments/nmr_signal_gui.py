@@ -162,7 +162,7 @@ class NMRWindow(QMainWindow):
         self._dragging_center = True
 
     # Setting target centerline position.
-    @propery
+    @property
     def centerfrq_Hz(self):
         if (
             self.centerline is None  # Centerline dosn't exist
@@ -462,8 +462,8 @@ class NMRWindow(QMainWindow):
         )
         self.axes.legend()
         # }}}
-        noise = noise["t2":centerfrq_Hz]
-        signal = signal["t2":centerfrq_Hz]
+        noise = noise["t2":centerfrq_auto_Hz]
+        signal = signal["t2":centerfrq_auto_Hz]
 
         # TODO ☐: JF deleted code that was equivalent to
         #         update_gamma_from_center_offset --> that should also be done
