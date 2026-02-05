@@ -107,10 +107,10 @@ class NMRWindow(QMainWindow):
 
     def set_default_choices(self):
         self.textbox_apo.setText("10 ms")
-        self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
-        self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
         self.textbox_apo.setMinimumWidth(10)
+        self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
         self.textbox_plen.setMinimumWidth(10)
+        self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
         self.textbox_gamma.setMinimumWidth(10)
         self.sw = 200
 
@@ -130,6 +130,10 @@ class NMRWindow(QMainWindow):
         return
 
     def on_gamma_edit(self):
+        """
+        Changes gamma_eff_mhz_g value when a new value is entered into the
+        textbox and updates the axvline position accordingly.
+        """
         if self._updating_gamma:
             # inside set_gamma_value, and we don't want infinite recursion
             return
@@ -139,9 +143,14 @@ class NMRWindow(QMainWindow):
         return
 
     def on_center_press(self, event):
+        """
+        Activates when we click the axvline. Checks if the click is done
+        with the left mouse-click and in the correct position. Sets the
+        tolarance of the line and activates the dragging event.
+        """
         if (
             event.inaxes != self.axes  # Click is in the correct axes
-            or self.centerfrq_Hz is None # centerline not set up properly
+            or self.centerfrq_Hz is None  # centerline not set up properly
             or event.xdata is None  # xdata exists
             or event.button != 1  # Ignore non-left mouse clicks
         ):
@@ -155,12 +164,14 @@ class NMRWindow(QMainWindow):
     # Setting target centerline position.
     @propery
     def centerfrq_Hz(self):
-        if (self.centerline is None  # Centerline dosn't exist
-        or self.centerline.axes is None  # Line isn't attached to axes
-        or self.centerline.figure is None  # Line isn't attached to figure
-            ):
+        if (
+            self.centerline is None  # Centerline dosn't exist
+            or self.centerline.axes is None  # Line isn't attached to axes
+            or self.centerline.figure is None  # Line isn't attached to figure
+        ):
             return None
         return self.centerline.get_xdata()[0]
+
     @centerfrq_Hz.setter
     def centerfrq_Hz(self, centerfrq_Hz):
         if self.centerline is not None:
@@ -172,8 +183,13 @@ class NMRWindow(QMainWindow):
     def update_gamma_from_center_offset(self):
         """use the position of the center line to determine a new value for
         gamma"""
-        old_field_G = self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"] 
-        new_gamma = self.myconfig["gamma_eff_MHz_G"] - self.centerfrq_Hz * 1e-6 / old_field_G
+        old_field_G = (
+            self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"]
+        )
+        new_gamma = (
+            self.myconfig["gamma_eff_MHz_G"]
+            - self.centerfrq_Hz * 1e-6 / old_field_G
+        )
         self.set_gamma_value(new_gamma)
         return new_gamma
 
@@ -192,7 +208,9 @@ class NMRWindow(QMainWindow):
         self.myconfig["gamma_eff_MHz_G"] = float(new_gamma)
         self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
         if update_centerline:
-            field_before_change_G = self.myconfig["carrierFreq_MHz"] / old_gamma
+            field_before_change_G = (
+                self.myconfig["carrierFreq_MHz"] / old_gamma
+            )
             field_after_change_G = (
                 self.myconfig["carrierFreq_MHz"]
                 / self.myconfig["gamma_eff_MHz_G"]
@@ -449,7 +467,7 @@ class NMRWindow(QMainWindow):
 
         # TODO ☐: JF deleted code that was equivalent to
         #         update_gamma_from_center_offset --> that should also be done
-        #         immediately after finding centerfrq_Hz 
+        #         immediately after finding centerfrq_Hz
         self.myconfig.write()
         self.canvas.draw()
         return
