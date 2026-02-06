@@ -82,7 +82,16 @@ class TuningWindow(qt6w.QMainWindow):
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
 
     def on_power_edit(self):
-        print("you changed MW power to", self.spinbox_power.value(), "dBm")
+        print("you changed MW power to", self.target_power_dbm, "dBm")
+        return
+
+    @property
+    def target_power_dbm(self):
+        return self.target_power_dbm
+
+    @target_power_dbm.setter
+    def target_power_dbm(self, power_dbm):
+        self.spinbox_power.setValue(power_dbm)
         return
 
     def orig_zoom_limits(self):
@@ -171,38 +180,37 @@ class TuningWindow(qt6w.QMainWindow):
         return
 
     def on_recapture(self):
-        power_diff = self.spinbox_power.value() - (
-            self.last_sweep_power_dbm
-            if self.last_sweep_power_dbm is not None
-            else self.spinbox_power.value()
-        )
-        """
-        In the future, we can choose threshold of a "reasonable reflection"
-        value based on the current curve and limits and adjust the value of
-        the reasonable power increment steps.
-        """
-        if power_diff > 3.0:
-            reply = qt6w.QMessageBox.question(
-                self,
-                "Confirm power change",
-                f"I am setting the power to {self.spinbox_power.value()}"
-                "dBm. Are you sure?",
-                qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
-                qt6w.QMessageBox.No,
-            )
-            if reply != qt6w.QMessageBox.Yes:
-                # Revert to previous value
-                self.textbox_power.setValue(self._last_power_dbm)
-                return
-        for power_val in np.linspace(
-            self.spinbox_power.value() - power_diff,
-            self.spinbox_power.value(),
-            int(power_diff / 3) + 1,
-        ):
-            self.B12.set_power(power_val)
+        if self.last_sweep_power_dbm is None:
+            self.B12.set_power(10.0)
+        else:
+            power_diff = self.target_power_dbm - self.last_sweep_power_dbm
+            """
+            In the future, we can choose threshold of a "reasonable reflection"
+            value based on the current curve and limits and adjust the value of
+            the reasonable power increment steps.
+            """
+            if power_diff > 3.0:
+                reply = qt6w.QMessageBox.question(
+                    self,
+                    "Confirm power change",
+                    f"I am setting the power to {self.target_power_dbm}"
+                    "dBm. Are you sure?",
+                    qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
+                    qt6w.QMessageBox.No,
+                )
+                if reply != qt6w.QMessageBox.Yes:
+                    # Revert to previous value
+                    self.textbox_power.setValue(self._last_power_dbm)
+                    return
+            for power_val in np.linspace(
+                self.last_sweep_power_dbm,
+                self.target_power_dbm,
+                int(power_diff / 3) + 1,
+            ):
+                self.B12.set_power(power_val)
         self.generate_data()
         self.regen_plots()
-        self.last_sweep_power_dbm = self.spinbox_power.value()
+        self.last_sweep_power_dbm = self.target_power_dbm
         return
 
     def regen_plots(self):
@@ -217,7 +225,7 @@ class TuningWindow(qt6w.QMainWindow):
         if self.fmode:
             if not self._already_fmode:
                 self.B12.set_freq(self.dip_frq_GHz * 1e9)
-                self.B12.set_power(self.spinbox_power.value())
+                self.B12.set_power(self.target_power_dbm)
                 self._already_fmode = True
             #    if hasattr(self, 'frq_log'):
             #        del self.frq_log
@@ -482,7 +490,6 @@ def main():
         b.set_rf(True)
         b.set_amp(True)
         time.sleep(5)
-        b.set_power(10.0)
         tunwin = TuningWindow(b, myconfig)
         tunwin.show()
         app.exec()
