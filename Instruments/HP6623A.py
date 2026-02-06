@@ -52,7 +52,7 @@ class channel_proxy:
         if isinstance(idx, int):
             return [self._norm_int_index(idx)], True
         if isinstance(idx, slice):
-            return list(range(*idx.indices(n))), False
+            return list(range(*idx.indices(self.size))), False
         if isinstance(idx, (list, tuple)):
             return [self._norm_int_index(x) for x in idx], False
         raise TypeError(f"unsupported index type: {type(idx).__name__}")
