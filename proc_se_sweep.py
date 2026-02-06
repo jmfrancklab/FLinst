@@ -1,3 +1,4 @@
+from pylab import *
 from pyspecdata import *
 from pyspecdata.plot_funcs.image import imagehsv
 import os
@@ -43,7 +44,7 @@ for date,id_string,numchan,field_axis,cycle_time, in [
     if check_time:
         timing_node = 'timing_data'
         q = nddata_hdf5(filename+'/'+timing_node,
-                directory = getDATADIR(exp_type='test_equip'))
+                directory = getDATADIR(exp_type='ODNP_NMR_comp/old'))
         big_delay = False
         time_diff_list = []
         for x in range(ndshape(q)['t']):
@@ -67,7 +68,7 @@ for date,id_string,numchan,field_axis,cycle_time, in [
     #}}}
     if not check_time :
         s = nddata_hdf5(filename+'/'+nodename,
-                directory = getDATADIR(exp_type='test_equip'))
+                directory = getDATADIR(exp_type='ODNP_NMR_comp/old'))
         s.set_units('t','s')
         s.setaxis('ph1', r_[0:4]*0.25)
         s.setaxis('ph2', r_[0:4:2]*0.25)
@@ -124,7 +125,7 @@ for date,id_string,numchan,field_axis,cycle_time, in [
         # with time-shifted, phase corrected raw data, now take analytic
         # measured phase is phase of each 90 after time-shifting and phase correcting
         analytic = raw_corr['ch',1].C.ft('t')['t':(0,16e6)].setaxis('t', lambda f: f-carrier_f).ift('t').reorder(['full_cyc','t'],first=False)
-        measured_phase = analytic['t':(-0.72e-6,0.72e-6)].mean('t',return_error=False).mean('ph2',return_error=True).mean('full_cyc',return_error=True)
+        measured_phase = analytic['t':(-0.72e-6,0.72e-6)].mean('t').mean('ph2').mean('full_cyc')
         measured_phase /= abs(measured_phase)
         print("measured phase")
         print(measured_phase)
@@ -198,4 +199,3 @@ for date,id_string,numchan,field_axis,cycle_time, in [
                 #}}}
             #}}}
 fl.show()
-quit()

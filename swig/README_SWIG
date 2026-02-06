@@ -1,0 +1,43 @@
+* JF ran
+$ conda install swig
+which now allows us to use swig from a shell script and greatly simplifies wrapping.
+Also suggested use of environment variables to enable compilation across machines.
+Thus need a re-structuring of the workflow here, likely removing the swig executable.
+Will incorporate a compile shell script for each program.
+
+See the Hahn_echo directory for working example.
+
+** To compile, run compile_swig.sh from directory containing module **
+Important in the interface file for compilation:
+    %include <windows.i> below module definition
+    #include <windows.h> within %{ }%
+Most recent test...
+gcc -shared -DMS_WIN64 -I'C:\ProgramData\Anaconda2\include' -I'C:\apps-su\spincore_apps' -I'C:\ProgramData\Anaconda2\lib\site-packages\numpy\core\include' -L'C:\ProgramData\Anaconda2\libs' -L'C:\apps-su\spincore_apps' Hahn_echo.c Hahn_echo_wrap.c -lpython27 -lmrispinapi64 -o _Hahn_echo.pyd
+
+Tested on Windows lab computer...
+
+From /c/apps-su/swigwin-3.0.12 directory, go to 'example' directory
+This directory should only have two files: example.c and example.i
+example.c is the c program that you wish to use within python
+example.i is the interface file that SWIG will use to generate the
+appropriate wrapper to enable this usage within python
+
+$ winpty ./../swig.exe -python -o example_wrap.c example.i
+$ gcc -shared -DMS_WIN64 -I'C:\ProgramData\Anaconda2\include' -L'C:\Program
+Files (x86)\Dev-Cpp\MinGW64\bin\lib' example.c example_wrap.c -lpython27 -o _example.pyd
+
+The last line compiles both C programs (example.c and example_wrap.c,
+the latter generated with the prior line) and then links them as a
+.pyd file. It is important to have leading underscore here, as this is
+how python handles modules.
+
+*** OR ***
+After running
+$ conda install libpython
+within the Anaconda2 directory in c, was able to compile module with the following:
+$ winpty ./../swig.exe -python -o example_wrap.c example.i
+$ gcc -shared -DMS_WIN64 -I'C:\ProgramData\Anaconda2\include' -L'C:\ProgramData\
+Anaconda2\libs' example.c example_wrap.c -lpython27 -o _example.pyd
+
+which is at least a simplification for the linking directory for the library containing
+python27 (wanting libpython27.dll.a)

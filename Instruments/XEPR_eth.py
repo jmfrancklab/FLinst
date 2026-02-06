@@ -21,6 +21,8 @@ class xepr(object):
     def __exit__(self, exception_type, exception_value, traceback):
         self.send('CLOSE')
         self.sock.close()
+        if exception_type == ConnectionRefusedError:
+            raise ConnectionRefusedError("Are you sure that you have the server running on the XEPR instrument?")
         return 
     def get(self):
         data = self.sock.recv(1024).decode('ASCII').strip()

@@ -64,19 +64,19 @@ def set_shims(HP_list, output=False):
 #}}}
 
 with prologix_connection() as p:
-        with HP6623A(prologix_instance=p, address=3) as HP1:
-            with HP6623A(prologix_instance=p, address=5) as HP2:
-                print("*** *** ***")
-                HP_list = [
-                        (HP1, 1, 0.0), # X shim
-                        (HP1, 2, 0.0), # Z2 shim
-                        (HP2, 1, 0.0), # B0 shim
-                        (HP2, 2, 0.1), # Y shim
-                        (HP2, 3, 0.03), # Z1 shim
-                        ]
-                set_shims(HP_list,True)
-                input()
-                print("DONE")
-                print("* * *")
-                set_shims(HP_list,False)
+    with HP6623A(prologix_instance=p, address=3) as HP1:
+        with HP6623A(prologix_instance=p, address=5) as HP2:
+            print("*** *** ***")
+            HP_list = [
+                    (HP1, 1, 0.0), # X shim
+                    (HP1, 2, 0.0), # Z2 shim
+                    (HP2, 1, 0.0), # B0 shim
+                    (HP2, 2, 0.1), # Y shim
+                    (HP2, 3, 0.03), # Z1 shim
+                    ]
+            set_shims(HP_list,True)
+            input()
+            print("DONE")
+            print("* * *")
+            set_shims(HP_list,False)
 quit()

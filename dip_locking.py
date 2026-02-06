@@ -65,6 +65,7 @@ def plot_all(show_log_scale=True):
     powerlist = []
     powerlist = list(set((float(k.split('dBm')[0 ]) for k in list(result.keys()))))
     powerlist.sort()
+
     #print "powerlist is",powerlist
     for power in powerlist:
         if show_log_scale:
