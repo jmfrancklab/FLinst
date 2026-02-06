@@ -375,14 +375,8 @@ class NMRWindow(QMainWindow):
 
     def acq_NMR(self):
         self.generate_data()
-        self.regen_plots()
-        return
-
-    def regen_plots(self):
-        """Redraws the figure"""
-        self.axes.clear()
-        # {{{ TODO ☐: this is signal processing -- we need to move it elsewhere
-        #     (see next TODO)
+        # {{{ Process the data to find the center frequency and update
+        # the centerline position.
         self.echo_data.ft("ph1", unitary=True)
         self.echo_data.ft("t2", shift=True)
         self.echo_data.ift("t2")
@@ -393,7 +387,45 @@ class NMRWindow(QMainWindow):
             / self.apo_time_const
         )
         self.echo_data.ft("t2")
+
+        if "nScans" in self.echo_data.dimlabels:
+            if int(psp.ndshape(self.echo_data)["nScans"]) > 1:
+                self.multiscan_copy = self.echo_data.C
+                self.many_scans = True
+                self.echo_data.mean("nScans")
+        else:
+            self.many_scans = False
+        self.noise = self.echo_data["ph1", r_[0, 2, 3]].run(np.std, "ph1")
+        self.signal = abs(self.echo_data["ph1", 1])
+        self.signal -= self.noise
+        centerfrq_auto_Hz = self.signal.C.argmax("t2").item()
+        print(f"DIAGNOSTIC I find signal max at {centerfrq_auto_Hz}")
+        self.centerline = self.axes.axvline(
+            x=centerfrq_auto_Hz, ls=":", color="r", alpha=0.25
+        )
+        # Set the picking region for the centerline to 5 units.
+        self.centerline.set_picker(5)
         # }}}
+
+        # {{{ check SNR before adjusting gamma
+        noise = self.noise["t2":centerfrq_auto_Hz]
+        signal = self.signal["t2":centerfrq_auto_Hz]
+        if signal > 3 * noise:
+            self.update_gamma_from_center_offset(centerfrq_auto_Hz)
+        else:
+            print(
+                "*" * 5
+                + "warning! SNR looks bad! I'm not adjusting γ!!!"
+                + "*" * 5
+            )  # this is not yet tested!
+        # }}}
+        self.regen_plots()
+        return
+
+    def regen_plots(self):
+        """Redraws the figure"""
+        center_frq = self.centerfrq_Hz
+        self.axes.clear()
 
         # {{{ pull essential parts of plotting routine
         #    from pyspecdata -- these are pulled from
@@ -420,54 +452,23 @@ class NMRWindow(QMainWindow):
             self.axes.set_xlabel(myxlabel)
 
         # }}}
-        # {{{ TODO ☐: this is also signal processing
-        if "nScans" in self.echo_data.dimlabels:
-            if int(psp.ndshape(self.echo_data)["nScans"]) > 1:
-                multiscan_copy = self.echo_data.C
-                many_scans = True
-                self.echo_data.mean("nScans")
-        else:
-            many_scans = False
-        noise = self.echo_data["ph1", r_[0, 2, 3]].run(np.std, "ph1")
-        # }}}
-        signal = abs(self.echo_data["ph1", 1])
-        signal -= noise
         for j in self.echo_data.getaxis("ph1"):
             pyspec_plot(
                 abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5
             )
-            if many_scans and j == 1:
-                for k in range(psp.ndshape(multiscan_copy)["nScans"]):
+            if self.many_scans and j == 1:
+                for k in range(psp.ndshape(self.multiscan_copy)["nScans"]):
                     pyspec_plot(
-                        abs(multiscan_copy["ph1":j]["nScans", k]),
+                        abs(self.multiscan_copy["ph1":j]["nScans", k]),
                         label=f"Δp=1, scan {k}",
                         alpha=0.2,
                     )
-        # {{{ TODO ☐: Here is the key, and why I want to separate the signal
-        #             processing.  The following automatically calculates the
-        #             centerline from the signal.  It should be done, along
-        #             with the signal processing.  **Immediately after the
-        #             signal acquisition finishes** and **at no other time**.
-        centerfrq_auto_Hz = signal.C.argmax("t2").item()
-        print(f"DIAGNOSTIC I find signal max at {centerfrq_auto_Hz}")
-        self.centerline = self.axes.axvline(
-            x=centerfrq_auto_Hz, ls=":", color="r", alpha=0.25
-        )
-        # TODO ☐: I don't know what the following does. Please add explanatory comment
-        self.centerline.set_picker(5)
-        # }}}
-        pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
+        pyspec_plot(self.noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
-            signal, color="r", label="abs of signal - noise", alpha=0.75
+            self.signal, color="r", label="abs of signal - noise", alpha=0.75
         )
+        self.axes.axvline(x=center_frq, ls=":", color="r", alpha=0.25)
         self.axes.legend()
-        # }}}
-        noise = noise["t2":centerfrq_auto_Hz]
-        signal = signal["t2":centerfrq_auto_Hz]
-
-        # TODO ☐: JF deleted code that was equivalent to
-        #         update_gamma_from_center_offset --> that should also be done
-        #         immediately after finding centerfrq_Hz
         self.myconfig.write()
         self.canvas.draw()
         return
