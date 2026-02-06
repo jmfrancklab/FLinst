@@ -1,4 +1,3 @@
-from pylab import *
 from .gpib_eth import gpib_eth
 from .log_inst import logger
 import time
@@ -8,57 +7,28 @@ class channel_proxy:
     r"""
     Per-instance bound view returned by channel_property.__get__.
 
-    This object exists to bind the owning instance ("owner") so that indexing
-    can work.
+    Python evaluates `owner.prop[idx]` as:
+        tmp = owner.prop            # attribute access -> descriptor __get__
+        tmp.__getitem__(idx)        # indexing on tmp
 
-    Evaluation order (why a proxy is needed)
-    ---------------------------------------
-    Python evaluates:
+    Therefore indexing runs on the object returned by __get__. This proxy
+    captures `owner` so __getitem__/__setitem__ can call fget/fset with the
+    correct instance.
 
-        owner.prop[idx]
+    `size` is determined from `len(owner._known_output_state)` at proxy
+    construction time. This enables len(), iteration, and slice.indices(size).
 
-    in two steps:
+    Indexing:
+      - int:        proxy[i]              -> single value
+      - slice:      proxy[i:j:k]          -> list of values
+      - list/tuple: proxy[[1,3,4]]        -> list of values
 
-        tmp = owner.prop            # attribute access
-        tmp.__getitem__(idx)        # indexing on the result
-
-    The first step triggers the descriptor protocol:
-
-        channel_property.__get__(owner, type(owner))
-
-    and whatever __get__ returns becomes `tmp`. Therefore `owner.prop[idx]`
-    calls `__getitem__` on the object returned by `__get__`, not on the
-    descriptor object, unless __get__ returns the descriptor itself.
-
-    Returning the descriptor itself is not sufficient because `__getitem__`
-    only receives (self, idx); it would not know which `owner` instance to use
-    (and "remembering the last owner" inside the shared descriptor is unsafe
-    under interleaving / reentrancy / threads). The proxy solves this by
-    capturing `owner` per access.
-
-    size
-    ----
-    Here, `size` is determined from `len(owner._known_output_state)` at proxy
-    construction time. This enables:
-      - len(proxy)
-      - iteration over channels 0..size-1
-      - slice indexing via slice.indices(size)
-
-    Indexing behavior
-    -----------------
-      - int:      proxy[i]            -> single value
-      - slice:    proxy[i:j:k]        -> list of values
-      - list/tuple of ints:
-                  proxy[[1,3,4]]     -> list of values
-
-    Assignment behavior
-    -------------------
-      - int:      proxy[i] = v
-      - slice:    proxy[i:j:k] = v            (scalar broadcast)
-                 proxy[i:j:k] = iterable      (length must match)
-      - list/tuple:
-                 proxy[[1,3,4]] = v           (scalar broadcast)
-                 proxy[[1,3,4]] = iterable    (length must match)
+    Assignment:
+      - int:        proxy[i] = v
+      - slice:      proxy[i:j:k] = v            (scalar broadcast)
+                   proxy[i:j:k] = iterable      (length must match)
+      - list/tuple: proxy[[...]] = v            (scalar broadcast)
+                   proxy[[...]] = iterable      (length must match)
     """
     __slots__ = ("_owner", "_prop", "size")
 
@@ -67,20 +37,24 @@ class channel_proxy:
         self._prop = prop
         self.size = len(owner._known_output_state)
 
-    def _require_size(self):
-        if self.size is None:
-            raise AttributeError("size is not set; required for slices/fancy indexing/iteration")
-        return int(self.size)
+    def _norm_int_index(self, i):
+        n = self.size
+        if not isinstance(i, int):
+            raise TypeError(f"channel index must be int, got {type(i).__name__}")
+        if i < 0:
+            i += n
+        if not (0 <= i < n):
+            raise IndexError(f"channel index {i} out of range for size {n}")
+        return i
 
     def _indices(self, idx):
-        """Normalize idx -> list[int]."""
+        """Normalize idx -> (list[int], is_scalar)."""
         if isinstance(idx, int):
-            return [idx], True  # True => scalar
+            return [self._norm_int_index(idx)], True
         if isinstance(idx, slice):
-            n = self._require_size()
             return list(range(*idx.indices(n))), False
         if isinstance(idx, (list, tuple)):
-            return list(idx), False
+            return [self._norm_int_index(x) for x in idx], False
         raise TypeError(f"unsupported index type: {type(idx).__name__}")
 
     def __getitem__(self, idx):
@@ -99,7 +73,6 @@ class channel_proxy:
             fset(self._owner, inds[0], value)
             return
 
-        # broadcast scalar vs zip iterable
         is_iterable = hasattr(value, "__iter__") and not isinstance(value, (str, bytes))
         if not is_iterable:
             for i in inds:
@@ -113,11 +86,10 @@ class channel_proxy:
             fset(self._owner, i, v)
 
     def __len__(self):
-        return self._require_size()
+        return self.size
 
     def __iter__(self):
-        n = self._require_size()
-        for ch in range(n):
+        for ch in range(self.size):
             yield self[ch]
 
     def __repr__(self):
@@ -196,35 +168,45 @@ class channel_property:
         self._fset = fset
         return self
 
-
-class HP6623A (gpib_eth):
+class HP6623A(gpib_eth):
     # TODO ☐: feed GPT this code and the manual, and ask it to make
     #         functions to handle all the functionality of the serial
     #         commands
+    # TODO ☐: software interlock that sets max safe current (let's start with
+    #         0.5A, and ask Boris for liquid crystal temperature paper in
+    #         Curt's cabinet against the wall.
     def __init__(self, prologix_instance=None, address=None):
-        r"""initialize a new `HP6623A` power supply class
-        """
-        super().__init__(prologix_instance,address)
+        r"""initialize a new `HP6623A` power supply class"""
+        super().__init__(prologix_instance, address)
         self.write("ID?")
         idstring = self.read()
-        if idstring[0:2] == 'HP':
-            logger.debug("Detected HP power supply with ID string %s"%idstring)
+        if idstring[0:2] == "HP":
+            logger.debug(
+                "Detected HP power supply with ID string %s" % idstring
+            )
         else:
-            raise ValueError("Not detecting identity as HP power supply, returned ID string as %s"%idstring)
+            raise ValueError(
+                "Not detecting identity as HP power supply, returned ID string as %s"
+                % idstring
+            )
+
         self._known_output_state = []
         for j in range(8):
             try:
                 x = self.get_output(j)
                 self._known_output_state.append(x)
-            except:
+            except Exception:
                 break
-        if j < 1:
+
+        if len(self._known_output_state) < 1:
             raise ValueError("I can't even get one channel!")
         return
+
     def check_id(self):
         self.write("ID?")
-        retval =  self.read()
-        return
+        retval = self.read()
+        return retval
+
     def set_voltage(self, ch, val):
         r"""set voltage (in Volts) on specific channel
 
@@ -238,14 +220,12 @@ class HP6623A (gpib_eth):
         Returns
         =======
         None
-        
         """
-        self.write("VSET %s,%s"%(str(ch+1),str(val)))
-        if val == 0.0:
-            return
-        else:
+        self.write("VSET %s,%s" % (str(ch + 1), str(val)))
+        if val != 0.0:
             time.sleep(5)
         return
+
     def get_voltage(self, ch):
         r"""get voltage (in Volts) on specific channel
 
@@ -256,10 +236,11 @@ class HP6623A (gpib_eth):
         Returns
         =======
         Voltage reading (in Volts) as float
-        
+
         """
-        self.write("VOUT? %s"%str(ch+1))
+        self.write("VOUT? %s" % str(ch + 1))
         return float(self.read())
+
     def set_current(self, ch, val):
         r"""set current (in Amps) on specific channel
 
@@ -272,9 +253,11 @@ class HP6623A (gpib_eth):
         Returns
         =======
         None
-        
+
         """
-        self.write("ISET %s,%s"%(str(ch+1),str(val)))
+        self.write("ISET %s,%s" % (str(ch + 1), str(val)))
+        return
+
     def get_current(self, ch):
         r"""get current (in Amps) on specific channel
 
@@ -285,18 +268,21 @@ class HP6623A (gpib_eth):
         Returns
         =======
         Current reading (in Amps) as float
-        
         """
-        self.write("IOUT? %s"%str(ch+1))
+        self.write("IOUT? %s" % str(ch + 1))
         curr_reading = float(self.read())
         for i in range(30):
-            self.write("IOUT? %s"%str(ch+1))
+            self.write("IOUT? %s" % str(ch + 1))
             this_val = float(self.read())
             if curr_reading == this_val:
                 break
             if i > 28:
-                print("Not able to get stable meter reading after 30 tries. Returning: %0.3f"%curr_reading)
-        return curr_reading 
+                print(
+                    "Not able to get stable meter reading after 30 tries. Returning: %0.3f"
+                    % curr_reading
+                )
+        return curr_reading
+
     def set_output(self, ch, trigger):
         r"""turn on or off the set_output on specific channel
 
@@ -310,17 +296,15 @@ class HP6623A (gpib_eth):
         Returns
         =======
         None
-        
+
         """
-        assert (isinstance(trigger, int)), "trigger must be int (or bool)"
-        assert(0 <= trigger <= 1), "trigger must be 0 (False) or 1 (True)"
-        if trigger:
-            trigger = 1
-        elif not trigger:
-            trigger = 0
-        self.write("OUT %s,%s"%(str(ch+1),str(trigger)))
+        assert isinstance(trigger, int), "trigger must be int (or bool)"
+        assert 0 <= trigger <= 1, "trigger must be 0 (False) or 1 (True)"
+        trigger = 1 if trigger else 0
+        self.write("OUT %s,%s" % (str(ch + 1), str(trigger)))
         self._known_output_state[ch] = trigger
-        return 
+        return
+
     def get_output(self, ch):
         r"""check the set_output status of a specific channel
 
@@ -331,37 +315,49 @@ class HP6623A (gpib_eth):
         Returns
         =======
         str stating whether the channel set_output is OFF or ON
-        
+
         """
-        self.write("OUT? %s"%str(ch+1))
+        self.write("OUT? %s" % str(ch + 1))
         retval = float(self.read())
         if retval == 0:
-            print("Ch %s set_output is OFF"%ch)
+            print("Ch %s output is OFF" % ch)
         elif retval == 1:
-            print("Ch %s set_output is ON"%ch)
+            print("Ch %s output is ON" % ch)
         return retval
+
     def close(self):
         for i in range(len(self._known_output_state)):
             # set voltage and current to 0 and turn off set_output on all channels,
             # before exiting
-            self.set_voltage(i,0)
-            self.set_current(i,0)
-            self.set_output(i,False)
+            self.set_voltage(i, 0)
+            self.set_current(i, 0)
+            self.set_output(i, 0)
         super().close()
+        return
+
+    # TODO ☐: make analogous code for current.  Enforce a software interlock
+    #         that if we are turning on the output for the first time, the
+    #         current limit must be small (maybe just 0 to be safe).  This
+    #         prevents us from slamming a somewhat reasonable voltage across a
+    #         low-impedance load.
+    # TODO ☐: After previous, write a basic example to use the current limit,
+    #         with voltage limit set high, and test on the instrument
+    #         (generally we will want to control the current, which is propto
+    #         field)
     @channel_property
-    def voltage(self,channel):
+    def voltage(self, channel):
         "this allows self.voltage[channel] to evaluate properly"
         return self.get_voltage(channel)
 
     @voltage.setter
-    def voltage(self,channel,value):
+    def voltage(self, channel, value):
         "this causes self.voltage[channel] = value to yield a change on the instrument"
         if value == 0:
-            self.set_voltage(channel,0)
+            self.set_voltage(channel, 0)
             if self._known_output_state[channel] == 1:
-                self.set_output(channel,0)
+                self.set_output(channel, 0)
         else:
-            self.set_voltage(channel,value)
+            self.set_voltage(channel, value)
             if self._known_output_state[channel] == 0:
-                self.set_output(channel,1)
+                self.set_output(channel, 1)
         return
