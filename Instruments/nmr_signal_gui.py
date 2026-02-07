@@ -393,13 +393,7 @@ class NMRWindow(QMainWindow):
         self.signal = abs(self.echo_data["ph1", 1])
         self.signal -= self.noise
         centerfrq_auto_Hz = self.signal.C.argmax("t2").item()
-        print(f"DIAGNOSTIC I find signal max at {centerfrq_auto_Hz}")
-        self.centerline = self.axes.axvline(
-            x=centerfrq_auto_Hz, ls=":", color="r", alpha=0.25
-        )
-        # Set the picking region for the centerline to 5 units.
-        self.centerline.set_picker(5)
-        # }}}
+        self.centerfrq_Hz = centerfrq_auto_Hz
         self.update_gamma_from_center_offset()
         self.regen_plots()
         return
@@ -449,6 +443,7 @@ class NMRWindow(QMainWindow):
         pyspec_plot(
             self.signal, color="r", label="abs of signal - noise", alpha=0.75
         )
+        self.centerfrq_Hz = center_frq
         self.axes.axvline(x=center_frq, ls=":", color="r", alpha=0.25)
         self.centerline.set_picker(5)
         self.axes.legend()
