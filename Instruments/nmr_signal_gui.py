@@ -387,10 +387,9 @@ class NMRWindow(QMainWindow):
             / self.apo_time_const
         )
         self.echo_data.ft("t2")
-
+        self.multiscan_copy = self.echo_data.C
         if "nScans" in self.echo_data.dimlabels:
             if int(psp.ndshape(self.echo_data)["nScans"]) > 1:
-                self.multiscan_copy = self.echo_data.C
                 self.echo_data.mean("nScans")
         self.noise = self.echo_data["ph1", r_[0, 2, 3]].run(np.std, "ph1")
         self.signal = abs(self.echo_data["ph1", 1])
@@ -442,7 +441,9 @@ class NMRWindow(QMainWindow):
                 abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5
             )
             if "nScans" in self.multiscan_copy.dimlabels and j == 1:
-                for k in range(self.multiscan_copy.shape["nScans"]):
+                for k in range(
+                    psp.ndshape(self.multiscan_copy.shape)["nScans"]
+                ):
                     pyspec_plot(
                         abs(self.multiscan_copy["ph1":j]["nScans", k]),
                         label=f"Δp=1, scan {k}",
