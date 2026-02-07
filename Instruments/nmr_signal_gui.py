@@ -148,7 +148,9 @@ class NMRWindow(QMainWindow):
         with the left mouse-click and in the correct position. Sets the
         tolarance of the line and activates the dragging event.
         """
-        print("press", event.inaxes,event.xdata,event.button,self.centerfrq_Hz)
+        print(
+            "press", event.inaxes, event.xdata, event.button, self.centerfrq_Hz
+        )
         if (
             event.inaxes != self.axes  # Click is in the correct axes
             or self.centerfrq_Hz is None  # centerline not set up properly
@@ -393,9 +395,16 @@ class NMRWindow(QMainWindow):
         self.signal = abs(self.echo_data["ph1", 1])
         self.signal -= self.noise
         centerfrq_auto_Hz = self.signal.C.argmax("t2").item()
+        print(f"DIAGNOSTIC I find signal max at {centerfrq_auto_Hz}")
+        self.centerline = self.axes.axvline(
+            x=centerfrq_auto_Hz, ls=":", color="r", alpha=0.25
+        )
         self.centerfrq_Hz = centerfrq_auto_Hz
-        self.update_gamma_from_center_offset()
+        # Set the picking region for the centerline to 5 units.
+        self.centerline.set_picker(5)
+        # }}}
         self.regen_plots()
+        self.update_gamma_from_center_offset()
         return
 
     def regen_plots(self):
@@ -444,7 +453,9 @@ class NMRWindow(QMainWindow):
             self.signal, color="r", label="abs of signal - noise", alpha=0.75
         )
         self.centerfrq_Hz = center_frq
-        self.axes.axvline(x=center_frq, ls=":", color="r", alpha=0.25)
+        self.centerline = self.axes.axvline(
+            x=center_frq, ls=":", color="r", alpha=0.25
+        )
         self.centerline.set_picker(5)
         self.axes.legend()
         self.myconfig.write()
