@@ -449,6 +449,7 @@ class NMRWindow(QMainWindow):
             self.signal, color="r", label="abs of signal - noise", alpha=0.75
         )
         self.axes.axvline(x=center_frq, ls=":", color="r", alpha=0.25)
+        self.centerline.set_picker(5)
         self.axes.legend()
         self.myconfig.write()
         self.canvas.draw()
