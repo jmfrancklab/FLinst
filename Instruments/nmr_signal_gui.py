@@ -441,9 +441,7 @@ class NMRWindow(QMainWindow):
                 abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5
             )
             if "nScans" in self.multiscan_copy.dimlabels and j == 1:
-                for k in range(
-                    psp.ndshape(self.multiscan_copy.shape)["nScans"]
-                ):
+                for k in range(self.multiscan_copy.shape["nScans"]):
                     pyspec_plot(
                         abs(self.multiscan_copy["ph1":j]["nScans", k]),
                         label=f"Δp=1, scan {k}",
