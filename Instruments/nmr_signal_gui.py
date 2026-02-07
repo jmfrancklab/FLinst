@@ -227,9 +227,6 @@ class NMRWindow(QMainWindow):
             return
         if event.inaxes != self.axes or event.xdata is None:
             return
-        # TODO ☐: check the following, which doesn't do quite the same as what
-        #         you did before -- this should update the line position, but
-        #         it might be slow
         self.centerfrq_Hz = event.xdata
 
     def on_center_release(self, event):
