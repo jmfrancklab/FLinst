@@ -124,9 +124,9 @@ class NMRWindow(QMainWindow):
         return
 
     def on_plen_edit(self):
-        thetext = self.textbox_plen.text()
-        print("you changed your pulse length to", thetext, "s sqrt(W)")
-        self.myconfig["beta_90_s_sqrtW"] = float(thetext)
+        thetext = float(self.textbox_plen.text())
+        print(f"you changed your pulse length to {thetext} s sqrt(W)")
+        self.myconfig["beta_90_s_sqrtW"] = thetext
         return
 
     def on_gamma_edit(self):
@@ -391,10 +391,7 @@ class NMRWindow(QMainWindow):
         if "nScans" in self.echo_data.dimlabels:
             if int(psp.ndshape(self.echo_data)["nScans"]) > 1:
                 self.multiscan_copy = self.echo_data.C
-                self.many_scans = True
                 self.echo_data.mean("nScans")
-        else:
-            self.many_scans = False
         self.noise = self.echo_data["ph1", r_[0, 2, 3]].run(np.std, "ph1")
         self.signal = abs(self.echo_data["ph1", 1])
         self.signal -= self.noise
@@ -406,19 +403,7 @@ class NMRWindow(QMainWindow):
         # Set the picking region for the centerline to 5 units.
         self.centerline.set_picker(5)
         # }}}
-
-        # {{{ check SNR before adjusting gamma
-        noise = self.noise["t2":centerfrq_auto_Hz]
-        signal = self.signal["t2":centerfrq_auto_Hz]
-        if signal > 3 * noise:
-            self.update_gamma_from_center_offset(centerfrq_auto_Hz)
-        else:
-            print(
-                "*" * 5
-                + "warning! SNR looks bad! I'm not adjusting γ!!!"
-                + "*" * 5
-            )  # this is not yet tested!
-        # }}}
+        self.update_gamma_from_center_offset()
         self.regen_plots()
         return
 
@@ -456,8 +441,8 @@ class NMRWindow(QMainWindow):
             pyspec_plot(
                 abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5
             )
-            if self.many_scans and j == 1:
-                for k in range(psp.ndshape(self.multiscan_copy)["nScans"]):
+            if "nScans" in self.multiscan_copy.dimlabels and j == 1:
+                for k in range(self.multiscan_copy.shape["nScans"]):
                     pyspec_plot(
                         abs(self.multiscan_copy["ph1":j]["nScans", k]),
                         label=f"Δp=1, scan {k}",
