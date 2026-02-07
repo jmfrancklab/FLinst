@@ -87,7 +87,8 @@ class TuningWindow(qt6w.QMainWindow):
 
     @property
     def target_power_dbm(self):
-        return self.target_power_dbm
+        target_power = self.spinbox_power.value()
+        return target_power
 
     @target_power_dbm.setter
     def target_power_dbm(self, power_dbm):
@@ -200,12 +201,12 @@ class TuningWindow(qt6w.QMainWindow):
                 )
                 if reply != qt6w.QMessageBox.Yes:
                     # Revert to previous value
-                    self.textbox_power.setValue(self._last_power_dbm)
+                    self.target_power_dbm = self.last_sweep_power_dbm
                     return
             for power_val in np.linspace(
                 self.last_sweep_power_dbm,
                 self.target_power_dbm,
-                int(power_diff / 3) + 1,
+                int(abs(power_diff) / 3) + 1,
             ):
                 self.B12.set_power(power_val)
         self.generate_data()
