@@ -44,6 +44,11 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.setInterval(100)  # .1 seconds
         self.timer.timeout.connect(self.opt_update_frq)
         self.timer.start(1000)
+        b.set_power(
+            10.0
+        )  # Now that we are controlling the power with the GUI,
+        #    we want to start out with a power of 10 dB (previously this was
+        #    handled in the "main" script)
         self.last_sweep_power_dbm = None
         self.on_recapture()
         # self._n_times_run = 0
@@ -185,11 +190,9 @@ class TuningWindow(qt6w.QMainWindow):
             self.B12.set_power(10.0)
         else:
             power_diff = self.target_power_dbm - self.last_sweep_power_dbm
-            """
-            In the future, we can choose threshold of a "reasonable reflection"
-            value based on the current curve and limits and adjust the value of
-            the reasonable power increment steps.
-            """
+            # In the future, we can choose threshold of a "reasonable reflection"
+            # value based on the current curve and limits and adjust the value of
+            # the reasonable power increment steps.
             if power_diff > 3.0:
                 reply = qt6w.QMessageBox.question(
                     self,

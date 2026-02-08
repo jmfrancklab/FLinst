@@ -148,9 +148,6 @@ class NMRWindow(QMainWindow):
         with the left mouse-click and in the correct position. Sets the
         tolarance of the line and activates the dragging event.
         """
-        print(
-            "press", event.inaxes, event.xdata, event.button, self.centerfrq_Hz
-        )
         if (
             event.inaxes != self.axes  # Click is in the correct axes
             or self.centerfrq_Hz is None  # centerline not set up properly
