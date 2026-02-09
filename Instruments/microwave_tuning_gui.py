@@ -90,12 +90,13 @@ class TuningWindow(qt6w.QMainWindow):
                 "Somehow you are changing the power without having done a sweep yet."
             )
         else:
-            power_diff = req_power_dBm - self.last_sweep_power_dBm
             # In the future, we can choose threshold of a "reasonable reflection"
             # value based on the current curve and limits and adjust the value of
             # the reasonable power increment steps.
             for power_val in np.r_[
-                self.last_sweep_power_dBm : req_power_dBm : 3, req_power_dBm
+                self.last_sweep_power_dBm
+                + 3 : req_power_dBm : 3,  # If the first number is bigger than the target power, it doesn't generate anything.
+                req_power_dBm,
             ]:
                 self.B12.set_power(power_val)
         return
