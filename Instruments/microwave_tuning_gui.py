@@ -44,12 +44,8 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.setInterval(100)  # .1 seconds
         self.timer.timeout.connect(self.opt_update_frq)
         self.timer.start(1000)
-        b.set_power(
-            10.0
-        )  # Now that we are controlling the power with the GUI,
-        #    we want to start out with a power of 10 dB (previously this was
-        #    handled in the "main" script)
-        self.last_sweep_power_dbm = None
+        self.last_sweep_power_dBm = None
+        self.target_power_dBm = 10.0
         self.on_recapture()
         # self._n_times_run = 0
 
@@ -86,17 +82,31 @@ class TuningWindow(qt6w.QMainWindow):
         """
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
 
-    def on_power_edit(self):
-        print("you changed MW power to", self.target_power_dbm, "dBm")
+    def on_power_edit(self, req_power_dBm):
+        print(f"you changed MW power to {req_power_dBm} dBm")
+        if self.last_sweep_power_dBm is None:
+            self.B12.set_power(10.0)
+            raise RuntimeError(
+                "Somehow you are changing the power without having done a sweep yet."
+            )
+        else:
+            power_diff = req_power_dBm - self.last_sweep_power_dBm
+            # In the future, we can choose threshold of a "reasonable reflection"
+            # value based on the current curve and limits and adjust the value of
+            # the reasonable power increment steps.
+            for power_val in np.r_[
+                self.last_sweep_power_dBm : req_power_dBm : 3, req_power_dBm
+            ]:
+                self.B12.set_power(power_val)
         return
 
     @property
-    def target_power_dbm(self):
+    def target_power_dBm(self):
         target_power = self.spinbox_power.value()
         return target_power
 
-    @target_power_dbm.setter
-    def target_power_dbm(self, power_dbm):
+    @target_power_dBm.setter
+    def target_power_dBm(self, power_dbm):
         self.spinbox_power.setValue(power_dbm)
         return
 
@@ -183,38 +193,12 @@ class TuningWindow(qt6w.QMainWindow):
         if hasattr(self, "interpdata"):
             delattr(self, "interpdata")
             delattr(self, "dip_frq_GHz")
+        self.last_sweep_power_dBm = self.target_power_dBm
         return
 
     def on_recapture(self):
-        if self.last_sweep_power_dbm is None:
-            self.B12.set_power(10.0)
-        else:
-            power_diff = self.target_power_dbm - self.last_sweep_power_dbm
-            # In the future, we can choose threshold of a "reasonable reflection"
-            # value based on the current curve and limits and adjust the value of
-            # the reasonable power increment steps.
-            if power_diff > 3.0:
-                reply = qt6w.QMessageBox.question(
-                    self,
-                    "Confirm power change",
-                    f"I am setting the power to {self.target_power_dbm}"
-                    "dBm. Are you sure?",
-                    qt6w.QMessageBox.Yes | qt6w.QMessageBox.No,
-                    qt6w.QMessageBox.No,
-                )
-                if reply != qt6w.QMessageBox.Yes:
-                    # Revert to previous value
-                    self.target_power_dbm = self.last_sweep_power_dbm
-                    return
-            for power_val in np.linspace(
-                self.last_sweep_power_dbm,
-                self.target_power_dbm,
-                int(abs(power_diff) / 3) + 1,
-            ):
-                self.B12.set_power(power_val)
         self.generate_data()
         self.regen_plots()
-        self.last_sweep_power_dbm = self.target_power_dbm
         return
 
     def regen_plots(self):
@@ -229,7 +213,6 @@ class TuningWindow(qt6w.QMainWindow):
         if self.fmode:
             if not self._already_fmode:
                 self.B12.set_freq(self.dip_frq_GHz * 1e9)
-                self.B12.set_power(self.target_power_dbm)
                 self._already_fmode = True
             #    if hasattr(self, 'frq_log'):
             #        del self.frq_log
