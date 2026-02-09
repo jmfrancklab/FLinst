@@ -161,7 +161,13 @@ class channel_property:
         return channel_proxy(owner, self)
 
     def __set__(self, owner, value):
-        raise AttributeError("can't set attribute directly; use indexing: owner.attr[ch] = value")
+        is_iterable = hasattr(value, "__iter__") and not isinstance(value, (str, bytes))
+        if not is_iterable:
+            raise AttributeError("can't set attribute directly; use indexing: owner.attr[ch] = value")
+        # Allow vector-style assignment across all channels when an iterable is provided.
+        proxy = channel_proxy(owner, self)
+        proxy[:] = value
+        return
 
     # Decorator-style configuration, modeled on property
     def setter(self, fset):

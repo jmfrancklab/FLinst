@@ -80,6 +80,12 @@ class TestChannelProperty(unittest.TestCase):
         inst.voltage[0:3] = np.array([1.0, 2.0, 3.0])
         self.assertEqual(inst.voltage[0:3], [1.0, 2.0, 3.0])
 
+    def test_direct_numpy_vector_set(self):
+        """Exercise direct vector assignment across all channels."""
+        inst = DemoInstrument(3)
+        inst.voltage = np.array([3.0, 3.0, 3.0])
+        self.assertEqual(inst.voltage[0:3], [3.0, 3.0, 3.0])
+
     def test_len_and_iter(self):
         """Exercise len() and iteration of the proxy."""
         inst = DemoInstrument(3)
@@ -92,7 +98,8 @@ class TestChannelProperty(unittest.TestCase):
         with self.assertRaises(IndexError):
             _ = inst.voltage[5]
         with self.assertRaises(AttributeError):
-            inst.voltage = 3.0
+            # Assignment to a scalar without indexing is not allowed.
+            inst.voltage = 3
 
 
 if __name__ == "__main__":
