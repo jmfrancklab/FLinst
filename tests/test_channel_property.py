@@ -84,7 +84,7 @@ class TestChannelProperty(unittest.TestCase):
         """Exercise direct vector assignment across all channels."""
         inst = DemoInstrument(3)
         inst.voltage = np.array([3.0, 3.0, 3.0])
-        self.assertEqual(inst.voltage[0:3], [3.0, 3.0, 3.0])
+        self.assertEqual(inst.voltage, [3.0, 3.0, 3.0])
 
     def test_len_and_iter(self):
         """Exercise len() and iteration of the proxy."""

@@ -92,6 +92,12 @@ class channel_proxy:
         for ch in range(self.size):
             yield self[ch]
 
+    def __eq__(self, other):
+        # Compare the proxy to another iterable as a full channel vector.
+        if not hasattr(other, "__iter__") or isinstance(other, (str, bytes)):
+            return False
+        return list(self) == list(other)
+
     def __repr__(self):
         name = self._prop._name or "<unnamed>"
         return f"<channel_proxy {name} bound to {type(self._owner).__name__} at {hex(id(self._owner))}>"
