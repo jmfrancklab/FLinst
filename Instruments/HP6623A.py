@@ -30,6 +30,7 @@ class channel_proxy:
       - list/tuple: proxy[[...]] = v            (scalar broadcast)
                    proxy[[...]] = iterable      (length must match)
     """
+
     __slots__ = ("_owner", "_prop", "size")
 
     def __init__(self, owner, prop):
@@ -40,7 +41,9 @@ class channel_proxy:
     def _norm_int_index(self, i):
         n = self.size
         if not isinstance(i, int):
-            raise TypeError(f"channel index must be int, got {type(i).__name__}")
+            raise TypeError(
+                f"channel index must be int, got {type(i).__name__}"
+            )
         if i < 0:
             i += n
         if not (0 <= i < n):
@@ -73,7 +76,9 @@ class channel_proxy:
             fset(self._owner, inds[0], value)
             return
 
-        is_iterable = hasattr(value, "__iter__") and not isinstance(value, (str, bytes))
+        is_iterable = hasattr(value, "__iter__") and not isinstance(
+            value, (str, bytes)
+        )
         if not is_iterable:
             for i in inds:
                 fset(self._owner, i, value)
@@ -81,7 +86,10 @@ class channel_proxy:
 
         vals = list(value)
         if len(vals) != len(inds):
-            raise ValueError(f"assignment length mismatch: {len(vals)} values for {len(inds)} indices")
+            raise ValueError(
+                f"assignment length mismatch: {len(vals)} "
+                f"values for {len(inds)} indices"
+            )
         for i, v in zip(inds, vals):
             fset(self._owner, i, v)
 
@@ -100,7 +108,11 @@ class channel_proxy:
 
     def __repr__(self):
         name = self._prop._name or "<unnamed>"
-        return f"<channel_proxy {name} bound to {type(self._owner).__name__} at {hex(id(self._owner))}>"
+        return (
+            f"<channel_proxy {name} bound to {type(self._owner).__name__}"
+            f" at {hex(id(self._owner))}>"
+        )
+
 
 class channel_property:
     r"""
@@ -133,7 +145,8 @@ class channel_property:
     inside the descriptor is unsafe under interleaving / threads / reentrancy).
 
     Therefore __get__ returns a channel_proxy that stores `owner` and the
-    descriptor, so the proxy can call fget(owner, idx) and fset(owner, idx, val).
+    descriptor, so the proxy can call fget(owner, idx) and fset(owner, idx,
+    val).
 
     ITERATION / LENGTH
     ------------------
@@ -152,6 +165,7 @@ class channel_property:
     - Direct assignment `owner.voltage = ...` is disallowed; use indexing.
     - Slices are intentionally not implemented (raise TypeError).
     """
+
     def __init__(self, fget):
         self._fget = fget
         self._fset = None
@@ -167,10 +181,16 @@ class channel_property:
         return channel_proxy(owner, self)
 
     def __set__(self, owner, value):
-        is_iterable = hasattr(value, "__iter__") and not isinstance(value, (str, bytes))
+        is_iterable = hasattr(value, "__iter__") and not isinstance(
+            value, (str, bytes)
+        )
         if not is_iterable:
-            raise AttributeError("can't set attribute directly; use indexing: owner.attr[ch] = value")
-        # Allow vector-style assignment across all channels when an iterable is provided.
+            raise AttributeError(
+                "can't set attribute directly; use indexing: owner.attr[ch] = "
+                "value"
+            )
+        # Allow vector-style assignment across all channels when an iterable is
+        # provided.
         proxy = channel_proxy(owner, self)
         proxy[:] = value
         return
@@ -179,6 +199,7 @@ class channel_property:
     def setter(self, fset):
         self._fset = fset
         return self
+
 
 class HP6623A(gpib_eth):
     # TODO ☐: feed GPT this code and the manual, and ask it to make
@@ -198,8 +219,10 @@ class HP6623A(gpib_eth):
             )
         else:
             raise ValueError(
-                "Not detecting identity as HP power supply, returned ID string as %s"
-                % idstring
+                "Not detecting identity as HP power supply. "
+                "Expected ID string to start with 'HP'. Check your "
+                "connections and address settings, and make sure the "
+                "instrument is powered on. (Returned ID string: {idstring})"
             )
 
         self._known_output_state = []
@@ -261,7 +284,8 @@ class HP6623A(gpib_eth):
         ch : int
             Channel 1, 2, or 3
         val : float
-            Current you want to set in Amps; check manual for limits on each channel.
+            Current you want to set in Amps; check manual for limits on each
+            channel.
         Returns
         =======
         None
@@ -290,8 +314,8 @@ class HP6623A(gpib_eth):
                 break
             if i > 28:
                 print(
-                    "Not able to get stable meter reading after 30 tries. Returning: %0.3f"
-                    % curr_reading
+                    "Not able to get stable meter reading after 30 tries. "
+                    f"Returning: {curr_reading:0.3f}"
                 )
         return curr_reading
 
@@ -339,8 +363,8 @@ class HP6623A(gpib_eth):
 
     def close(self):
         for i in range(len(self._known_output_state)):
-            # set voltage and current to 0 and turn off set_output on all channels,
-            # before exiting
+            # set voltage and current to 0 and turn off set_output on all
+            # channels, before exiting
             self.set_voltage(i, 0)
             self.set_current(i, 0)
             self.set_output(i, 0)
@@ -363,7 +387,8 @@ class HP6623A(gpib_eth):
 
     @voltage.setter
     def voltage(self, channel, value):
-        "this causes self.voltage[channel] = value to yield a change on the instrument"
+        """this causes self.voltage[channel] = value to yield a change on the
+        instrument"""
         if value == 0:
             self.set_voltage(channel, 0)
             if self._known_output_state[channel] == 1:

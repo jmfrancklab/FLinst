@@ -5,6 +5,7 @@ import types
 import unittest
 
 import numpy as np
+
 # {{{ Provide minimal stub modules to satisfy relative imports in HP6623A.
 #     The test uses these shims to load the descriptor without importing
 #     optional dependencies from the Instruments package.
@@ -17,15 +18,21 @@ gpib_eth_module.gpib_eth = object
 sys.modules["Instruments.gpib_eth"] = gpib_eth_module
 
 log_inst_module = types.ModuleType("Instruments.log_inst")
-log_inst_module.logger = types.SimpleNamespace(debug=lambda *args, **kwargs: None)
+log_inst_module.logger = types.SimpleNamespace(
+    debug=lambda *args, **kwargs: None
+)
 sys.modules["Instruments.log_inst"] = log_inst_module
 # }}}
 
-# {{{ Load the channel_property descriptor directly to avoid package import side effects.
-#     This isolates the descriptor implementation so the tests can run in
-#     environments without hardware driver dependencies.
-module_path = pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "HP6623A.py"
-spec = importlib.util.spec_from_file_location("Instruments.HP6623A", module_path)
+# {{{ Load the channel_property descriptor directly to avoid package import
+#     side effects.  This isolates the descriptor implementation so the tests
+#     can run in environments without hardware driver dependencies.
+module_path = (
+    pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "HP6623A.py"
+)
+spec = importlib.util.spec_from_file_location(
+    "Instruments.HP6623A", module_path
+)
 HP6623A_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(HP6623A_module)
 channel_property = HP6623A_module.channel_property
@@ -33,7 +40,9 @@ channel_property = HP6623A_module.channel_property
 
 
 class DemoInstrument:
-    """Simple fixture class to demonstrate channel_property get/set behavior."""
+    """Simple fixture class to demonstrate channel_property get/set
+    behavior."""
+
     def __init__(self, channel_count):
         """Store channel values and known output states for proxy sizing."""
         self.values = list(range(channel_count))
@@ -53,6 +62,7 @@ class DemoInstrument:
 
 class TestChannelProperty(unittest.TestCase):
     """Verify channel_property indexing, assignment, and error behavior."""
+
     def test_scalar_get_set(self):
         """Exercise scalar indexing and assignment."""
         inst = DemoInstrument(3)

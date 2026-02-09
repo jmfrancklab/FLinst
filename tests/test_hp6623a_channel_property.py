@@ -13,22 +13,34 @@ instruments_pkg.__path__ = []
 sys.modules["Instruments"] = instruments_pkg
 
 # Load gpib_eth from disk so we can use the real Prologix connection code.
-gpib_eth_path = pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "gpib_eth.py"
-gpib_eth_spec = importlib.util.spec_from_file_location("Instruments.gpib_eth", gpib_eth_path)
+gpib_eth_path = (
+    pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "gpib_eth.py"
+)
+gpib_eth_spec = importlib.util.spec_from_file_location(
+    "Instruments.gpib_eth", gpib_eth_path
+)
 gpib_eth_module = importlib.util.module_from_spec(gpib_eth_spec)
 gpib_eth_spec.loader.exec_module(gpib_eth_module)
 sys.modules["Instruments.gpib_eth"] = gpib_eth_module
 
 # Load log_inst so HP6623A can access its logger dependency.
-log_inst_path = pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "log_inst.py"
-log_inst_spec = importlib.util.spec_from_file_location("Instruments.log_inst", log_inst_path)
+log_inst_path = (
+    pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "log_inst.py"
+)
+log_inst_spec = importlib.util.spec_from_file_location(
+    "Instruments.log_inst", log_inst_path
+)
 log_inst_module = importlib.util.module_from_spec(log_inst_spec)
 log_inst_spec.loader.exec_module(log_inst_module)
 sys.modules["Instruments.log_inst"] = log_inst_module
 
 # Load HP6623A using the package context above to keep imports localized.
-hp6623a_path = pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "HP6623A.py"
-hp6623a_spec = importlib.util.spec_from_file_location("Instruments.HP6623A", hp6623a_path)
+hp6623a_path = (
+    pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "HP6623A.py"
+)
+hp6623a_spec = importlib.util.spec_from_file_location(
+    "Instruments.HP6623A", hp6623a_path
+)
 hp6623a_module = importlib.util.module_from_spec(hp6623a_spec)
 hp6623a_spec.loader.exec_module(hp6623a_module)
 
@@ -37,13 +49,18 @@ prologix_connection = gpib_eth_module.prologix_connection
 
 
 class TestHP6623AChannelProperty(unittest.TestCase):
-    """Verify channel-aware property behavior on the actual HP6623A hardware."""
+    """Verify channel-aware property behavior on the actual HP6623A
+    hardware."""
+
     @classmethod
     def setUpClass(cls):
-        """Connect to the instrument, or skip the suite if it is unavailable."""
+        """Connect to the instrument, or skip the suite if it is
+        unavailable."""
         # Require an explicit address so the test never hits the wrong device.
         if "HP6623A_ADDRESS" not in os.environ:
-            raise unittest.SkipTest("HP6623A_ADDRESS not set; skipping hardware test.")
+            raise unittest.SkipTest(
+                "HP6623A_ADDRESS not set; skipping hardware test."
+            )
         address = int(os.environ["HP6623A_ADDRESS"])
 
         # Allow optional overrides for the Prologix connection settings.
@@ -131,7 +148,9 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         """Exercise len() and iteration of the proxy."""
         self.require_channels(3)
         self.hp.voltage[0:3] = [0.0, 0.1, 0.2]
-        self.assertEqual(len(self.hp.voltage), len(self.hp._known_output_state))
+        self.assertEqual(
+            len(self.hp.voltage), len(self.hp._known_output_state)
+        )
         self.assertEqual(list(self.hp.voltage)[0:3], [0.0, 0.1, 0.2])
 
     def test_invalid_index_and_direct_set(self):
