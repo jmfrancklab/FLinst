@@ -4,6 +4,7 @@ import sys
 import types
 import unittest
 
+import numpy as np
 # {{{ Provide minimal stub modules to satisfy relative imports in HP6623A.
 #     The test uses these shims to load the descriptor without importing
 #     optional dependencies from the Instruments package.
@@ -72,6 +73,12 @@ class TestChannelProperty(unittest.TestCase):
         self.assertEqual(inst.voltage[[0, 2]], [0, 2])
         inst.voltage[[1, 3]] = [8.0, 9.0]
         self.assertEqual(inst.voltage[0:4], [0, 8.0, 2, 9.0])
+
+    def test_numpy_vector_set(self):
+        """Exercise numpy vector assignment for channel values."""
+        inst = DemoInstrument(3)
+        inst.voltage[0:3] = np.array([1.0, 2.0, 3.0])
+        self.assertEqual(inst.voltage[0:3], [1.0, 2.0, 3.0])
 
     def test_len_and_iter(self):
         """Exercise len() and iteration of the proxy."""
