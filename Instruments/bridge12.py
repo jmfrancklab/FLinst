@@ -499,6 +499,8 @@ class Bridge12(Serial):
         )  # change to the screen that shows the reflection
         rxvalues = np.zeros(len(freq))
         txvalues = np.zeros(len(freq))
+        if not hasattr(self, "cur_pwr_int"):
+            self.cur_pwr_int = self.power_int()
         if not self.frq_sweep_10dBm_has_been_run:
             if self.cur_pwr_int != 100:
                 raise ValueError(
