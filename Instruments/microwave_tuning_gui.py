@@ -46,7 +46,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.start(1000)
         self.last_sweep_power_dBm = None
         self.target_power_dBm = 10.0
-        self.B12.set_power(10.0)
+        self.on_power_edit(10.0)
         self.on_recapture()
         # self._n_times_run = 0
 
