@@ -46,6 +46,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.timeout.connect(self.opt_update_frq)
         self.timer.start(1000)
         self.target_power_dBm = 10.0
+        self.B12.set_power(10.0)
         self.on_recapture()
         # self._n_times_run = 0
 
@@ -342,7 +343,9 @@ class TuningWindow(qt6w.QMainWindow):
         self.spinbox_power.setRange(0, 40.0)
         self.spinbox_power.setSingleStep(1.0)
         self.spinbox_power.setValue(10.0)
-        self.spinbox_power.editingFinished.connect(self.on_power_edit)
+        self.spinbox_power.editingFinished.connect(
+            self.on_power_edit(self.target_power_dBm)
+        )
         self.textboxes_vbox.addWidget(self.power_label)
         self.textboxes_vbox.addWidget(self.spinbox_power)
         # }}}
