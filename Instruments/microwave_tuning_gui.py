@@ -82,10 +82,18 @@ class TuningWindow(qt6w.QMainWindow):
         """
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
 
-    def on_power_edit(self, req_power_dBm):
+    def on_power_edit(self, req_power_dBm=None):
+        if req_power_dBm is None:
+            req_power_dBm = self.target_power_dBm
         print(f"you changed MW power to {req_power_dBm} dBm")
         if self.last_sweep_power_dBm is None:
+            if req_power_dBm != 10.0:
+                raise RuntimeError(
+                    "You must run the first sweep at 10 dBm before changing "
+                    "the power."
+                )
             self.B12.set_power(10.0)
+            return
         else:
             # In the future, we can choose threshold of a "reasonable
             # reflection value based on the current curve and limits
@@ -334,9 +342,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.spinbox_power.setRange(0, 40.0)
         self.spinbox_power.setSingleStep(1.0)
         self.spinbox_power.setValue(10.0)
-        self.spinbox_power.editingFinished.connect(
-            self.on_power_edit(self.target_power_dBm)
-        )
+        self.spinbox_power.editingFinished.connect(self.on_power_edit)
         self.textboxes_vbox.addWidget(self.power_label)
         self.textboxes_vbox.addWidget(self.spinbox_power)
         # }}}
