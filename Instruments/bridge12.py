@@ -609,9 +609,9 @@ class Bridge12(Serial):
                         " lower than the rx_dBm of the dip, which doesn't make"
                         " sense -- check %gdBm_%s" % (10.0, rx_dBm)
                     )
-        assert (
-            self.frq_sweep_10dBm_has_been_run
-        ), "I should have run the 10 dBm curve -- not sure what happened"
+        assert self.frq_sweep_10dBm_has_been_run, (
+            "I should have run the 10 dBm curve -- not sure what happened"
+        )
         over_diff = r_[
             0, np.diff(np.int32(over_bool))
         ]  # should indicate whether this position has lifted over (+1) or
@@ -701,8 +701,8 @@ class Bridge12(Serial):
         p = np.polyfit(freq, rx, 2)
         c, b, a = p
         # polynomial of form a+bx+cx^2
-        self.fit_data[self.last_sweep_name + "_func"] = (
-            lambda x: a + b * x + c * x**2
+        self.fit_data[self.last_sweep_name + "_func"] = lambda x: (
+            a + b * x + c * x**2
         )
         self.fit_data[self.last_sweep_name + "_range"] = freq[r_[0, -1]]
         # the following should be decided from doing algebra (I haven't

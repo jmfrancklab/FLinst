@@ -49,6 +49,7 @@ from Instruments.field_feedback import ramp_field
 
 # All power supply parameters are now controlled by the config_dict
 
+
 class NMRWindow(QMainWindow):
     def __init__(
         self, mygenesys, myLakeShore475, myconfig, parent=None, ini_field=None
@@ -68,6 +69,10 @@ class NMRWindow(QMainWindow):
 
         self.create_menu()
         self.create_main_frame()
+        self.centerline = None
+        # The axvline marks the expected zero-offset position based on gamma.
+        self._dragging_center = False
+        self._updating_gamma = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -102,9 +107,11 @@ class NMRWindow(QMainWindow):
 
     def set_default_choices(self):
         self.textbox_apo.setText("10 ms")
-        self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
         self.textbox_apo.setMinimumWidth(10)
+        self.textbox_plen.setText("%g" % self.myconfig["beta_90_s_sqrtW"])
         self.textbox_plen.setMinimumWidth(10)
+        self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
+        self.textbox_gamma.setMinimumWidth(10)
         self.sw = 200
 
     def on_apo_edit(self):
@@ -117,22 +124,125 @@ class NMRWindow(QMainWindow):
         return
 
     def on_plen_edit(self):
-        thetext = self.textbox_plen.text()
-        print("you changed your pulse length to", thetext, "s sqrt(W)")
-        self.myconfig["beta_90_s_sqrtW"] = float(thetext)
+        thetext = float(self.textbox_plen.text())
+        print(f"you changed your pulse length to {thetext} s sqrt(W)")
+        self.myconfig["beta_90_s_sqrtW"] = thetext
         return
 
-    def on_pick(self, event):
-        # The event received here is of the type
-        # matplotlib.backend_bases.PickEvent
-        #
-        # It carries lots of information, of which we're using
-        # only a small amount here.
-        #
-        box_points = event.artist.get_bbox().get_points()
-        msg = "You've clicked on a bar with coords:\n %s" % box_points
+    def on_gamma_edit(self):
+        """
+        Changes gamma_eff_mhz_g value when a new value is entered into the
+        textbox and updates the axvline position accordingly.
+        """
+        if self._updating_gamma:
+            # inside set_gamma_value, and we don't want infinite recursion
+            return
+        thetext = self.textbox_gamma.text()
+        print("you changed gamma_eff_MHz_G to", thetext)
+        self.set_gamma_value(float(thetext), update_centerline=True)
+        return
 
-        QMessageBox.information(self, "Click!", msg)
+    def on_center_press(self, event):
+        """
+        Activates when we click the axvline. Checks if the click is done
+        with the left mouse-click and in the correct position. Sets the
+        tolarance of the line and activates the dragging event.
+        """
+        if (
+            event.inaxes != self.axes  # Click is in the correct axes
+            or self.centerfrq_Hz is None  # centerline not set up properly
+            or event.xdata is None  # xdata exists
+            or event.button != 1  # Ignore non-left mouse clicks
+        ):
+            return
+
+        tol = 0.03 * abs(np.diff(self.axes.get_xlim()).item())
+        if abs(event.xdata - self.centerfrq_Hz) > tol:
+            return
+        self._dragging_center = True
+
+    # Setting target centerline position.
+    @property
+    def centerfrq_Hz(self):
+        if (
+            self.centerline is None  # Centerline dosn't exist
+            or self.centerline.axes is None  # Line isn't attached to axes
+            or self.centerline.figure is None  # Line isn't attached to figure
+        ):
+            return None
+        return self.centerline.get_xdata()[0]
+
+    @centerfrq_Hz.setter
+    def centerfrq_Hz(self, centerfrq_Hz):
+        if self.centerline is not None:
+            self.centerline.set_xdata([centerfrq_Hz, centerfrq_Hz])
+        self.canvas.draw_idle()
+        return
+
+    # Computing new gamma from centerline offset.
+    def update_gamma_from_center_offset(self):
+        """use the position of the center line to determine a new value for
+        gamma"""
+        old_field_G = (
+            self.myconfig["carrierFreq_MHz"] / self.myconfig["gamma_eff_MHz_G"]
+        )
+        new_gamma = (
+            self.myconfig["gamma_eff_MHz_G"]
+            - self.centerfrq_Hz * 1e-6 / old_field_G
+        )
+        self.set_gamma_value(new_gamma)
+        return new_gamma
+
+    # Setting gamma value manually (via textbox) and
+    # updating centerline if needed.
+    def set_gamma_value(self, new_gamma, update_centerline=False):
+        """change gamma_eff_MHz_G for upcoming signal acquisition, and move the
+        centerline (axvline) to the position on the spectrum that will be
+        resonant with carrierFreq_MHz after we change the field
+        """
+        if self._updating_gamma:
+            # inside set_gamma_value, and we don't want infinite recursion
+            return
+        self._updating_gamma = True
+        old_gamma = self.myconfig["gamma_eff_MHz_G"]
+        self.myconfig["gamma_eff_MHz_G"] = float(new_gamma)
+        self.textbox_gamma.setText("%g" % self.myconfig["gamma_eff_MHz_G"])
+        if update_centerline:
+            field_before_change_G = (
+                self.myconfig["carrierFreq_MHz"] / old_gamma
+            )
+            field_after_change_G = (
+                self.myconfig["carrierFreq_MHz"]
+                / self.myconfig["gamma_eff_MHz_G"]
+            )
+            self.centerfrq_Hz = (
+                (field_before_change_G - field_after_change_G)
+                * self.myconfig["gamma_eff_MHz_G"]
+                * 1e6
+            )
+        self._updating_gamma = False
+
+    def on_center_motion(self, event):
+        if not self._dragging_center:
+            return
+        if event.inaxes != self.axes or event.xdata is None:
+            return
+        self.centerfrq_Hz = event.xdata
+
+    def on_center_release(self, event):
+        if not self._dragging_center:
+            return
+        self._dragging_center = False
+        if event.inaxes != self.axes or event.xdata is None:
+            if self.centerfrq_Hz is None:
+                return
+            drag_final_x = self.centerfrq_Hz
+        else:
+            drag_final_x = event.xdata
+        self.centerfrq_Hz = drag_final_x
+        new_gamma = self.update_gamma_from_center_offset()
+        if new_gamma is not None:
+            self.textbox_gamma.setText("%g" % new_gamma)
 
     def set_field_conditional(
         self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
@@ -262,23 +372,42 @@ class NMRWindow(QMainWindow):
 
     def acq_NMR(self):
         self.generate_data()
-        self.regen_plots()
-        return
-
-    def regen_plots(self):
-        """Redraws the figure"""
-        self.axes.clear()
+        # {{{ Process the data to find the center frequency and update
+        # the centerline position.
         self.echo_data.ft("ph1", unitary=True)
         self.echo_data.ft("t2", shift=True)
         self.echo_data.ift("t2")
-        filter_timeconst = self.apo_time_const
         self.echo_data *= np.exp(
             -abs(
                 self.echo_data.fromaxis("t2") - self.myconfig["tau_us"] * 1e-6
             )
-            / filter_timeconst
+            / self.apo_time_const
         )
         self.echo_data.ft("t2")
+        self.multiscan_copy = self.echo_data.C
+        if "nScans" in self.echo_data.dimlabels:
+            if int(psp.ndshape(self.echo_data)["nScans"]) > 1:
+                self.echo_data.mean("nScans")
+        self.noise = self.echo_data["ph1", r_[0, 2, 3]].run(np.std, "ph1")
+        self.signal = abs(self.echo_data["ph1", 1])
+        self.signal -= self.noise
+        centerfrq_auto_Hz = self.signal.C.argmax("t2").item()
+        print(f"DIAGNOSTIC I find signal max at {centerfrq_auto_Hz}")
+        self.centerline = self.axes.axvline(
+            x=centerfrq_auto_Hz, ls=":", color="r", alpha=0.25
+        )
+        self.centerfrq_Hz = centerfrq_auto_Hz
+        # Set the picking region for the centerline to 5 units.
+        self.centerline.set_picker(5)
+        # }}}
+        self.regen_plots()
+        self.update_gamma_from_center_offset()
+        return
+
+    def regen_plots(self):
+        """Redraws the figure"""
+        center_frq = self.centerfrq_Hz
+        self.axes.clear()
 
         # {{{ pull essential parts of plotting routine
         #    from pyspecdata -- these are pulled from
@@ -305,50 +434,28 @@ class NMRWindow(QMainWindow):
             self.axes.set_xlabel(myxlabel)
 
         # }}}
-        if "nScans" in self.echo_data.dimlabels:
-            if int(psp.ndshape(self.echo_data)["nScans"]) > 1:
-                multiscan_copy = self.echo_data.C
-                many_scans = True
-                self.echo_data.mean("nScans")
-        else:
-            many_scans = False
-        noise = self.echo_data["ph1", r_[0, 2, 3]].run(np.std, "ph1")
-        signal = abs(self.echo_data["ph1", 1])
-        signal -= noise
         for j in self.echo_data.getaxis("ph1"):
             pyspec_plot(
                 abs(self.echo_data["ph1":j]), label=f"Δp={j}", alpha=0.5
             )
-            if many_scans and j == 1:
-                for k in range(psp.ndshape(multiscan_copy)["nScans"]):
+            if "nScans" in self.multiscan_copy.dimlabels and j == 1:
+                for k in range(self.multiscan_copy.shape["nScans"]):
                     pyspec_plot(
-                        abs(multiscan_copy["ph1":j]["nScans", k]),
+                        abs(self.multiscan_copy["ph1":j]["nScans", k]),
                         label=f"Δp=1, scan {k}",
                         alpha=0.2,
                     )
-        centerfrq = signal.C.argmax("t2").item()
-        self.axes.axvline(x=centerfrq, ls=":", color="r", alpha=0.25)
-        pyspec_plot(noise, color="k", label="Noise std", alpha=0.75)
+        pyspec_plot(self.noise, color="k", label="Noise std", alpha=0.75)
         pyspec_plot(
-            signal, color="r", label="abs of signal - noise", alpha=0.75
+            self.signal, color="r", label="abs of signal - noise", alpha=0.75
         )
+        self.centerfrq_Hz = center_frq
+        self.centerline = self.axes.axvline(
+            x=center_frq, ls=":", color="r", alpha=0.25
+        )
+        self.centerline.set_picker(5)
         self.axes.legend()
-        # }}}
-        noise = noise["t2":centerfrq]
-        signal = signal["t2":centerfrq]
-        if signal > 3 * noise:
-            Field = (
-                self.myconfig["carrierFreq_MHz"]
-                / self.myconfig["gamma_eff_MHz_G"]
-            )
-            self.myconfig["gamma_eff_MHz_G"] -= centerfrq * 1e-6 / Field
-            self.myconfig.write()
-        else:
-            print(
-                "*" * 5
-                + "warning! SNR looks bad! I'm not adjusting γ!!!"
-                + "*" * 5
-            )  # this is not yet tested!
+        self.myconfig.write()
         self.canvas.draw()
         return
 
@@ -372,8 +479,10 @@ class NMRWindow(QMainWindow):
         # work.
         #
         self.axes = self.fig.add_subplot(111)
-        # Bind the 'pick' event
-        self.canvas.mpl_connect("pick_event", self.on_pick)
+        # Bind the dragging event
+        self.canvas.mpl_connect("button_press_event", self.on_center_press)
+        self.canvas.mpl_connect("motion_notify_event", self.on_center_motion)
+        self.canvas.mpl_connect("button_release_event", self.on_center_release)
         # Create the navigation toolbar, tied to the canvas
         self.mpl_toolbar = mplqt6.NavigationToolbar2QT(
             self.canvas, self.main_frame
@@ -383,6 +492,7 @@ class NMRWindow(QMainWindow):
         self.bottomleft_vbox = QVBoxLayout()
         self.textbox_apo = QLineEdit()
         self.textbox_plen = QLineEdit()
+        self.textbox_gamma = QLineEdit()
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
@@ -391,8 +501,10 @@ class NMRWindow(QMainWindow):
         self.bottomleft_vbox.addWidget(self.combo_sw)
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
         self.textbox_plen.editingFinished.connect(self.on_plen_edit)
+        self.textbox_gamma.editingFinished.connect(self.on_gamma_edit)
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
+        self.bottomleft_vbox.addWidget(self.textbox_gamma)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -403,10 +515,6 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
-        self.fmode_cb = QCheckBox("Const &Frq &Mode")
-        self.fmode_cb.setChecked(False)
-        self.fmode_cb.stateChanged.connect(self.regen_plots)
-        self.boxes_vbox.addWidget(self.fmode_cb)
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders

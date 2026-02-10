@@ -31,6 +31,7 @@ class TuningWindow(qt6w.QMainWindow):
         qt6w.QMainWindow.__init__(self, parent)
         self.setWindowTitle("B12 tuning!")
         self.setGeometry(20, 20, 1500, 800)
+        self.last_sweep_power_dBm = None
 
         self.create_menu()
         self.create_main_frame()
@@ -44,6 +45,8 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.setInterval(100)  # .1 seconds
         self.timer.timeout.connect(self.opt_update_frq)
         self.timer.start(1000)
+        self.target_power_dBm = 10.0
+        self.B12.set_power(10.0)
         self.on_recapture()
         # self._n_times_run = 0
 
@@ -79,6 +82,38 @@ class TuningWindow(qt6w.QMainWindow):
          * Click on a bar to receive an informative message
         """
         qt6w.QMessageBox.about(self, "About the demo", msg.strip())
+
+    def on_power_edit(self, req_power_dBm=None):
+        if req_power_dBm is None:
+            req_power_dBm = self.target_power_dBm
+        print(f"you changed MW power to {req_power_dBm} dBm")
+        if self.last_sweep_power_dBm is None:
+            if req_power_dBm != 10.0:
+                raise RuntimeError(
+                    "You must run the first sweep at 10 dBm before changing "
+                    "the power."
+                )
+            self.B12.set_power(10.0)
+            return
+        else:
+            for power_val in np.r_[
+                self.last_sweep_power_dBm
+                + 3 : req_power_dBm : 3,  # If the first number is bigger than
+                # the target power, it doesn't generate anything.
+                req_power_dBm,
+            ]:
+                self.B12.set_power(power_val)
+        return
+
+    @property
+    def target_power_dBm(self):
+        target_power = self.spinbox_power.value()
+        return target_power
+
+    @target_power_dBm.setter
+    def target_power_dBm(self, power_dBm):
+        self.spinbox_power.setValue(power_dBm)
+        return
 
     def orig_zoom_limits(self):
         myconfig = SpinCore_pp.configuration("active.ini")
@@ -163,6 +198,7 @@ class TuningWindow(qt6w.QMainWindow):
         if hasattr(self, "interpdata"):
             delattr(self, "interpdata")
             delattr(self, "dip_frq_GHz")
+        self.last_sweep_power_dBm = self.target_power_dBm
         return
 
     def on_recapture(self):
@@ -295,6 +331,18 @@ class TuningWindow(qt6w.QMainWindow):
         self.textbox2 = qt6w.QLineEdit()
 
         self.orig_zoom_limits()
+        # }}}
+
+        # {{{ box to set MW power
+        self.power_label = qt6w.QLabel("MW Power (dBm)")
+        self.spinbox_power = qt6w.QDoubleSpinBox()
+        self.spinbox_power.setDecimals(1)
+        self.spinbox_power.setRange(0, 40.0)
+        self.spinbox_power.setSingleStep(1.0)
+        self.spinbox_power.setValue(10.0)
+        self.spinbox_power.editingFinished.connect(self.on_power_edit)
+        self.textboxes_vbox.addWidget(self.power_label)
+        self.textboxes_vbox.addWidget(self.spinbox_power)
         # }}}
 
         # {{{ buttons
@@ -434,7 +482,6 @@ def main():
         b.set_rf(True)
         b.set_amp(True)
         time.sleep(5)
-        b.set_power(10.0)
         tunwin = TuningWindow(b, myconfig)
         tunwin.show()
         app.exec()
