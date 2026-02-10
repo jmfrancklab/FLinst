@@ -31,9 +31,8 @@ class TuningWindow(qt6w.QMainWindow):
         qt6w.QMainWindow.__init__(self, parent)
         self.setWindowTitle("B12 tuning!")
         self.setGeometry(20, 20, 1500, 800)
-
         self.last_sweep_power_dBm = None
-        self.target_power_dBm = 10.0
+
         self.create_menu()
         self.create_main_frame()
         self.create_status_bar()
@@ -46,6 +45,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.setInterval(100)  # .1 seconds
         self.timer.timeout.connect(self.opt_update_frq)
         self.timer.start(1000)
+        self.target_power_dBm = 10.0
         self.on_recapture()
         # self._n_times_run = 0
 
@@ -86,10 +86,6 @@ class TuningWindow(qt6w.QMainWindow):
         print(f"you changed MW power to {req_power_dBm} dBm")
         if self.last_sweep_power_dBm is None:
             self.B12.set_power(10.0)
-            raise RuntimeError(
-                "Somehow you are changing the power without having done a "
-                "sweep yet."
-            )
         else:
             # In the future, we can choose threshold of a "reasonable
             # reflection value based on the current curve and limits
