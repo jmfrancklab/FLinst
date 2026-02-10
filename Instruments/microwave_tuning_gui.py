@@ -96,9 +96,6 @@ class TuningWindow(qt6w.QMainWindow):
             self.B12.set_power(10.0)
             return
         else:
-            # In the future, we can choose threshold of a "reasonable
-            # reflection value based on the current curve and limits
-            # and adjust the value of the reasonable power increment steps.
             for power_val in np.r_[
                 self.last_sweep_power_dBm
                 + 3 : req_power_dBm : 3,  # If the first number is bigger than
