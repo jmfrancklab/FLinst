@@ -46,6 +46,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.timer.start(1000)
         self.last_sweep_power_dBm = None
         self.target_power_dBm = 10.0
+        self.on_power_edit(self.target_power_dBm)
         self.on_recapture()
         # self._n_times_run = 0
 
@@ -109,8 +110,8 @@ class TuningWindow(qt6w.QMainWindow):
         return target_power
 
     @target_power_dBm.setter
-    def target_power_dBm(self, power_dbm):
-        self.spinbox_power.setValue(power_dbm)
+    def target_power_dBm(self, power_dBm):
+        self.spinbox_power.setValue(power_dBm)
         return
 
     def orig_zoom_limits(self):
