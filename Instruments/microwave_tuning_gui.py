@@ -343,9 +343,7 @@ class TuningWindow(qt6w.QMainWindow):
         self.spinbox_power.setRange(0, 40.0)
         self.spinbox_power.setSingleStep(1.0)
         self.spinbox_power.setValue(10.0)
-        self.spinbox_power.editingFinished.connect(
-            self.on_power_edit(self.target_power_dBm)
-        )
+        self.spinbox_power.editingFinished.connect(self.on_power_edit)
         self.textboxes_vbox.addWidget(self.power_label)
         self.textboxes_vbox.addWidget(self.spinbox_power)
         # }}}
