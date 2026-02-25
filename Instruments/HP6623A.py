@@ -610,11 +610,6 @@ class HP6623A(gpib_eth):
         super().close()
         return
 
-    # TODO ☐: After previous, write a basic example to use the current limit,
-    #         with voltage limit set high, and test on the instrument
-    #         (generally we will want to control the current, which is propto
-    #         field)
-
     @channel_property
     def voltage(self, channel):
         "this allows self.voltage[channel] to evaluate properly"
