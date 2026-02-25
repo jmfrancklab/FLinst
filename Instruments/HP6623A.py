@@ -202,8 +202,6 @@ class channel_property:
 
 
 class HP6623A(gpib_eth):
-    # TODO ☐: software interlock that sets max safe current (let's start with
-    #         1.8A.
     def __init__(self, prologix_instance=None, address=None):
         r"""initialize a new `HP6623A` power supply class"""
         super().__init__(prologix_instance, address)
@@ -218,7 +216,7 @@ class HP6623A(gpib_eth):
                 "Not detecting identity as HP power supply. "
                 "Expected ID string to start with 'HP'. Check your "
                 "connections and address settings, and make sure the "
-                "instrument is powered on. (Returned ID string: {idstring})"
+                f"instrument is powered on. (Returned ID string: {idstring})"
             )
 
         self._known_output_state = []
@@ -313,6 +311,10 @@ class HP6623A(gpib_eth):
         None
 
         """
+        if abs(val) > 1.8:
+            raise ValueError(
+                f"Requested current {val} A exceeds max safe current 1.8 A"
+            )
         self.write("ISET %s,%s" % (str(ch + 1), str(val)))
         return
 
@@ -618,6 +620,11 @@ class HP6623A(gpib_eth):
     @current.setter
     def current(self, channel, value):
         """set the current limit for a channel"""
+        if abs(value) > 1.8:
+            raise ValueError(
+                f"Requested current {value} A exceeds "
+                f"max safe current value 1.8 A"
+            )
         if value == 0:
             self.set_current(channel, 0)
             if self._known_output_state[channel] == 1:
@@ -625,7 +632,7 @@ class HP6623A(gpib_eth):
             return
 
         if self._known_output_state[channel] == 0:
-            if value > self.safe_current_on_enable:
+            if abs(value) > self.safe_current_on_enable:
                 raise ValueError(
                     "Refusing to enable output with current limit "
                     f"{value} A > safe_current_on_enable "
