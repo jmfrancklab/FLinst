@@ -6,8 +6,7 @@ Just go through and set the voltage on a bunch of shim coils, and verify
 that the power supply believes that the currents have been changed."""
 
 from pylab import *
-from Instruments import HP6623A, prologix_connection, gigatronics
-from Instruments.bridge12 import convert_to_power, convert_to_mv
+from Instruments import HP6623A, prologix_connection
 from serial import Serial
 
 # voltage_array = r_[0.:1.:0.025]
