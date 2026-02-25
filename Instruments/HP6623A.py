@@ -202,12 +202,8 @@ class channel_property:
 
 
 class HP6623A(gpib_eth):
-    # TODO ☐: feed GPT this code and the manual, and ask it to make
-    #         functions to handle all the functionality of the serial
-    #         commands
     # TODO ☐: software interlock that sets max safe current (let's start with
-    #         0.5A, and ask Boris for liquid crystal temperature paper in
-    #         Curt's cabinet against the wall.
+    #         1.8A.
     def __init__(self, prologix_instance=None, address=None):
         r"""initialize a new `HP6623A` power supply class"""
         super().__init__(prologix_instance, address)
@@ -235,6 +231,7 @@ class HP6623A(gpib_eth):
 
         if len(self._known_output_state) < 1:
             raise ValueError("I can't even get one channel!")
+        self.safe_current_on_enable = 0.0
         return
 
     def check_id(self):
@@ -244,9 +241,7 @@ class HP6623A(gpib_eth):
 
     def _require_channel(self, ch):
         if not isinstance(ch, int):
-            raise TypeError(
-                f"channel must be int, got {type(ch).__name__}"
-            )
+            raise TypeError(f"channel must be int, got {type(ch).__name__}")
         if not (0 <= ch < len(self._known_output_state)):
             raise IndexError(
                 f"channel {ch} out of range for "
@@ -554,9 +549,7 @@ class HP6623A(gpib_eth):
 
     # Calibration commands (Appendix A)
     def vdata(self, ch, vlo, vhi):
-        self.write(
-            "VDATA %s,%s,%s" % (str(ch + 1), str(vlo), str(vhi))
-        )
+        self.write("VDATA %s,%s,%s" % (str(ch + 1), str(vlo), str(vhi)))
         return
 
     def vhi(self, ch):
@@ -568,9 +561,7 @@ class HP6623A(gpib_eth):
         return
 
     def idata(self, ch, ilo, ihi):
-        self.write(
-            "IDATA %s,%s,%s" % (str(ch + 1), str(ilo), str(ihi))
-        )
+        self.write("IDATA %s,%s,%s" % (str(ch + 1), str(ilo), str(ihi)))
         return
 
     def ihi(self, ch):
@@ -595,15 +586,11 @@ class HP6623A(gpib_eth):
         super().close()
         return
 
-    # TODO ☐: make analogous code for current.  Enforce a software interlock
-    #         that if we are turning on the output for the first time, the
-    #         current limit must be small (maybe just 0 to be safe).  This
-    #         prevents us from slamming a somewhat reasonable voltage across a
-    #         low-impedance load.
     # TODO ☐: After previous, write a basic example to use the current limit,
     #         with voltage limit set high, and test on the instrument
     #         (generally we will want to control the current, which is propto
     #         field)
+
     @channel_property
     def voltage(self, channel):
         "this allows self.voltage[channel] to evaluate properly"
@@ -631,6 +618,24 @@ class HP6623A(gpib_eth):
     @current.setter
     def current(self, channel, value):
         """set the current limit for a channel"""
+        if value == 0:
+            self.set_current(channel, 0)
+            if self._known_output_state[channel] == 1:
+                self.set_output(channel, 0)
+            return
+
+        if self._known_output_state[channel] == 0:
+            if value > self.safe_current_on_enable:
+                raise ValueError(
+                    "Refusing to enable output with current limit "
+                    f"{value} A > safe_current_on_enable "
+                    f"{self.safe_current_on_enable} A. Set a smaller "
+                    "current first."
+                )
+            self.set_current(channel, value)
+            self.set_output(channel, 1)
+            return
+
         self.set_current(channel, value)
         return
 
