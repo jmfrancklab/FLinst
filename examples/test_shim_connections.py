@@ -5,9 +5,8 @@ HP Shim Power Supply
 Just go through and set the voltage on a bunch of shim coils, and verify
 that the power supply believes that the currents have been changed."""
 
-from pylab import *
 from Instruments import HP6623A, prologix_connection
-from serial import Serial
+
 
 # voltage_array = r_[0.:1.:0.025]
 HP1 = 2
@@ -25,41 +24,41 @@ print(HP_list[:][-1])
 # {{{
 def set_shims(HP_list, output=False):
     # pass a list of the HP sources, we either have 1 or 2
-    B0_shim = HP_list[0]
-    Z1_shim = HP_list[1]
-    Z2_shim = HP_list[2]
-    X_shim = HP_list[3]
-    Y_shim = HP_list[4]
+    # B0_shim = HP_list[0]
+    # Z1_shim = HP_list[1]
+    # Z2_shim = HP_list[2]
+    # X_shim = HP_list[3]
+    # Y_shim = HP_list[4]
     if output:
         for index in range(len(HP_list)):
             this_shim = HP_list[index]
-            this_shim[0].set_voltage(this_shim[1], this_shim[-1])
+            this_shim[0].voltage[this_shim[1]] = this_shim[-1]
         for index in range(len(HP_list)):
             this_shim = HP_list[index]
             if this_shim[-1] == 0.0:
                 print("zero")
-                this_shim[0].output(this_shim[1], False)
+                this_shim[0].output[this_shim[1]] = False
             else:
-                this_shim[0].output(this_shim[1], True)
+                this_shim[0].output[this_shim[1]] = True
         curr_list = []
         volt_list = []
         for index in range(len(HP_list)):
             this_shim = HP_list[index]
-            curr_list.append(this_shim[0].get_current(this_shim[1]))
-            volt_list.append(this_shim[0].get_voltage(this_shim[1]))
+            curr_list.append(this_shim[0].current[this_shim[1]])
+            volt_list.append(this_shim[0].voltage[this_shim[1]])
         print("CURRENT LIST", curr_list)
         print("VOLTAGE LIST", volt_list)
         return curr_list, volt_list
     else:
         for index in range(len(HP_list)):
             this_shim = HP_list[index]
-            this_shim[0].output(this_shim[1], False)
+            this_shim[0].output[this_shim[1]] = False
         curr_list = []
         volt_list = []
         for index in range(len(HP_list)):
             this_shim = HP_list[index]
-            curr_list.append(this_shim[0].get_current(this_shim[1]))
-            volt_list.append(this_shim[0].get_voltage(this_shim[1]))
+            curr_list.append(this_shim[0].current[this_shim[1]])
+            volt_list.append(this_shim[0].voltage[this_shim[1]])
         print("CURRENT LIST", curr_list)
         print("VOLTAGE LIST", volt_list)
         return curr_list, volt_list
