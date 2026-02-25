@@ -13,11 +13,11 @@ from serial import Serial
 HP1 = 2
 HP2 = 3
 HP_list = [
-    (HP1, 1, 1.0),  # B0 shim
-    (HP1, 2, 1.0),  # Z1 shim
-    (HP2, 1, 0.0),  # Z2 shim
-    (HP2, 2, 0.0),  # X shim
-    (HP2, 3, 0.0),  # Y shim
+    (HP1, 0, 1.0),  # B0 shim
+    (HP1, 1, 1.0),  # Z1 shim
+    (HP2, 0, 0.0),  # Z2 shim
+    (HP2, 1, 0.0),  # X shim
+    (HP2, 2, 0.0),  # Y shim
 ]
 print(HP_list[:][-1])
 
@@ -72,11 +72,11 @@ with prologix_connection() as p:
         with HP6623A(prologix_instance=p, address=5) as HP2:
             print("*** *** ***")
             HP_list = [
-                (HP1, 1, 0.0),  # X shim
-                (HP1, 2, 0.0),  # Z2 shim
-                (HP2, 1, 0.0),  # B0 shim
-                (HP2, 2, 0.1),  # Y shim
-                (HP2, 3, 0.03),  # Z1 shim
+                (HP1, 0, 1.0),  # B0 shim
+                (HP1, 1, 1.0),  # Z1 shim
+                (HP2, 0, 0.0),  # Z2 shim
+                (HP2, 1, 0.0),  # X shim
+                (HP2, 2, 0.0),  # Y shim
             ]
             set_shims(HP_list, True)
             input()
