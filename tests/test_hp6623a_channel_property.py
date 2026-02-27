@@ -107,60 +107,60 @@ class TestHP6623AChannelProperty(unittest.TestCase):
     def setUp(self):
         """Reset all channels to zero to keep the hardware in a safe state."""
         for ch in range(len(self.hp._known_output_state)):
-            self.hp.voltage[ch] = 0
+            self.hp.V_limit[ch] = 0
 
     def tearDown(self):
         """Return all channels to zero after each test."""
         for ch in range(len(self.hp._known_output_state)):
-            self.hp.voltage[ch] = 0
+            self.hp.V_limit[ch] = 0
 
     def test_scalar_get_set(self):
         """Exercise scalar indexing and assignment on the instrument."""
         self.require_channels(1)
-        self.hp.voltage[0] = 0.1
-        self.assertAlmostEqual(self.hp.voltage[0], 0.1, places=2)
+        self.hp.V_limit[0] = 0.1
+        self.assertAlmostEqual(self.hp.V_limit[0], 0.1, places=2)
 
     def test_slice_get_set(self):
         """Exercise slice indexing and scalar broadcasting."""
         self.require_channels(3)
-        self.hp.voltage[0:2] = 0.05
-        self.assertEqual(self.hp.voltage[0:3], [0.05, 0.05, 0.0])
+        self.hp.V_limit[0:2] = 0.05
+        self.assertEqual(self.hp.V_limit[0:3], [0.05, 0.05, 0.0])
 
     def test_list_get_set(self):
         """Exercise list indexing and list assignment."""
         self.require_channels(3)
-        self.hp.voltage[[0, 2]] = [0.1, 0.2]
-        self.assertEqual(self.hp.voltage[0:3], [0.1, 0.0, 0.2])
+        self.hp.V_limit[[0, 2]] = [0.1, 0.2]
+        self.assertEqual(self.hp.V_limit[0:3], [0.1, 0.0, 0.2])
 
     def test_numpy_vector_set(self):
         """Exercise numpy vector assignment for channel values."""
         self.require_channels(3)
-        self.hp.voltage[0:3] = np.array([0.2, 0.3, 0.4])
-        self.assertEqual(self.hp.voltage[0:3], [0.2, 0.3, 0.4])
+        self.hp.V_limit[0:3] = np.array([0.2, 0.3, 0.4])
+        self.assertEqual(self.hp.V_limit[0:3], [0.2, 0.3, 0.4])
 
     def test_direct_numpy_vector_set(self):
         """Exercise direct vector assignment across all channels."""
         self.require_channels(3)
-        self.hp.voltage = np.array([0.3, 0.3, 0.3])
-        self.assertEqual(self.hp.voltage, [0.3, 0.3, 0.3])
+        self.hp.V_limit = np.array([0.3, 0.3, 0.3])
+        self.assertEqual(self.hp.V_limit, [0.3, 0.3, 0.3])
 
     def test_len_and_iter(self):
         """Exercise len() and iteration of the proxy."""
         self.require_channels(3)
-        self.hp.voltage[0:3] = [0.0, 0.1, 0.2]
+        self.hp.V_limit[0:3] = [0.0, 0.1, 0.2]
         self.assertEqual(
-            len(self.hp.voltage), len(self.hp._known_output_state)
+            len(self.hp.V_limit), len(self.hp._known_output_state)
         )
-        self.assertEqual(list(self.hp.voltage)[0:3], [0.0, 0.1, 0.2])
+        self.assertEqual(list(self.hp.V_limit)[0:3], [0.0, 0.1, 0.2])
 
     def test_invalid_index_and_direct_set(self):
         """Exercise error paths for invalid index and direct attribute set."""
         self.require_channels(1)
         with self.assertRaises(IndexError):
-            _ = self.hp.voltage[len(self.hp._known_output_state) + 1]
+            _ = self.hp.V_limit[len(self.hp._known_output_state) + 1]
         with self.assertRaises(AttributeError):
             # Assignment to a scalar without indexing is not allowed.
-            self.hp.voltage = 3
+            self.hp.V_limit = 3
 
 
 if __name__ == "__main__":

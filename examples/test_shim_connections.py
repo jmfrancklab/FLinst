@@ -22,24 +22,24 @@ def set_shims(HP_list, output=False):
             this_shim = HP_list[index]
             if this_shim[-1] == 0.0:
                 print("zero")
-                this_shim[0].current[this_shim[1]] = 0.0
-                this_shim[0].voltage[this_shim[1]] = 0.0
+                this_shim[0].I_limit[this_shim[1]] = 0.0
+                this_shim[0].V_limit[this_shim[1]] = 0.0
                 this_shim[0].output[this_shim[1]] = False
                 logging.info(f"Shim {this_shim[0]} is turned off")
             else:
-                this_shim[0].voltage[this_shim[1]] = 15
-                this_shim[0].current[this_shim[1]] = this_shim[-1]
+                this_shim[0].V_limit[this_shim[1]] = 15
+                this_shim[0].I_limit[this_shim[1]] = this_shim[-1]
                 this_shim[0].output[this_shim[1]] = True
                 logging.info(
                     f"Shim {this_shim[0]} is on with current set"
-                    f"to {this_shim[0].current[this_shim[1]]}."
+                    f"to {this_shim[0].I_limit[this_shim[1]]}."
                 )
         curr_list = []
         volt_list = []
         for index in range(len(HP_list)):
             this_shim = HP_list[index]
-            curr_list.append(this_shim[0].current[this_shim[1]])
-            volt_list.append(this_shim[0].voltage[this_shim[1]])
+            curr_list.append(this_shim[0].I_limit[this_shim[1]])
+            volt_list.append(this_shim[0].V_limit[this_shim[1]])
         print("CURRENT LIST", curr_list)
         print("VOLTAGE LIST", volt_list)
         return curr_list, volt_list
@@ -51,8 +51,8 @@ def set_shims(HP_list, output=False):
         volt_list = []
         for index in range(len(HP_list)):
             this_shim = HP_list[index]
-            curr_list.append(this_shim[0].current[this_shim[1]])
-            volt_list.append(this_shim[0].voltage[this_shim[1]])
+            curr_list.append(this_shim[0].I_limit[this_shim[1]])
+            volt_list.append(this_shim[0].V_limit[this_shim[1]])
         print("CURRENT LIST", curr_list)
         print("VOLTAGE LIST", volt_list)
         return curr_list, volt_list
