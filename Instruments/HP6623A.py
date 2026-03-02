@@ -6,7 +6,15 @@ from channel_proxy_and_property import channel_property
 
 class HP6623A(gpib_eth):
     def __init__(self, prologix_instance=None, address=None):
-        r"""initialize a new `HP6623A` power supply class"""
+        r"""Initialize a new `HP6623A` power supply instance.
+
+        Parameters
+        ==========
+        prologix_instance : prologix_connection
+            Active Prologix Ethernet-GPIB connection.
+        address : int
+            GPIB address of the HP6623A.
+        """
         super().__init__(prologix_instance, address)
         self.write("ID?")
         idstring = self.read()
@@ -247,7 +255,27 @@ class HP6623A(gpib_eth):
         return
 
     def set_unmask(self, ch, mask):
-        """Set mask register for channel (UNMASK)."""
+        """Set the mask register for a channel (UNMASK).
+
+        The mask register works with the status register to determine which
+        conditions set bits in the FAULT register. A FAULT bit is set only
+        when the corresponding bit is set in both the STATUS register and
+        the MASK register. Use this to enable/disable which status conditions
+        are allowed to latch into FAULT for a given channel.
+
+        Parameters
+        ==========
+        ch : int
+            Channel index (0-based in this API; sent as 1-based to the
+            instrument).
+        mask : int
+            Integer 0-255 representing the mask bits for the channel.
+
+        Notes
+        =====
+        - Per the manual, UNMASK sets the channel mask register directly.
+        - Use UNMASK? to query the current mask value.
+        """
         self.write("UNMASK %s,%s" % (str(ch + 1), str(mask)))
         return
 
@@ -297,7 +325,22 @@ class HP6623A(gpib_eth):
         return
 
     def set_srq(self, setting):
-        """Set SRQ cause mask (SRQ 0-3)."""
+        """Set which events can generate SRQ (SRQ).
+
+        The SRQ setting determines the conditions under which the power
+        supply will assert a service request. The manual defines four
+        settings (0-3) that map to combinations of fault and error events.
+
+        Parameters
+        ==========
+        setting : int
+            One of 0, 1, 2, or 3 per the manual's SRQ <setting> table.
+
+        Notes
+        =====
+        - Use SRQ? to query the current SRQ setting.
+        - A serial poll clears the active SRQ condition.
+        """
         self.write("SRQ %s" % str(setting))
         return
 
@@ -307,7 +350,22 @@ class HP6623A(gpib_eth):
         return int(float(self.read()))
 
     def set_pon(self, enable):
-        """Enable/disable power-on SRQ (PON)."""
+        """Enable/disable power-on service request (PON).
+
+        When enabled, the supply can assert SRQ at power-on or after a
+        momentary loss of power. The setting is stored in non-volatile memory
+        and persists across power cycles.
+
+        Parameters
+        ==========
+        enable : bool or int
+            Truthy to enable PON SRQ, falsy to disable. Sent as 1 or 0.
+
+        Notes
+        =====
+        - Use PON? to query the current setting.
+        - The manual lists conditions for which PON will generate an SRQ.
+        """
         enable = 1 if enable else 0
         self.write("PON %s" % str(enable))
         return
@@ -349,7 +407,23 @@ class HP6623A(gpib_eth):
         return self.read()
 
     def set_cmode(self, enable):
-        """Enable/disable calibration mode (CMODE)."""
+        """Enable/disable calibration mode (CMODE).
+
+        Calibration commands are only accepted when calibration mode is on.
+        The manual notes that attempting calibration with CMODE off will
+        generate a calibration error. Use this to explicitly gate access to
+        calibration routines.
+
+        Parameters
+        ==========
+        enable : bool or int
+            Truthy to enable calibration mode, falsy to disable. Sent as 1 or 0.
+
+        Notes
+        =====
+        - Use CMODE? to query the current calibration mode state.
+        - Calibration procedures are described in Appendix A of the manual.
+        """
         enable = 1 if enable else 0
         self.write("CMODE %s" % str(enable))
         return
@@ -360,46 +434,116 @@ class HP6623A(gpib_eth):
         return int(float(self.read()))
 
     def set_dcpon(self, mode):
-        """Set power-on output state (DCPON)."""
+        """Set power-on output state (DCPON).
+
+        This command sets how outputs behave when AC power is applied.
+        The manual defines the mode values and their effects (e.g., whether
+        outputs wake up on or off and how current is biased at turn-on).
+
+        Parameters
+        ==========
+        mode : int
+            Mode value as defined by the manual's DCPON table.
+
+        Notes
+        =====
+        - This setting affects all outputs.
+        - The setting is stored in non-volatile memory.
+        """
         self.write("DCPON %s" % str(mode))
         return
 
     def rom(self):
-        """Query firmware revision (ROM?)."""
+        """Query the firmware revision string (ROM?).
+
+        This query returns the revision date of the power supply firmware.
+        """
         self.write("ROM?")
         return self.read()
 
     def vmux(self, ch, input_num):
-        """Query analog multiplexer input (VMUX?)."""
+        """Query an analog multiplexer input (VMUX?).
+
+        This command returns the measurement of the specified multiplexer
+        input on the output board. It is primarily a service/diagnostic
+        feature and is described in the Service Manual.
+
+        Parameters
+        ==========
+        ch : int
+            Channel index (0-based in this API; sent as 1-based to the
+            instrument).
+        input_num : int
+            Multiplexer input number (1-8).
+        """
         self.write("VMUX? %s,%s" % (str(ch + 1), str(input_num)))
         return float(self.read())
 
     # Calibration commands (Appendix A)
     def vdata(self, ch, vlo, vhi):
+        """Send voltage calibration data for a channel (VDATA).
+
+        This command supplies the measured low and high voltage values used
+        to compute correction constants for the voltage setting/readback
+        circuits. It is part of the calibration procedure described in
+        Appendix A of the manual and requires CMODE to be enabled.
+
+        Parameters
+        ==========
+        ch : int
+            Channel index (0-based in this API; sent as 1-based to the
+            instrument).
+        vlo : float
+            Measured low-voltage calibration value.
+        vhi : float
+            Measured high-voltage calibration value.
+        """
         self.write("VDATA %s,%s,%s" % (str(ch + 1), str(vlo), str(vhi)))
         return
 
     def vhi(self, ch):
+        """Drive channel to the high voltage calibration point (VHI)."""
         self.write("VHI %s" % str(ch + 1))
         return
 
     def vlo(self, ch):
+        """Drive channel to the low voltage calibration point (VLO)."""
         self.write("VLO %s" % str(ch + 1))
         return
 
     def idata(self, ch, ilo, ihi):
+        """Send current calibration data for a channel (IDATA).
+
+        This command supplies the measured low and high current values used
+        to compute correction constants for the current setting/readback
+        circuits. It is part of the calibration procedure described in
+        Appendix A of the manual and requires CMODE to be enabled.
+
+        Parameters
+        ==========
+        ch : int
+            Channel index (0-based in this API; sent as 1-based to the
+            instrument).
+        ilo : float
+            Measured low-current calibration value.
+        ihi : float
+            Measured high-current calibration value.
+        """
         self.write("IDATA %s,%s,%s" % (str(ch + 1), str(ilo), str(ihi)))
         return
 
     def ihi(self, ch):
+        """Drive channel to the high current calibration point (IHI)."""
         self.write("IHI %s" % str(ch + 1))
         return
 
     def ilo(self, ch):
+        """Drive channel to the low current calibration point (ILO)."""
         self.write("ILO %s" % str(ch + 1))
         return
 
     def ovcal(self, ch):
+        """Run overvoltage calibration routine for a channel (OVCAL)."""
         self.write("OVCAL %s" % str(ch + 1))
         return
 
