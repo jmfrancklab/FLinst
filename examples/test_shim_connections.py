@@ -2,82 +2,57 @@
 HP Shim Power Supply
 ====================
 
-Just go through and set the voltage on a bunch of shim coils, and verify
-that the power supply believes that the currents have been changed."""
+This script provides a small shim-mapping layer for two HP6623A supplies.
+Named shim channels (e.g., Z0, Z1, Z2, X, Y) are mapped to a specific
+instrument and output channel, and the helper function applies a current
+limit, voltage limit, and output on/off state in one call.
+"""
 
 from Instruments import HP6623A, prologix_connection
 import logging
 
+# Initialize the two HP6623A instances and create a dictionary of shim names.
+HP1 = HP6623A(gpibaddr=3)
+HP2 = HP6623A(gpibaddr=5)
+shim_dict = {
+    "Z0": (HP1, 0),
+    "Y": (HP1, 1),
+    "Z1": (HP2, 0),
+    "Z2": (HP2, 1),
+    "X": (HP2, 2),
+}
 
-# {{{
-def set_shims(HP_list, output=False):
-    # pass a list of the HP sources, we either have 1 or 2
-    # B0_shim = HP_list[0]
-    # Z1_shim = HP_list[1]
-    # Z2_shim = HP_list[2]
-    # X_shim = HP_list[3]
-    # Y_shim = HP_list[4]
-    if output:
-        for index in range(len(HP_list)):
-            this_shim = HP_list[index]
-            if this_shim[-1] == 0.0:
-                print("zero")
-                this_shim[0].I_limit[this_shim[1]] = 0.0
-                this_shim[0].V_limit[this_shim[1]] = 0.0
-                this_shim[0].output[this_shim[1]] = False
-                logging.info(f"Shim {this_shim[0]} is turned off")
-            else:
-                this_shim[0].V_limit[this_shim[1]] = 15
-                this_shim[0].I_limit[this_shim[1]] = this_shim[-1]
-                this_shim[0].output[this_shim[1]] = True
-                logging.info(
-                    f"Shim {this_shim[0]} is on with current set"
-                    f"to {this_shim[0].I_limit[this_shim[1]]}."
-                )
-        curr_list = []
-        volt_list = []
-        for index in range(len(HP_list)):
-            this_shim = HP_list[index]
-            curr_list.append(this_shim[0].I_limit[this_shim[1]])
-            volt_list.append(this_shim[0].V_limit[this_shim[1]])
-        print("CURRENT LIST", curr_list)
-        print("VOLTAGE LIST", volt_list)
-        return curr_list, volt_list
+
+def shim_setter(which_shim, value, v_limit=15.0):
+    """Set current and output state for a named shim."""
+    hp_inst, ch = shim_dict[which_shim]
+    if value == 0.0:
+        hp_inst.I_limit[ch] = 0.0
+        hp_inst.V_limit[ch] = 0.0
+        hp_inst.output[ch] = False
+        logging.info(f"Shim {which_shim} is turned off")
     else:
-        for index in range(len(HP_list)):
-            this_shim = HP_list[index]
-            this_shim[0].output[this_shim[1]] = False
-        curr_list = []
-        volt_list = []
-        for index in range(len(HP_list)):
-            this_shim = HP_list[index]
-            curr_list.append(this_shim[0].I_limit[this_shim[1]])
-            volt_list.append(this_shim[0].V_limit[this_shim[1]])
-        print("CURRENT LIST", curr_list)
-        print("VOLTAGE LIST", volt_list)
-        return curr_list, volt_list
+        hp_inst.V_limit[ch] = v_limit
+        hp_inst.I_limit[ch] = value
+        hp_inst.output[ch] = True
+        logging.info(f"Shim {which_shim} is on with current set to {value}.")
 
-
-# }}}
 
 with prologix_connection() as p:
     with HP6623A(prologix_instance=p, address=3) as HP1:
         with HP6623A(prologix_instance=p, address=5) as HP2:
             HP1.safe_current_on_enable = 1.8
             HP2.safe_current_on_enable = 1.8
-            print("*** *** ***")
-            HP_list = [
-                (HP1, 0, 1.0),  # B0 shim
-                (HP1, 1, 1.0),  # Z1 shim
-                (HP2, 0, 0.0),  # Z2 shim
-                (HP2, 1, 0.0),  # X shim
-                (HP2, 2, 0.0),  # Y shim
-            ]
-            for inst, ch, _ in HP_list:
+
+            for inst, ch in shim_dict.values():
                 inst.set_overvoltage(ch, 15)
-            set_shims(HP_list, True)
+
+            shim_setter("Z0", 1.0)
+            shim_setter("Y", 1.0)
+            shim_setter("Z1", 0.0)
+            shim_setter("Z2", 0.0)
+            shim_setter("X", 0.0)
+
             input()
-            print("DONE")
-            print("* * *")
-            set_shims(HP_list, False)
-quit()
+            for shim in shim_dict:
+                shim_setter(shim, 0.0)
