@@ -12,6 +12,21 @@ instruments_pkg = types.ModuleType("Instruments")
 instruments_pkg.__path__ = []
 sys.modules["Instruments"] = instruments_pkg
 
+# Load channel_property from disk for HP6623A dependency.
+channel_property_path = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "Instruments"
+    / "channel_property.py"
+)
+channel_property_spec = importlib.util.spec_from_file_location(
+    "Instruments.channel_property", channel_property_path
+)
+channel_property_module = importlib.util.module_from_spec(
+    channel_property_spec
+)
+channel_property_spec.loader.exec_module(channel_property_module)
+sys.modules["Instruments.channel_property"] = channel_property_module
+
 # Load gpib_eth from disk so we can use the real Prologix connection code.
 gpib_eth_path = (
     pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "gpib_eth.py"

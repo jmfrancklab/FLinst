@@ -1,7 +1,7 @@
 from .gpib_eth import gpib_eth
 from .log_inst import logger
+from .channel_property import channel_property
 import time
-from channel_proxy_and_property import channel_property
 
 
 class HP6623A(gpib_eth):
