@@ -417,7 +417,7 @@ class HP6623A(gpib_eth):
         Parameters
         ==========
         enable : bool or int
-            Truthy to enable calibration mode, falsy to disable. Sent as 1 or 0.
+            Truthy to enable calibration mode, falsy to disable. Sent as 1 or 0
 
         Notes
         =====
