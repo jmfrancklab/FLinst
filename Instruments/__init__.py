@@ -17,6 +17,7 @@ from .logobj import logobj
 from .hall_probe import LakeShore475
 from .field_feedback import adjust_field, ramp_field
 from .genesys import genesys
+from .channel_property import channel_property, channel_proxy
 
 __all__ += [
     "HP6623A",
@@ -25,7 +26,8 @@ __all__ += [
     "adjust_field",
     "genesys",
     "gigatronics",
-    "logobj"
-    "prologix_connection",
+    "logobjprologix_connection",
     "ramp_field",
+    "channel_property",
+    "channel_proxy",
 ]
