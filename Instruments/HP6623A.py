@@ -46,7 +46,7 @@ class HP6623A(gpib_eth):
 
         if len(self._known_output_state) < 1:
             raise ValueError("I can't even get one channel!")
-        self.safe_current_on_enable = 0.0
+        self.safe_current_on_enable = None
         return
 
     def check_id(self):
@@ -621,6 +621,8 @@ class HP6623A(gpib_eth):
     @I_limit.setter
     def I_limit(self, channel, value):
         """set the current limit for a channel"""
+        if self.safe_current_on_enable is None:
+            raise ValueError("safe_current_on_enable is not set.")
         if abs(value) > 1.8:
             raise ValueError(
                 f"Requested current {value} A exceeds "
