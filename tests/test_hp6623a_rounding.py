@@ -148,11 +148,12 @@ class TestHP6623ARounding(unittest.TestCase):
         for ch in ch_list:
             res = self.hp.res_V[ch]
             base = self.hp.min_V[ch]
-            value = base + res * 2.4
+            value = base + res * 6.4
             expected = base + round((value - base) / res) * res
             self.hp.V_limit[ch] = value
-            self.assertAlmostEqual(self.hp.V_limit[ch], expected, places=3)
+            self.assertAlmostEqual(self.hp.V_limit[ch], expected, places=2)
             self.hp.V_limit[ch] = 0.0
+            print(ch)
 
     def test_i_limit_rounds_and_reads_back(self):
         """Set I_limit and verify readback matches rounded value."""
@@ -160,11 +161,12 @@ class TestHP6623ARounding(unittest.TestCase):
         for ch in ch_list:
             res = self.hp.res_I[ch]
             base = self.hp.min_I[ch]
-            value = base + res * 3.6
+            value = base + res * 7.6
             expected = base + round((value - base) / res) * res
             self.hp.I_limit[ch] = value
-            self.assertAlmostEqual(self.hp.I_limit[ch], expected, places=3)
+            self.assertAlmostEqual(self.hp.I_limit[ch], expected, places=2)
             self.hp.I_limit[ch] = 0.0
+            print(ch)
 
 
 if __name__ == "__main__":

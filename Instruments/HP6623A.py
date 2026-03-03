@@ -17,10 +17,10 @@ class HP6623A(gpib_eth):
         """
         super().__init__(prologix_instance, address)
         self.write("ID?")
-        self.min_V = [0.000, 0.002, 0.005]
+        self.min_V = [-0.002, 0.000, 0.009]
         self.res_V = [0.006, 0.006, 0.015]
         self.max_V = [20.2, 20.2, 50.5]
-        self.min_I = [0.084, 0.130, 0.053]
+        self.min_I = [0.072, 0.110, 0.053]
         self.res_I = [0.025, 0.050, 0.010]
         self.max_I = [5.15, 10.30, 2.06]
         idstring = self.read()
