@@ -558,9 +558,14 @@ class HP6623A(gpib_eth):
         return
 
     @channel_property
+    def V_read(self, channel):
+        "this retrieves the actual/read voltage"
+        return self.get_voltage(channel)
+
+    @channel_property
     def V_limit(self, channel):
         "this allows self.V_limit[channel] to evaluate properly"
-        return self.get_voltage(channel)
+        return self.get_voltage_setting(channel)
 
     @V_limit.setter
     def V_limit(self, channel, value):
@@ -577,9 +582,14 @@ class HP6623A(gpib_eth):
         return
 
     @channel_property
+    def I_read(self, channel):
+        "this retrieves the actual/read current"
+        return self.get_current(channel)
+
+    @channel_property
     def I_limit(self, channel):
         "this allows self.I_limit[channel] to evaluate properly"
-        return self.get_current(channel)
+        return self.get_current_setting(channel)
 
     @I_limit.setter
     def I_limit(self, channel, value):
