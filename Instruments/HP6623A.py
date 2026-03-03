@@ -17,6 +17,12 @@ class HP6623A(gpib_eth):
         """
         super().__init__(prologix_instance, address)
         self.write("ID?")
+        self.min_V = [0.000, 0.002, 0.005]
+        self.res_V = [0.006, 0.006, 0.015]
+        self.max_V = [20.2, 20.2, 50.5]
+        self.min_I = [0.083, 0.130, 0.053]
+        self.res_I = [0.025, 0.050, 0.010]
+        self.max_I = [5.15, 10.30, 2.06]
         idstring = self.read()
         if idstring[0:2] == "HP":
             logger.debug(
@@ -567,6 +573,16 @@ class HP6623A(gpib_eth):
         "this allows self.V_limit[channel] to evaluate properly"
         return self.get_voltage_setting(channel)
 
+    def _V_round_to_allowed(self, channel, value):
+        """determine the closest allowed value
+        this relies on the dictionaries:
+
+        min_V, res_V, and max_V
+        """
+        step_idx = round((value - self.min_V[channel])/self.res_V[channel])
+        assert self.max_V[channel] > value, "you're trying to set a value higher than what's allowed by the instrument!!"
+        return self.min_V[channel] + step_idx * self.res_V[channel]
+
     @V_limit.setter
     def V_limit(self, channel, value):
         """this causes self.V_limit[channel] = value to yield a change on the
@@ -576,7 +592,7 @@ class HP6623A(gpib_eth):
             if self._known_output_state[channel] == 1:
                 self.set_output(channel, 0)
         else:
-            self.set_voltage(channel, value)
+            self.set_voltage(channel, self._V_round_to_allowed(channel,value))
             if self._known_output_state[channel] == 0:
                 self.set_output(channel, 1)
         return
@@ -590,6 +606,17 @@ class HP6623A(gpib_eth):
     def I_limit(self, channel):
         "this allows self.I_limit[channel] to evaluate properly"
         return self.get_current_setting(channel)
+
+    def _I_round_to_allowed(self, channel, value):
+        """determine the closest allowed value
+        this relies on the lists initialized
+        in __init__:
+
+        min_I, res_I, and max_I
+        """
+        step_idx = round((value - self.min_I[channel])/self.res_I[channel])
+        assert self.max_I[channel] > value, "you're trying to set a value higher than what's allowed by the instrument!!"
+        return self.min_I[channel] + step_idx * self.res_I[channel]
 
     @I_limit.setter
     def I_limit(self, channel, value):
@@ -613,7 +640,7 @@ class HP6623A(gpib_eth):
                     f"{self.safe_current_on_enable} A. Set a smaller "
                     "current first."
                 )
-            self.set_current(channel, value)
+            self.set_current(channel, self._I_round_to_allowed(channel,value))
             self.set_output(channel, 1)
             return
 

@@ -1,6 +1,7 @@
 class channel_proxy:
     r"""
     Per-instance bound view returned by channel_property.__get__.
+    This represents the vector-like object associated with each channel.
 
     Python evaluates `owner.prop[idx]` as:
         tmp = owner.prop            # attribute access -> descriptor __get__
@@ -65,12 +66,10 @@ class channel_proxy:
         fset = self._prop._fset
         if fset is None:
             raise AttributeError("can't set (no setter defined)")
-
         inds, is_scalar = self._indices(idx)
         if is_scalar:
             fset(self._owner, inds[0], value)
             return
-
         is_iterable = hasattr(value, "__iter__") and not isinstance(
             value, (str, bytes)
         )
@@ -78,7 +77,6 @@ class channel_proxy:
             for i in inds:
                 fset(self._owner, i, value)
             return
-
         vals = list(value)
         if len(vals) != len(inds):
             raise ValueError(
@@ -97,15 +95,18 @@ class channel_proxy:
 
     def __eq__(self, other):
         # Compare the proxy to another iterable as a full channel vector.
+        print("about to run equality -- trying to compare self to",other)
         if not hasattr(other, "__iter__") or isinstance(other, (str, bytes)):
+            print("other has no iter")
             return False
+        print("going to use list(self), which is",list(self))
         return list(self) == list(other)
 
     def __repr__(self):
         name = self._prop._name or "<unnamed>"
         return (
-            f"<channel_proxy {name} bound to {type(self._owner).__name__}"
-            f" at {hex(id(self._owner))}>"
+            f"{str(list(self))} <channel_proxy {name} bound to {type(self._owner).__name__}"
+            f" at {str(hex(id(self._owner)))} >"
         )
 
 

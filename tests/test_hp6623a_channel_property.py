@@ -73,38 +73,25 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         unavailable."""
         # Require an explicit address so the test never hits the wrong device.
         if "HP6623A_ADDRESS" not in os.environ:
-            raise unittest.SkipTest(
-                "HP6623A_ADDRESS not set; skipping hardware test."
-            )
+            os.environ["HP6623A_ADDRESS"] = "3"
         address = int(os.environ["HP6623A_ADDRESS"])
-
         # Allow optional overrides for the Prologix connection settings.
-        if "PROLOGIX_IP" in os.environ:
-            ip = os.environ["PROLOGIX_IP"]
-        else:
-            ip = "192.168.0.162"
-        if "PROLOGIX_PORT" in os.environ:
-            port = int(os.environ["PROLOGIX_PORT"])
-        else:
-            port = 1234
+        if "PROLOGIX_IP" not in os.environ:
+            os.environ["PROLOGIX_IP"] = "192.168.0.162"
+        ip = os.environ["PROLOGIX_IP"]
+        if "PROLOGIX_PORT" not in os.environ:
+            os.environ["PROLOGIX_PORT"] = "1234"
+        port = int(os.environ["PROLOGIX_PORT"])
 
         # Connect to the Prologix adapter and the HP6623A itself.
         try:
             cls.prologix = prologix_connection(ip=ip, port=port)
+        except Exception as exc:
+            raise unittest.SkipTest("prologix not available -- orig error:\n%s" % exc)
+        try:
             cls.hp = HP6623A(prologix_instance=cls.prologix, address=address)
         except Exception as exc:
-            # Clean up any partial connection before skipping.
-            if hasattr(cls, "hp"):
-                try:
-                    cls.hp.close()
-                except Exception:
-                    pass
-            if hasattr(cls, "prologix"):
-                try:
-                    cls.prologix.close()
-                except Exception:
-                    pass
-            raise unittest.SkipTest("HP6623A not available: %s" % exc)
+            raise unittest.SkipTest("HP6623A not available -- orig error:\n%s" % exc)
 
     @classmethod
     def tearDownClass(cls):
@@ -138,35 +125,42 @@ class TestHP6623AChannelProperty(unittest.TestCase):
     def test_slice_get_set(self):
         """Exercise slice indexing and scalar broadcasting."""
         self.require_channels(3)
-        self.hp.V_limit[0:2] = 0.05
-        self.assertEqual(self.hp.V_limit[0:3], [0.05, 0.05, 0.0])
+        setval = [0.049, 0.051]
+        self.hp.V_limit[0:2] = setval
+        print(self.hp.V_limit[0:3])
+        self.assertEqual(self.hp.V_limit[0:3],[0.049, 0.051, 0.005])
 
     def test_list_get_set(self):
         """Exercise list indexing and list assignment."""
         self.require_channels(3)
-        self.hp.V_limit[[0, 2]] = [0.1, 0.2]
-        self.assertEqual(self.hp.V_limit[0:3], [0.1, 0.0, 0.2])
+        setval = [0.098, 0.197]
+        self.hp.V_limit[[0, 2]] = setval
+        setval = [setval[0], 0.002, setval[1]]
+        self.assertEqual(self.hp.V_limit[0:3], setval)
 
     def test_numpy_vector_set(self):
         """Exercise numpy vector assignment for channel values."""
         self.require_channels(3)
-        self.hp.V_limit[0:3] = np.array([0.2, 0.3, 0.4])
-        self.assertEqual(self.hp.V_limit[0:3], [0.2, 0.3, 0.4])
+        setval = np.array([0.196, 0.302, 0.389])
+        self.hp.V_limit[0:3] = setval
+        assert all(list(self.hp.V_limit)[0:3] == setval)
 
     def test_direct_numpy_vector_set(self):
         """Exercise direct vector assignment across all channels."""
         self.require_channels(3)
-        self.hp.V_limit = np.array([0.3, 0.3, 0.3])
-        self.assertEqual(self.hp.V_limit, [0.3, 0.3, 0.3])
+        setval = np.array([0.3, 0.302, 0.299])
+        self.hp.V_limit = setval
+        self.assertEqual(self.hp.V_limit, setval)
 
     def test_len_and_iter(self):
         """Exercise len() and iteration of the proxy."""
         self.require_channels(3)
-        self.hp.V_limit[0:3] = [0.0, 0.1, 0.2]
+        setval = [0.0, 0.1, 0.197]
+        self.hp.V_limit[0:3] = setval
         self.assertEqual(
             len(self.hp.V_limit), len(self.hp._known_output_state)
         )
-        self.assertEqual(list(self.hp.V_limit)[0:3], [0.0, 0.1, 0.2])
+        self.assertEqual(list(self.hp.V_limit)[0:3], setval)
 
     def test_invalid_index_and_direct_set(self):
         """Exercise error paths for invalid index and direct attribute set."""

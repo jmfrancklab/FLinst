@@ -88,6 +88,7 @@ py.install_sources(files([
     'Instruments/HP6623A.py',
     'Instruments/gpib_eth.py',
     'Instruments/power_control_server_dummy.py',
+    'Instruments/channel_property.py',
     'Instruments/gpib_legacy.py',
     'Instruments/power_control.py',
     'Instruments/microwave_tuning_gui.py',
