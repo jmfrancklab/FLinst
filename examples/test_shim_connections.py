@@ -96,7 +96,7 @@ class ShimCurrentMapping:
                 hp_inst.output[ch] = True
                 logging.info(
                     f"Shim {which_shim} is on with current"
-                    f" set to {value_oneormore}."
+                    f" set to {hp_inst.I_limit[ch]}."
                 )
 
     def items(self):
