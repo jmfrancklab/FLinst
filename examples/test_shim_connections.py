@@ -125,7 +125,7 @@ with prologix_connection() as p:
                         "X": (HP2, 2),
                     }
                 ),
-                overvoltage=15.0,
+                overvoltage=16.0,
             )
 
             shims["Z0"] = 1.0
@@ -134,5 +134,5 @@ with prologix_connection() as p:
             shims["Z2"] = 0.0
             shims["X"] = 0.0
 
-            input()
+            input("Press enter to exit")
             shims[:] = 0.0
