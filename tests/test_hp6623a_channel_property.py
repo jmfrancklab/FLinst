@@ -170,6 +170,27 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         self.hp.V_limit = rounded
         np.testing.assert_allclose(list(self.hp.V_limit)[0:3], rounded)
 
+    def test_zero_is_always_allowed(self):
+        """Treat zero as an allowed setpoint for rounding and validation."""
+        self.require_channels(1)
+        self.assertEqual(self.hp.round_to_allowed("V", 0, 0), 0)
+        self.assertEqual(self.hp.round_to_allowed("I", 0, 0), 0)
+        self.hp.check_if_allowed("V", 0, 0)
+        self.hp.check_if_allowed("I", 0, 0)
+
+    def test_zero_reads_back_as_zero_when_output_is_off(self):
+        """Report zero when an off channel sits at the rounded-zero step."""
+        self.require_channels(1)
+        self.hp.V_limit[0] = 0
+        self.assertEqual(self.hp.V_limit[0], 0)
+        old_safe_current = self.hp.safe_current_on_enable
+        self.hp.safe_current_on_enable = 1.8
+        try:
+            self.hp.I_limit[0] = 0
+            self.assertEqual(self.hp.I_limit[0], 0)
+        finally:
+            self.hp.safe_current_on_enable = old_safe_current
+
     def test_len_and_iter(self):
         """Exercise len() and iteration of the proxy."""
         self.require_channels(3)

@@ -2,6 +2,7 @@ from .gpib_eth import gpib_eth
 from .log_inst import logger
 from .channel_property import channel_property
 import time
+import numpy as np
 
 
 class HP6623A(gpib_eth):
@@ -152,6 +153,10 @@ class HP6623A(gpib_eth):
 
         """
         self.check_if_allowed("I", ch, val)
+        if val == 0:
+            # shortcut the logic for I=0, so we can bypass the checks
+            self.write("ISET %s,%s" % (str(ch + 1), str(val)))
+            return
         if self.safe_current_on_enable is None:
             raise ValueError(
                 "safe_current_on_enable is not set.  You need to"
@@ -586,7 +591,14 @@ class HP6623A(gpib_eth):
     @channel_property
     def V_limit(self, channel):
         "this allows self.V_limit[channel] to evaluate properly"
-        return self.get_voltage_setting(channel)
+        value = self.get_voltage_setting(channel)
+        if (
+            self.output[channel] == 0
+            and
+            np.isclose(value, self.round_to_allowed("V", channel, value))
+        ):
+            return 0
+        return value
 
     def check_if_allowed(self, which, channel, value):
         """Validate that a requested setpoint matches a supported discrete
@@ -606,7 +618,11 @@ class HP6623A(gpib_eth):
         AssertionError
             If ``value`` is not already on one of the instrument's supported
             discrete settings for the selected channel.
+            A value of ``0`` is always allowed because it's possible
+            by disabling the output.
         """
+        if value == 0:
+            return
         rounded_value = self.round_to_allowed(which, channel, value)
         assert abs((rounded_value - value) / value) < 1e-4, (
             f"{value} is not sufficiently close to allowed value of"
@@ -630,6 +646,8 @@ class HP6623A(gpib_eth):
         float or list of float
             Rounded value for a single channel, or a list of rounded values
             when an iterable is provided.
+            A value of ``0`` is always allowed because it's possible
+            by disabling the output.
 
         Raises
         ------
@@ -647,6 +665,8 @@ class HP6623A(gpib_eth):
             ]
         else:
             raise ValueError("I don't understand the arguments!")
+        if value == 0:
+            return 0
         the_min = getattr(self, "min_" + which)
         the_res = getattr(self, "res_" + which)
         the_max = getattr(self, "max_" + which)
@@ -679,7 +699,14 @@ class HP6623A(gpib_eth):
     @channel_property
     def I_limit(self, channel):
         "this allows self.I_limit[channel] to evaluate properly"
-        return self.get_current_setting(channel)
+        value = self.get_current_setting(channel)
+        if (
+            self.output[channel] == 0
+            and
+            np.isclose(value, self.round_to_allowed("I", channel, value))
+        ):
+            return 0
+        return value
 
     @I_limit.setter
     def I_limit(self, channel, value):
@@ -694,12 +721,10 @@ class HP6623A(gpib_eth):
             if self._known_output_state[channel] == 1:
                 self.set_output(channel, 0)
             return
-
         if self._known_output_state[channel] == 0:
             self.set_current(channel, value)
             self.set_output(channel, 1)
             return
-
         self.set_current(channel, value)
         return
 
