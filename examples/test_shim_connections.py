@@ -104,6 +104,10 @@ class ShimCurrentMapping:
         for name in self:
             yield name, self[name]
 
+    def round(self, key, value):
+        hp_inst, ch = self._shim_dict[key]
+        return hp_inst.round_to_allowed("I", value)
+
     def connections(self):
         """Return an iterable of (name, (instrument, channel)) pairs."""
         return self._shim_dict.items()
@@ -128,11 +132,11 @@ with prologix_connection() as p:
                 overvoltage=16.0,
             )
 
-            shims["Z0"] = 1.0
-            shims["Y"] = 1.0
-            shims["Z1"] = 0.0
-            shims["Z2"] = 0.0
-            shims["X"] = 0.0
+            shims["Z0"] = shims.round("Z0", 1.0)
+            shims["Y"] = shims.round("Y", 1.0)
+            shims["Z1"] = shims.round("Z1", 0.0)
+            shims["Z2"] = shims.round("Z2", 0.0)
+            shims["X"] = shims.round("X", 0.0)
 
             input("Press enter to exit")
             shims[:] = 0.0
