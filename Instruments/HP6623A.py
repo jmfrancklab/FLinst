@@ -18,7 +18,7 @@ class HP6623A(gpib_eth):
         """
         super().__init__(prologix_instance, address)
         self.write("ID?")
-        self.min_V = [0.000, 0.00349, 0.014]
+        self.min_V = [0.000, 0.004, 0.014]
         self.res_V = [0.006, 0.006, 0.015]
         self.max_V = [20.2, 20.2, 50.5]
         self.min_I = [0.072, 0.110, 0.053]
@@ -243,10 +243,6 @@ class HP6623A(gpib_eth):
         """
         self.write("OUT? %s" % str(ch + 1))
         retval = float(self.read())
-        if retval == 0:
-            print("Ch %s output is OFF" % ch)
-        elif retval == 1:
-            print("Ch %s output is ON" % ch)
         return retval
 
     def set_overvoltage(self, ch, val):
@@ -665,15 +661,15 @@ class HP6623A(gpib_eth):
             raise ValueError("I don't understand the arguments!")
         if value == 0:
             return 0
-        the_min = getattr(self, "min_" + which)
-        the_res = getattr(self, "res_" + which)
-        the_max = getattr(self, "max_" + which)
-        step_idx = round((value - the_min[channel]) / the_res[channel])
-        assert the_max[channel] > value, (
+        the_min = getattr(self, "min_" + which)[channel]
+        the_res = getattr(self, "res_" + which)[channel]
+        the_max = getattr(self, "max_" + which)[channel]
+        step_idx = round((value - the_min) / the_res)
+        assert the_max > value, (
             f"you're trying to set a {which} value "
             "higher than what's allowed by the instrument!!"
         )
-        return round(the_min[channel] + step_idx * the_res[channel],3)
+        return the_min + step_idx * the_res
 
     @V_limit.setter
     def V_limit(self, channel, value):

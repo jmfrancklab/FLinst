@@ -218,17 +218,18 @@ class TestHP6623AChannelProperty(unittest.TestCase):
             span = 3.0 * res
             step = span / 14.0
             print(f"*** Channel {ch} ***")
-            for i in range(15):
+            for i in range(1,16):
                 value = base + i * step
-                expected = base + round((value - base) / res) * res
+                print("for target",value)
+                value = base + round((value - base) / res) * res
                 self.hp.V_limit[ch] = value
                 print(
-                    "Actual setting",
+                    "actual setting = ",
                     self.hp.V_limit[ch],
-                    "vs. expected",
-                    expected,
+                    "vs. rounded expected = ",
+                    value,
                 )
-                self.assertAlmostEqual(self.hp.V_limit[ch], expected, places=3)
+                self.assertAlmostEqual(self.hp.V_limit[ch], value, places=3)
             self.hp.V_limit[ch] = 0.0
 
 
