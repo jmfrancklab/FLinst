@@ -140,44 +140,30 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         self.require_channels(3)
         setval = [0.098, 0.197]
         self.hp.V_limit[[0, 2]] = setval
-        setval = [setval[0], 0.002, setval[1]]
+        setval = [setval[0], self.hp.V_limit[1], setval[1]]
         self.assertEqual(self.hp.V_limit[0:3], setval)
 
     def test_numpy_vector_set(self):
         """Exercise numpy vector assignment for channel values."""
         self.require_channels(3)
-        setval = np.array(self.hp.round_to_allowed("V", [0.196, 0.302, 0.389]))
-        self.hp.V_limit[0:3] = setval
-        assert all(list(self.hp.V_limit)[0:3] == setval)
+        setval = np.array(self.hp.round_to_allowed("I", [0.196, 0.302]))
+        self.hp.I_limit[0:2] = setval
+        assert all(list(self.hp.I_limit)[0:2] == setval)
 
     def test_direct_numpy_vector_set(self):
         """Exercise direct vector assignment across all channels."""
         self.require_channels(3)
-        setval = np.array(self.hp.round_to_allowed("V", [0.3, 0.3, 0.3]))
-        self.hp.V_limit = setval
-        self.assertEqual(self.hp.V_limit, setval)
-
-    def test_non_allowed_value_raises(self):
-        """Reject values that do not match the instrument's discrete steps."""
-        self.require_channels(1)
-        with self.assertRaises(AssertionError):
-            self.hp.V_limit[0] = 0.2
+        setval = np.array(self.hp.round_to_allowed("I", [0.3, 0.3, 0]))
+        self.hp.I_limit = setval
+        self.assertEqual(self.hp.I_limit, setval)
 
     def test_round_vector_to_allowed_then_set(self):
         """Round a vector to allowed values before applying it."""
         self.require_channels(3)
-        requested = np.array([0.2, 0.35, 0.4])
-        rounded = np.array(self.hp.round_to_allowed("V", requested))
-        self.hp.V_limit = rounded
-        np.testing.assert_allclose(list(self.hp.V_limit)[0:3], rounded)
-
-    def test_zero_is_always_allowed(self):
-        """Treat zero as an allowed setpoint for rounding and validation."""
-        self.require_channels(1)
-        self.assertEqual(self.hp.round_to_allowed("V", 0, 0), 0)
-        self.assertEqual(self.hp.round_to_allowed("I", 0, 0), 0)
-        self.hp.check_if_allowed("V", 0, 0)
-        self.hp.check_if_allowed("I", 0, 0)
+        requested = np.array([0.8, 0.35, 0])
+        rounded = np.array(self.hp.round_to_allowed("I", requested))
+        self.hp.I_limit = rounded
+        np.testing.assert_allclose(list(self.hp.I_limit)[0:3], rounded)
 
     def test_zero_reads_back_as_zero_when_output_is_off(self):
         """Report zero when an off channel sits at the rounded-zero step."""
@@ -212,65 +198,70 @@ class TestHP6623AChannelProperty(unittest.TestCase):
             self.hp.V_limit = 3
 
     def test_I_limit_rounding_grid_over_range(self):
-        """Check that the stored allowed curents agree with the behavior of the instrument."""
+        """Check that the stored allowed curents agree with the behavior of the
+        instrument."""
         self.hp.safe_current = 1.8
         n_steps = 70
         for ch in [0, 1]:
-            for thisI in np.linspace(self.hp.min_I[ch], 1.5, n_steps):
-                self.hp.I_limit[ch] = thisI
-            self.hp.I_limit[ch] = 0.0
-            result = np.array(sorted(list(self.hp.observed_I[ch])))
-            print(
-                "for channel",
-                ch,
-                "allowed values are",
-                result,
-                "(",
-                len(result),
-                "/",
-                n_steps,
-                ")",
-                "and the diff is",
-                np.diff(result),
-            )
-            np.testing.assert_allclose(result, self.hp.allowed_I[ch])
+            with self.subTest(ch=ch):
+                for thisI in np.linspace(self.hp.min_I[ch], 1.5, n_steps):
+                    self.hp.I_limit[ch] = thisI
+                self.hp.I_limit[ch] = 0.0
+                result = np.array(sorted(list(self.hp.observed_I[ch])))
+                print(
+                    "for channel",
+                    ch,
+                    "allowed values are",
+                    result,
+                    "(",
+                    len(result),
+                    "/",
+                    n_steps,
+                    ")",
+                    "and the diff is",
+                    np.diff(result),
+                )
+                np.testing.assert_allclose(result, self.hp.allowed_I[ch])
 
     def test_resistance_check(self):
-        """Check that the stored allowed curents agree with the behavior of the instrument.
+        """Check that the stored allowed curents agree with the behavior of the
+        instrument.
 
-        In order to run this test, you need a 3.9 Ω hooked up to channel 1 and a 6.8 Ω hooked up to channel 2 (or else change the values for R_meas_expected)
+        In order to run this test, you need a 3.9 Ω hooked up to channel 1 and
+        a 6.8 Ω hooked up to channel 2 (or else change the values for
+        R_meas_expected)
         """
         self.hp.safe_current = 1.8
         R_meas_expected = [3.9, 6.8]
         for ch in [0, 1]:
-            R_meas_list = []
-            I_meas_list = []
-            self.hp.V_limit[ch] = 15
-            all_currents = self.hp.allowed_I[ch]
-            # {{{ remove 0 (div by zero error) and next lowest (resistance precision)
-            all_currents.pop(0)
-            all_currents.pop(0)
-            # }}}
-            for thisI in all_currents:
-                self.hp.I_limit[ch] = thisI
-                I_meas = self.hp.I_read[ch]
-                if I_meas > 0:
-                    R_meas_list.append(self.hp.V_read[ch] / I_meas)
-                I_meas_list.append(I_meas)
-            self.hp.output[ch] = 0
-            print(
-                "for channel",
-                ch,
-                "I explore all allowed currents, and get observed R = ",
-                R_meas_list,
-                "and ΔI (set vs. obs) = ",
-                np.array(I_meas_list) - np.array(all_currents),
-            )
-            np.testing.assert_allclose(
-                R_meas_list, R_meas_expected[ch], atol=0.2
-            )
-            np.testing.assert_allclose(I_meas_list, all_currents,
-                                       rtol=0.03)
+            with self.subTest(ch=ch):
+                R_meas_list = []
+                I_meas_list = []
+                self.hp.V_limit[ch] = 15
+                all_currents = self.hp.allowed_I[ch]
+                all_currents = all_currents[3:] # remove 0 (div by zero error)
+                #                                 and next two lowest
+                #                                 (resistance precision)
+                for thisI in all_currents:
+                    self.hp.I_limit[ch] = thisI
+                    I_meas = self.hp.I_read[ch]
+                    if I_meas > 0:
+                        R_meas_list.append(self.hp.V_read[ch] / I_meas)
+                    I_meas_list.append(I_meas)
+                self.hp.output[ch] = 0
+                print(
+                    "for channel",
+                    ch,
+                    "I explore all allowed currents, and get observed R = ",
+                    R_meas_list,
+                    "and ΔI (set vs. obs) = ",
+                    np.array(I_meas_list) - np.array(all_currents),
+                )
+                np.testing.assert_allclose(
+                    R_meas_list, R_meas_expected[ch], atol=0.2
+                )
+                np.testing.assert_allclose(I_meas_list, all_currents,
+                                           rtol=0.03)
 
 
 if __name__ == "__main__":

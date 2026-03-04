@@ -24,7 +24,7 @@ class HP6623A(gpib_eth):
         self.write("ID?")
         # {{{ these are just determined from the observed values
         self.allowed_I = [
-            [
+            np.r_[
                 0.0,
                 0.083,
                 0.107,
@@ -88,7 +88,7 @@ class HP6623A(gpib_eth):
                 1.475,
                 1.498,
             ],
-            [
+            np.r_[
                 0.0,
                 0.13,
                 0.18,
@@ -121,6 +121,7 @@ class HP6623A(gpib_eth):
                 1.46,
                 1.5,
             ],
+            np.r_[0],
         ]
         # }}}
         self.min_V = [0.000, 0.002, 0.018]
@@ -697,6 +698,43 @@ class HP6623A(gpib_eth):
             return 0
         return value
 
+    def round_to_allowed(self, which, *args):
+        """Round setpoints to the nearest instrument-supported discrete values.
+
+        Parameters
+        ----------
+        which : {"I", "V"}
+            Quantity to round.
+        *args : tuple
+            Either ``(channel, value)`` for a single zero-based channel, or a
+            single iterable of per-channel values to round elementwise.
+
+        Returns
+        -------
+        float or list of float
+            Rounded value for a single channel, or a list of rounded values
+            when an iterable is provided.
+            A value of ``0`` is always allowed because it's possible
+            by disabling the output.
+
+        Raises
+        ------
+        ValueError
+            If the arguments do not match one of the supported call forms.
+        AssertionError
+            If a requested value exceeds the instrument limit for its channel.
+        """
+        if len(args) == 2:
+            channel, value = args
+        elif len(args) == 1 and hasattr(args[0], "__iter__"):
+            return [
+                self.round_to_allowed(which, j, args[0][j])
+                for j in range(len(args[0]))
+            ]
+        else:
+            raise ValueError("I don't understand the arguments!")
+        the_values = getattr(self, "allowed_" + which)[channel]
+        return the_values[np.argmin(value - the_values)]
     @V_limit.setter
     def V_limit(self, channel, value):
         """this causes self.V_limit[channel] = value to yield a change on the
@@ -723,7 +761,7 @@ class HP6623A(gpib_eth):
         "this allows self.I_limit[channel] to evaluate properly"
         value = self.get_current_setting(channel)
         if self.output[channel] == 0 and np.isclose(
-            value, self.min_V[channel]
+            value, self.min_I[channel]
         ):
             return 0
         return value
