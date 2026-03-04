@@ -153,7 +153,10 @@ class HP6623A(gpib_eth):
         """
         self.check_if_allowed("I", ch, val)
         if self.safe_current_on_enable is None:
-            raise ValueError("safe_current_on_enable is not set.  You need to set it before you can do anything!")
+            raise ValueError(
+                "safe_current_on_enable is not set.  You need to"
+                " set it before you can do anything!"
+            )
         else:
             if abs(val) > self.safe_current_on_enable:
                 raise ValueError(
@@ -586,7 +589,8 @@ class HP6623A(gpib_eth):
         return self.get_voltage_setting(channel)
 
     def check_if_allowed(self, which, channel, value):
-        """Validate that a requested setpoint matches a supported discrete step.
+        """Validate that a requested setpoint matches a supported discrete
+        step.
 
         Parameters
         ----------
@@ -604,9 +608,11 @@ class HP6623A(gpib_eth):
             discrete settings for the selected channel.
         """
         rounded_value = self.round_to_allowed(which, channel, value)
-        assert (
-            abs((rounded_value - value) / value) < 1e-4
-        ), f"{value} is not sufficiently close to allowed value of {rounded_value} -- consider using the round_to_allowed method first!"
+        assert abs((rounded_value - value) / value) < 1e-4, (
+            f"{value} is not sufficiently close to allowed value of"
+            f" {rounded_value} -- consider using the round_to_allowed"
+            " method first!"
+        )
 
     def round_to_allowed(self, which, *args):
         """Round setpoints to the nearest instrument-supported discrete values.
