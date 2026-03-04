@@ -67,7 +67,7 @@ class TestHP6623ARounding(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-       """Connect to the instrument, or skip the suite if it is
+        """Connect to the instrument, or skip the suite if it is
         unavailable."""
         # Require an explicit address so the test never hits the wrong device.
         if "HP6623A_ADDRESS" not in os.environ:
@@ -85,11 +85,16 @@ class TestHP6623ARounding(unittest.TestCase):
         try:
             cls.prologix = prologix_connection(ip=ip, port=port)
         except Exception as exc:
-            raise unittest.SkipTest("prologix not available -- orig error:\n%s" % exc)
+            raise unittest.SkipTest(
+                "prologix not available -- orig error:\n%s" % exc
+            )
         try:
             cls.hp = HP6623A(prologix_instance=cls.prologix, address=address)
         except Exception as exc:
-            raise unittest.SkipTest("HP6623A not available -- orig error:\n%s" % exc)
+            raise unittest.SkipTest(
+                "HP6623A not available -- orig error:\n%s" % exc
+            )
+        cls.hp.safe_current_on_enable = 1.8
 
     @classmethod
     def tearDownClass(cls):
@@ -132,6 +137,28 @@ class TestHP6623ARounding(unittest.TestCase):
         ch = 1
         with self.assertRaises(AssertionError):
             self.hp._I_round_to_allowed(ch, self.hp.max_I[ch] + 0.1)
+
+    def test_v_limit_rounds_and_reads_back(self):
+        """Set V_limit and verify readback matches rounded value."""
+        ch = 0
+        res = self.hp.res_V[ch]
+        base = self.hp.min_V[ch]
+        value = base + res * 2.4
+        expected = base + round((value - base) / res) * res
+        self.hp.V_limit[ch] = value
+        self.assertAlmostEqual(self.hp.V_limit[ch], expected, places=3)
+        self.hp.V_limit[ch] = 0.0
+
+    def test_i_limit_rounds_and_reads_back(self):
+        """Set I_limit and verify readback matches rounded value."""
+        ch = 1
+        res = self.hp.res_I[ch]
+        base = self.hp.min_I[ch]
+        value = base + res * 3.6
+        expected = base + round((value - base) / res) * res
+        self.hp.I_limit[ch] = value
+        self.assertAlmostEqual(self.hp.I_limit[ch], expected, places=3)
+        self.hp.I_limit[ch] = 0.0
 
 
 if __name__ == "__main__":
