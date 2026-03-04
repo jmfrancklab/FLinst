@@ -592,10 +592,8 @@ class HP6623A(gpib_eth):
     def V_limit(self, channel):
         "this allows self.V_limit[channel] to evaluate properly"
         value = self.get_voltage_setting(channel)
-        if (
-            self.output[channel] == 0
-            and
-            np.isclose(value, self.round_to_allowed("V", channel, value))
+        if self.output[channel] == 0 and np.isclose(
+            value, self.round_to_allowed("V", channel, value)
         ):
             return 0
         return value
@@ -700,10 +698,8 @@ class HP6623A(gpib_eth):
     def I_limit(self, channel):
         "this allows self.I_limit[channel] to evaluate properly"
         value = self.get_current_setting(channel)
-        if (
-            self.output[channel] == 0
-            and
-            np.isclose(value, self.round_to_allowed("I", channel, value))
+        if self.output[channel] == 0 and np.isclose(
+            value, self.round_to_allowed("I", channel, value)
         ):
             return 0
         return value
