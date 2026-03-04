@@ -101,7 +101,6 @@ class HP6623A(gpib_eth):
         =======
         None
         """
-        self.check_if_allowed("V", ch, val)
         self.write("VSET %s,%s" % (str(ch + 1), str(val)))
         if val != 0.0:
             time.sleep(5)
@@ -153,7 +152,6 @@ class HP6623A(gpib_eth):
         None
 
         """
-        self.check_if_allowed("I", ch, val)
         if val == 0:
             # shortcut the logic for I=0, so we can bypass the checks
             self.write("ISET %s,%s" % (str(ch + 1), str(val)))
@@ -590,87 +588,11 @@ class HP6623A(gpib_eth):
         "this allows self.V_limit[channel] to evaluate properly"
         value = self.get_voltage_setting(channel)
         if self.output[channel] == 0 and np.isclose(
-            value, self.round_to_allowed("V", channel, value)
+            value, self.min_V[channel]
         ):
             return 0
         return value
 
-    def check_if_allowed(self, which, channel, value):
-        """Validate that a requested setpoint matches a supported discrete
-        step.
-
-        Parameters
-        ----------
-        which : {"I", "V"}
-            Quantity being checked.
-        channel : int
-            Zero-based channel index.
-        value : float
-            Requested setpoint.
-
-        Raises
-        ------
-        AssertionError
-            If ``value`` is not already on one of the instrument's supported
-            discrete settings for the selected channel.
-            A value of ``0`` is always allowed because it's possible
-            by disabling the output.
-        """
-        if value == 0:
-            return
-        rounded_value = self.round_to_allowed(which, channel, value)
-        assert abs((rounded_value - value) / value) < 1e-4, (
-            f"{value} is not sufficiently close to allowed value of"
-            f" {rounded_value} -- consider using the round_to_allowed"
-            f" method first for channel {channel}!"
-        )
-
-    def round_to_allowed(self, which, *args):
-        """Round setpoints to the nearest instrument-supported discrete values.
-
-        Parameters
-        ----------
-        which : {"I", "V"}
-            Quantity to round.
-        *args : tuple
-            Either ``(channel, value)`` for a single zero-based channel, or a
-            single iterable of per-channel values to round elementwise.
-
-        Returns
-        -------
-        float or list of float
-            Rounded value for a single channel, or a list of rounded values
-            when an iterable is provided.
-            A value of ``0`` is always allowed because it's possible
-            by disabling the output.
-
-        Raises
-        ------
-        ValueError
-            If the arguments do not match one of the supported call forms.
-        AssertionError
-            If a requested value exceeds the instrument limit for its channel.
-        """
-        if len(args) == 2:
-            channel, value = args
-        elif len(args) == 1 and hasattr(args[0], "__iter__"):
-            return [
-                self.round_to_allowed(which, j, args[0][j])
-                for j in range(len(args[0]))
-            ]
-        else:
-            raise ValueError("I don't understand the arguments!")
-        if value == 0:
-            return 0
-        the_min = getattr(self, "min_" + which)[channel]
-        the_res = getattr(self, "res_" + which)[channel]
-        the_max = getattr(self, "max_" + which)[channel]
-        step_idx = round((value - the_min) / the_res)
-        assert the_max > value, (
-            f"you're trying to set a {which} value "
-            "higher than what's allowed by the instrument!!"
-        )
-        return the_min + step_idx * the_res
 
     @V_limit.setter
     def V_limit(self, channel, value):
@@ -698,7 +620,7 @@ class HP6623A(gpib_eth):
         "this allows self.I_limit[channel] to evaluate properly"
         value = self.get_current_setting(channel)
         if self.output[channel] == 0 and np.isclose(
-            value, self.round_to_allowed("I", channel, value)
+            value, self.min_V[channel]
         ):
             return 0
         return value
