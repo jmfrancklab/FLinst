@@ -106,59 +106,65 @@ class TestHP6623ARounding(unittest.TestCase):
 
     def test_v_round_to_allowed(self):
         """Verify V rounding snaps to nearest allowed step."""
-        ch = 0
-        res = self.hp.res_V[ch]
-        base = self.hp.min_V[ch]
-        value = base + res * 2.4
-        expected = base + round((value - base) / res) * res
-        self.assertAlmostEqual(
-            self.hp._V_round_to_allowed(ch, value), expected, places=6
-        )
+        ch_list = [0, 1, 2]
+        for ch in ch_list:
+            res = self.hp.res_V[ch]
+            base = self.hp.min_V[ch]
+            value = base + res * 2.4
+            expected = base + round((value - base) / res) * res
+            self.assertAlmostEqual(
+                self.hp._V_round_to_allowed(ch, value), expected, places=3
+            )
 
     def test_v_round_to_allowed_above_max(self):
         """Verify V rounding rejects values above max."""
-        ch = 0
-        with self.assertRaises(AssertionError):
-            self.hp._V_round_to_allowed(ch, self.hp.max_V[ch] + 0.1)
+        ch_list = [0, 1, 2]
+        for ch in ch_list:
+            with self.assertRaises(AssertionError):
+                self.hp._V_round_to_allowed(ch, self.hp.max_V[ch] + 0.1)
 
     def test_i_round_to_allowed(self):
         """Verify I rounding snaps to nearest allowed step."""
-        ch = 1
-        res = self.hp.res_I[ch]
-        base = self.hp.min_I[ch]
-        value = base + res * 3.6
-        expected = base + round((value - base) / res) * res
-        self.assertAlmostEqual(
-            self.hp._I_round_to_allowed(ch, value), expected, places=6
-        )
+        ch_list = [0, 1, 2]
+        for ch in ch_list:
+            res = self.hp.res_I[ch]
+            base = self.hp.min_I[ch]
+            value = base + res * 3.6
+            expected = base + round((value - base) / res) * res
+            self.assertAlmostEqual(
+                self.hp._I_round_to_allowed(ch, value), expected, places=3
+            )
 
     def test_i_round_to_allowed_above_max(self):
         """Verify I rounding rejects values above max."""
-        ch = 1
-        with self.assertRaises(AssertionError):
-            self.hp._I_round_to_allowed(ch, self.hp.max_I[ch] + 0.1)
+        ch_list = [0, 1, 2]
+        for ch in ch_list:
+            with self.assertRaises(AssertionError):
+                self.hp._I_round_to_allowed(ch, self.hp.max_I[ch] + 0.1)
 
     def test_v_limit_rounds_and_reads_back(self):
         """Set V_limit and verify readback matches rounded value."""
-        ch = 0
-        res = self.hp.res_V[ch]
-        base = self.hp.min_V[ch]
-        value = base + res * 2.4
-        expected = base + round((value - base) / res) * res
-        self.hp.V_limit[ch] = value
-        self.assertAlmostEqual(self.hp.V_limit[ch], expected, places=3)
-        self.hp.V_limit[ch] = 0.0
+        ch_list = [0, 1, 2]
+        for ch in ch_list:
+            res = self.hp.res_V[ch]
+            base = self.hp.min_V[ch]
+            value = base + res * 2.4
+            expected = base + round((value - base) / res) * res
+            self.hp.V_limit[ch] = value
+            self.assertAlmostEqual(self.hp.V_limit[ch], expected, places=3)
+            self.hp.V_limit[ch] = 0.0
 
     def test_i_limit_rounds_and_reads_back(self):
         """Set I_limit and verify readback matches rounded value."""
-        ch = 1
-        res = self.hp.res_I[ch]
-        base = self.hp.min_I[ch]
-        value = base + res * 3.6
-        expected = base + round((value - base) / res) * res
-        self.hp.I_limit[ch] = value
-        self.assertAlmostEqual(self.hp.I_limit[ch], expected, places=3)
-        self.hp.I_limit[ch] = 0.0
+        ch_list = [0, 1]
+        for ch in ch_list:
+            res = self.hp.res_I[ch]
+            base = self.hp.min_I[ch]
+            value = base + res * 3.6
+            expected = base + round((value - base) / res) * res
+            self.hp.I_limit[ch] = value
+            self.assertAlmostEqual(self.hp.I_limit[ch], expected, places=3)
+            self.hp.I_limit[ch] = 0.0
 
 
 if __name__ == "__main__":
