@@ -210,6 +210,27 @@ class TestHP6623AChannelProperty(unittest.TestCase):
             # Assignment to a scalar without indexing is not allowed.
             self.hp.V_limit = 3
 
+    def test_v_limit_rounding_grid_over_range(self):
+        """Sweep small V range and verify rounding/readback at each step."""
+        for ch in range(len(self.hp._known_output_state)):
+            res = self.hp.res_V[ch]
+            base = self.hp.min_V[ch]
+            span = 3.0 * res
+            step = span / 14.0
+            print(f"*** Channel {ch} ***")
+            for i in range(15):
+                value = base + i * step
+                expected = base + round((value - base) / res) * res
+                self.hp.V_limit[ch] = value
+                print(
+                    "Actual setting",
+                    self.hp.V_limit[ch],
+                    "vs. expected",
+                    expected,
+                )
+                self.assertAlmostEqual(self.hp.V_limit[ch], expected, places=3)
+            self.hp.V_limit[ch] = 0.0
+
 
 if __name__ == "__main__":
     unittest.main()
