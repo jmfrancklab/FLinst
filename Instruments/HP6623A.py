@@ -40,7 +40,7 @@ class HP6623A(gpib_eth):
         self._known_output_state = []
         for j in range(8):
             try:
-                x = self.get_output(j)
+                x = self.output[j]
                 self._known_output_state.append(x)
             except Exception:
                 break
@@ -207,133 +207,15 @@ class HP6623A(gpib_eth):
                 )
         return curr_reading
 
-    def set_output(self, ch, trigger):
-        r"""turn on or off the set_output on specific channel
-
-        Parameters
-        ==========
-        ch : int
-            Channel 1, 2, or 3
-        trigger : int
-            To turn set_output off, set `trigger` to 0 (or False)
-            To turn set_output on, set `trigger` to  1 (or True)
-        Returns
-        =======
-        None
-
-        """
-        assert isinstance(trigger, int), "trigger must be int (or bool)"
-        assert 0 <= trigger <= 1, "trigger must be 0 (False) or 1 (True)"
-        trigger = 1 if trigger else 0
-        self.write("OUT %s,%s" % (str(ch + 1), str(trigger)))
-        self._known_output_state[ch] = trigger
-        return
-
-    def get_output(self, ch):
-        r"""check the set_output status of a specific channel
-
-        Parameters
-        ==========
-        ch : int
-            Channel 1, 2, or 3
-        Returns
-        =======
-        str stating whether the channel set_output is OFF or ON
-
-        """
-        self.write("OUT? %s" % str(ch + 1))
-        retval = float(self.read())
-        if retval == 0:
-            print("Ch %s output is OFF" % ch)
-        elif retval == 1:
-            print("Ch %s output is ON" % ch)
-        return retval
-
-    def set_overvoltage(self, ch, val):
-        """Set overvoltage trip point (OVSET)."""
-        self.write("OVSET %s,%s" % (str(ch + 1), str(val)))
-        return
-
-    def get_overvoltage(self, ch):
-        """Query overvoltage trip point (OVSET?)."""
-        self.write("OVSET? %s" % str(ch + 1))
-        return float(self.read())
-
     def reset_overvoltage(self, ch):
         """Reset overvoltage crowbar circuit (OVRST)."""
         self.write("OVRST %s" % str(ch + 1))
         return
 
-    def set_ocp(self, ch, enable):
-        """Enable/disable overcurrent protection (OCP)."""
-        enable = 1 if enable else 0
-        self.write("OCP %s,%s" % (str(ch + 1), str(enable)))
-        return
-
-    def get_ocp(self, ch):
-        """Query overcurrent protection status (OCP?)."""
-        self.write("OCP? %s" % str(ch + 1))
-        return int(float(self.read()))
-
     def reset_overcurrent(self, ch):
         """Reset output after overcurrent protection (OCRST)."""
         self.write("OCRST %s" % str(ch + 1))
         return
-
-    def set_unmask(self, ch, mask):
-        """Set the mask register for a channel (UNMASK).
-
-        The mask register works with the status register to determine which
-        conditions set bits in the FAULT register. A FAULT bit is set only
-        when the corresponding bit is set in both the STATUS register and
-        the MASK register. Use this to enable/disable which status conditions
-        are allowed to latch into FAULT for a given channel.
-
-        Parameters
-        ==========
-        ch : int
-            Channel index (0-based in this API; sent as 1-based to the
-            instrument).
-        mask : int
-            Integer 0-255 representing the mask bits for the channel.
-
-        Notes
-        =====
-        - Per the manual, UNMASK sets the channel mask register directly.
-        - Use UNMASK? to query the current mask value.
-        """
-        self.write("UNMASK %s,%s" % (str(ch + 1), str(mask)))
-        return
-
-    def get_unmask(self, ch):
-        """Query mask register for channel (UNMASK?)."""
-        self.write("UNMASK? %s" % str(ch + 1))
-        return int(float(self.read()))
-
-    def set_delay(self, ch, seconds):
-        """Set reprogramming delay in seconds (DLY)."""
-        self.write("DLY %s,%s" % (str(ch + 1), str(seconds)))
-        return
-
-    def get_delay(self, ch):
-        """Query reprogramming delay in seconds (DLY?)."""
-        self.write("DLY? %s" % str(ch + 1))
-        return float(self.read())
-
-    def status(self, ch):
-        """Query status register (STS?)."""
-        self.write("STS? %s" % str(ch + 1))
-        return int(float(self.read()))
-
-    def accumulated_status(self, ch):
-        """Query accumulated status register (ASTS?)."""
-        self.write("ASTS? %s" % str(ch + 1))
-        return int(float(self.read()))
-
-    def fault(self, ch):
-        """Query fault register (FAULT?)."""
-        self.write("FAULT? %s" % str(ch + 1))
-        return int(float(self.read()))
 
     def clear(self):
         """Return supply to power-on state (CLR)."""
@@ -579,7 +461,7 @@ class HP6623A(gpib_eth):
             # channels, before exiting
             self.set_voltage(i, 0)
             self.set_current(i, 0)
-            self.set_output(i, 0)
+            self.output[i] = 0
         super().close()
         return
 
@@ -684,11 +566,11 @@ class HP6623A(gpib_eth):
         if value == 0:
             self.set_voltage(channel, 0)
             if self._known_output_state[channel] == 1:
-                self.set_output(channel, 0)
+                self.output[channel] = 0
         else:
             self.set_voltage(channel, value)
             if self._known_output_state[channel] == 0:
-                self.set_output(channel, 1)
+                self.output[channel] = 1
         return
 
     @channel_property
@@ -719,22 +601,160 @@ class HP6623A(gpib_eth):
         if value == 0:
             self.set_current(channel, 0)
             if self._known_output_state[channel] == 1:
-                self.set_output(channel, 0)
+                self.output[channel] = 0
             return
         if self._known_output_state[channel] == 0:
             self.set_current(channel, value)
-            self.set_output(channel, 1)
+            self.output[channel] = 1
             return
         self.set_current(channel, value)
         return
 
     @channel_property
     def output(self, channel):
-        "this allows self.output[channel] to evaluate properly"
-        return self.get_output(channel)
+        r"""check the set_output status of a specific channel
+
+        Parameters
+        ==========
+        channel : int
+            Channel 1, 2, or 3
+        Returns
+        =======
+        str stating whether the channel set_output is OFF or ON
+
+        """
+        ch = self._require_channel(channel)
+        retval = float(self._query("OUT? %s" % str(ch)))
+        if retval == 0:
+            print("Ch %s output is OFF" % channel)
+        elif retval == 1:
+            print("Ch %s output is ON" % channel)
+        return retval
 
     @output.setter
     def output(self, channel, value):
-        """turn output on/off for a channel"""
-        self.set_output(channel, int(bool(value)))
+        r"""turn on or off the set_output on specific channel
+
+        Parameters
+        ==========
+        channel : int
+            Channel 1, 2, or 3
+        value : int
+            To turn set_output off, set `value` to 0 (or False)
+            To turn set_output on, set `value` to 1 (or True)
+        Returns
+        =======
+        None
+
+        """
+        ch = self._require_channel(channel)
+        assert isinstance(value, int), "value must be int (or bool)"
+        assert 0 <= value <= 1, "value must be 0 (False) or 1 (True)"
+        value = 1 if value else 0
+        self.write("OUT %s,%s" % (str(ch), str(value)))
+        self._known_output_state[channel] = value
+        return
+
+    @channel_property
+    def status(self, channel):
+        """Query status register (STS?)."""
+        ch = self._require_channel(channel)
+        return int(float(self._query("STS? %s" % str(ch))))
+
+    @channel_property
+    def accumulated_status(self, channel):
+        """Query accumulated status register (ASTS?)."""
+        ch = self._require_channel(channel)
+        return int(float(self._query("ASTS? %s" % str(ch))))
+
+    @channel_property
+    def fault(self, channel):
+        """Query fault register (FAULT?)."""
+        ch = self._require_channel(channel)
+        return int(float(self._query("FAULT? %s" % str(ch))))
+
+    @channel_property
+    def overvoltage(self, channel):
+        """Overvoltage trip point (OVSET)."""
+        ch = self._require_channel(channel)
+        self.write("OVSET? %s" % str(ch))
+        return float(self.read())
+
+    @overvoltage.setter
+    def overvoltage(self, channel, value):
+        """Set overvoltage trip point (OVSET)."""
+        ch = self._require_channel(channel)
+        self.write("OVSET %s,%s" % (str(ch), str(value)))
+        return
+
+    @channel_property
+    def ocp(self, channel):
+        """Overcurrent protection enable (OCP)."""
+        ch = self._require_channel(channel)
+        self.write("OCP? %s" % str(ch))
+        return int(float(self.read()))
+
+    @ocp.setter
+    def ocp(self, channel, value):
+        """Enable/disable overcurrent protection (OCP)."""
+        ch = self._require_channel(channel)
+        value = 1 if value else 0
+        self.write("OCP %s,%s" % (str(ch), str(value)))
+        return
+
+    @channel_property
+    def unmask(self, channel):
+        """Mask register for a channel (UNMASK).
+
+        The mask register works with the status register to determine which
+        conditions set bits in the FAULT register. A FAULT bit is set only
+        when the corresponding bit is set in both the STATUS register and
+        the MASK register. Use this to enable/disable which status conditions
+        are allowed to latch into FAULT for a given channel.
+
+        Notes
+        =====
+        - Use this property to query the current mask value.
+        - Per the manual, UNMASK sets the channel mask register directly.
+        """
+        ch = self._require_channel(channel)
+        self.write("UNMASK? %s" % str(ch))
+        return int(float(self.read()))
+
+    @unmask.setter
+    def unmask(self, channel, value):
+        """Set the mask register for a channel (UNMASK).
+
+        The mask register works with the status register to determine which
+        conditions set bits in the FAULT register. A FAULT bit is set only
+        when the corresponding bit is set in both the STATUS register and
+        the MASK register. Use this to enable/disable which status conditions
+        are allowed to latch into FAULT for a given channel.
+
+        Parameters
+        ==========
+        value : int
+            Integer 0-255 representing the mask bits for the channel.
+
+        Notes
+        =====
+        - Per the manual, UNMASK sets the channel mask register directly.
+        - Read back the current mask via this same property.
+        """
+        ch = self._require_channel(channel)
+        self.write("UNMASK %s,%s" % (str(ch), str(value)))
+        return
+
+    @channel_property
+    def delay(self, channel):
+        """Reprogramming delay in seconds (DLY)."""
+        ch = self._require_channel(channel)
+        self.write("DLY? %s" % str(ch))
+        return float(self.read())
+
+    @delay.setter
+    def delay(self, channel, value):
+        """Set reprogramming delay in seconds (DLY)."""
+        ch = self._require_channel(channel)
+        self.write("DLY %s,%s" % (str(ch), str(value)))
         return
