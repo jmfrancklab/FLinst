@@ -99,6 +99,7 @@ class HP6623A(gpib_eth):
         =======
         None
         """
+        self.check_if_allowed("V", ch, val)
         self.write("VSET %s,%s" % (str(ch + 1), str(val)))
         if val != 0.0:
             time.sleep(5)
@@ -150,6 +151,17 @@ class HP6623A(gpib_eth):
         None
 
         """
+        self.check_if_allowed("I", ch, val)
+        if self.safe_current_on_enable is None:
+            raise ValueError("safe_current_on_enable is not set.  You need to set it before you can do anything!")
+        else:
+            if abs(val) > self.safe_current_on_enable:
+                raise ValueError(
+                    "Refusing to enable output with current limit "
+                    f"{val} A > safe_current_on_enable "
+                    f"{self.safe_current_on_enable} A. Set a smaller "
+                    "current first."
+                )
         if abs(val) > 1.8:
             raise ValueError(
                 f"Requested current {val} A exceeds max safe current 1.8 A"
@@ -573,19 +585,52 @@ class HP6623A(gpib_eth):
         "this allows self.V_limit[channel] to evaluate properly"
         return self.get_voltage_setting(channel)
 
-    def _V_round_to_allowed(self, channel, value):
+    def check_if_allowed(self, which, channel, value):
+        rounded_value = self.round_to_allowed(which, channel, value)
+        assert (
+            abs((rounded_value - value) / value) < 1e-4
+        ), f"{value} is not sufficiently close to allowed value of {rounded_value} -- consider using the round_to_allowed method first!"
+
+    def round_to_allowed(self, which, *args):
         """determine the closest allowed value
         this relies on the lists initialized
         in __init__:
 
         min_V, res_V, and max_V
+
+        or
+
+        min_A, res_A, and max_A
+
+        Parameters
+        ==========
+        which: str ['A','V']
+        channel: int
+            Channel number (0 indexed)
+            (can be skipped in positional arguments)
+        value: float
+            The value you want to round
+            (If only one positional argument, assume this is a list or
+            array instead)
         """
-        step_idx = round((value - self.min_V[channel]) / self.res_V[channel])
-        assert self.max_V[channel] > value, (
-            "you're trying to set a voltage value "
+        if len(args) == 2:
+            channel, value = args
+        elif len(args) == 1 and hasattr(args[0], "__iter__"):
+            return [
+                self.round_to_allowed(which, j, args[0][j])
+                for j in range(len(args[0]))
+            ]
+        else:
+            raise ValueError("I don't understand the arguments!")
+        the_min = getattr(self, "min_" + which)
+        the_res = getattr(self, "res_" + which)
+        the_max = getattr(self, "max_" + which)
+        step_idx = round((value - the_min[channel]) / the_res[channel])
+        assert the_max[channel] > value, (
+            f"you're trying to set a {which} value "
             "higher than what's allowed by the instrument!!"
         )
-        return self.min_V[channel] + step_idx * self.res_V[channel]
+        return the_min[channel] + step_idx * the_res[channel]
 
     @V_limit.setter
     def V_limit(self, channel, value):
@@ -596,7 +641,7 @@ class HP6623A(gpib_eth):
             if self._known_output_state[channel] == 1:
                 self.set_output(channel, 0)
         else:
-            self.set_voltage(channel, self._V_round_to_allowed(channel, value))
+            self.set_voltage(channel, value)
             if self._known_output_state[channel] == 0:
                 self.set_output(channel, 1)
         return
@@ -611,25 +656,9 @@ class HP6623A(gpib_eth):
         "this allows self.I_limit[channel] to evaluate properly"
         return self.get_current_setting(channel)
 
-    def _I_round_to_allowed(self, channel, value):
-        """determine the closest allowed value
-        this relies on the lists initialized
-        in __init__:
-
-        min_I, res_I, and max_I
-        """
-        step_idx = round((value - self.min_I[channel]) / self.res_I[channel])
-        assert self.max_I[channel] > value, (
-            "you're trying to set a current value higher than "
-            "what's allowed by the instrument!!"
-        )
-        return self.min_I[channel] + step_idx * self.res_I[channel]
-
     @I_limit.setter
     def I_limit(self, channel, value):
         """set the current limit for a channel"""
-        if self.safe_current_on_enable is None:
-            raise ValueError("safe_current_on_enable is not set.")
         if abs(value) > 1.8:
             raise ValueError(
                 f"Requested current {value} A exceeds "
@@ -642,14 +671,7 @@ class HP6623A(gpib_eth):
             return
 
         if self._known_output_state[channel] == 0:
-            if abs(value) > self.safe_current_on_enable:
-                raise ValueError(
-                    "Refusing to enable output with current limit "
-                    f"{value} A > safe_current_on_enable "
-                    f"{self.safe_current_on_enable} A. Set a smaller "
-                    "current first."
-                )
-            self.set_current(channel, self._I_round_to_allowed(channel, value))
+            self.set_current(channel, value)
             self.set_output(channel, 1)
             return
 

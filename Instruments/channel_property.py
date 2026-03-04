@@ -95,11 +95,8 @@ class channel_proxy:
 
     def __eq__(self, other):
         # Compare the proxy to another iterable as a full channel vector.
-        print("about to run equality -- trying to compare self to", other)
         if not hasattr(other, "__iter__") or isinstance(other, (str, bytes)):
-            print("other has no iter")
             return False
-        print("going to use list(self), which is", list(self))
         return list(self) == list(other)
 
     def __repr__(self):
