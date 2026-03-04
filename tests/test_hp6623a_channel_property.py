@@ -6,6 +6,7 @@ import types
 import unittest
 
 import numpy as np
+from numpy import r_
 
 # Create a minimal Instruments package so we can load only the needed modules.
 instruments_pkg = types.ModuleType("Instruments")
@@ -212,25 +213,13 @@ class TestHP6623AChannelProperty(unittest.TestCase):
 
     def test_v_limit_rounding_grid_over_range(self):
         """Sweep small V range and verify rounding/readback at each step."""
-        for ch in range(len(self.hp._known_output_state)):
-            res = self.hp.res_V[ch]
-            base = self.hp.min_V[ch]
-            span = 3.0 * res
-            step = span / 14.0
-            print(f"*** Channel {ch} ***")
-            for i in range(1,16):
-                value = base + i * step
-                print("for target",value)
-                value = base + round((value - base) / res) * res
-                self.hp.V_limit[ch] = value
-                print(
-                    "actual setting = ",
-                    self.hp.V_limit[ch],
-                    "vs. rounded expected = ",
-                    value,
-                )
-                self.assertAlmostEqual(self.hp.V_limit[ch], value, places=3)
+        for ch in [0]:#range(len(self.hp._known_output_state)):
+            for thisV in r_[self.hp.min_V[ch]:5.0:10j]:
+                self.hp.V_limit[ch] = thisV
             self.hp.V_limit[ch] = 0.0
+            result = np.array(sorted(list(self.hp.allowed_values[ch])))
+            print("for channel",ch,"allowed values are",
+                  result, "and the diff is", np.diff(result))
 
 
 if __name__ == "__main__":

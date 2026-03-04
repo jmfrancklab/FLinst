@@ -17,9 +17,10 @@ class HP6623A(gpib_eth):
             GPIB address of the HP6623A.
         """
         super().__init__(prologix_instance, address)
+        self.allowed_values = [set(),set(),set()]
         self.write("ID?")
-        self.min_V = [0.000, 0.004, 0.014]
-        self.res_V = [0.006, 0.006, 0.015]
+        self.min_V = [0.000, 0.002, 0.018]
+        self.res_V = [0.0055, 0.0055, 0.0125]
         self.max_V = [20.2, 20.2, 50.5]
         self.min_I = [0.072, 0.110, 0.053]
         self.res_I = [0.025, 0.050, 0.010]
@@ -679,10 +680,12 @@ class HP6623A(gpib_eth):
             self.set_voltage(channel, 0)
             if self._known_output_state[channel] == 1:
                 self.set_output(channel, 0)
+            self.allowed_values[channel] |= {0}
         else:
             self.set_voltage(channel, value)
             if self._known_output_state[channel] == 0:
                 self.set_output(channel, 1)
+            self.allowed_values[channel] |= {self.get_voltage_setting(channel)}
         return
 
     @channel_property
