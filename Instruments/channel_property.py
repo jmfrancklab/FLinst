@@ -95,17 +95,18 @@ class channel_proxy:
 
     def __eq__(self, other):
         # Compare the proxy to another iterable as a full channel vector.
-        print("about to run equality -- trying to compare self to",other)
+        print("about to run equality -- trying to compare self to", other)
         if not hasattr(other, "__iter__") or isinstance(other, (str, bytes)):
             print("other has no iter")
             return False
-        print("going to use list(self), which is",list(self))
+        print("going to use list(self), which is", list(self))
         return list(self) == list(other)
 
     def __repr__(self):
         name = self._prop._name or "<unnamed>"
         return (
-            f"{str(list(self))} <channel_proxy {name} bound to {type(self._owner).__name__}"
+            f"{str(list(self))} <channel_proxy {name}"
+            f" bound to {type(self._owner).__name__}"
             f" at {str(hex(id(self._owner)))} >"
         )
 

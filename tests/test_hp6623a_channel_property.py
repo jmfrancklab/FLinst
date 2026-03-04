@@ -87,11 +87,15 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         try:
             cls.prologix = prologix_connection(ip=ip, port=port)
         except Exception as exc:
-            raise unittest.SkipTest("prologix not available -- orig error:\n%s" % exc)
+            raise unittest.SkipTest(
+                "prologix not available -- orig error:\n%s" % exc
+            )
         try:
             cls.hp = HP6623A(prologix_instance=cls.prologix, address=address)
         except Exception as exc:
-            raise unittest.SkipTest("HP6623A not available -- orig error:\n%s" % exc)
+            raise unittest.SkipTest(
+                "HP6623A not available -- orig error:\n%s" % exc
+            )
 
     @classmethod
     def tearDownClass(cls):
@@ -128,7 +132,7 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         setval = [0.049, 0.051]
         self.hp.V_limit[0:2] = setval
         print(self.hp.V_limit[0:3])
-        self.assertEqual(self.hp.V_limit[0:3],[0.049, 0.051, 0.005])
+        self.assertEqual(self.hp.V_limit[0:3], [0.049, 0.051, 0.005])
 
     def test_list_get_set(self):
         """Exercise list indexing and list assignment."""
