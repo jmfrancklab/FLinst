@@ -18,7 +18,7 @@ class HP6623A(gpib_eth):
         """
         super().__init__(prologix_instance, address)
         self.write("ID?")
-        self.min_V = [-0.002, 0.000, 0.009]
+        self.min_V = [0.000, 0.00349, 0.014]
         self.res_V = [0.006, 0.006, 0.015]
         self.max_V = [20.2, 20.2, 50.5]
         self.min_I = [0.072, 0.110, 0.053]
@@ -625,7 +625,7 @@ class HP6623A(gpib_eth):
         assert abs((rounded_value - value) / value) < 1e-4, (
             f"{value} is not sufficiently close to allowed value of"
             f" {rounded_value} -- consider using the round_to_allowed"
-            " method first!"
+            f" method first for channel {channel}!"
         )
 
     def round_to_allowed(self, which, *args):
@@ -673,7 +673,7 @@ class HP6623A(gpib_eth):
             f"you're trying to set a {which} value "
             "higher than what's allowed by the instrument!!"
         )
-        return the_min[channel] + step_idx * the_res[channel]
+        return round(the_min[channel] + step_idx * the_res[channel],3)
 
     @V_limit.setter
     def V_limit(self, channel, value):

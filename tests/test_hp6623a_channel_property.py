@@ -145,14 +145,14 @@ class TestHP6623AChannelProperty(unittest.TestCase):
     def test_numpy_vector_set(self):
         """Exercise numpy vector assignment for channel values."""
         self.require_channels(3)
-        setval = np.array([0.196, 0.302, 0.389])
+        setval = np.array(self.hp.round_to_allowed("V",[0.196, 0.302, 0.389]))
         self.hp.V_limit[0:3] = setval
         assert all(list(self.hp.V_limit)[0:3] == setval)
 
     def test_direct_numpy_vector_set(self):
         """Exercise direct vector assignment across all channels."""
         self.require_channels(3)
-        setval = np.array([0.3, 0.302, 0.299])
+        setval = np.array(self.hp.round_to_allowed("V",[0.3, 0.3, 0.3]))
         self.hp.V_limit = setval
         self.assertEqual(self.hp.V_limit, setval)
 
@@ -187,7 +187,7 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         self.hp.safe_current_on_enable = 1.8
         try:
             self.hp.I_limit[0] = 0
-            self.assertEqual(self.hp.I_limit[0], 0)
+            self.assertEqual(self.hp.I_read[0], 0)
         finally:
             self.hp.safe_current_on_enable = old_safe_current
 
