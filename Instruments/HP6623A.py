@@ -575,12 +575,16 @@ class HP6623A(gpib_eth):
 
     def _V_round_to_allowed(self, channel, value):
         """determine the closest allowed value
-        this relies on the dictionaries:
+        this relies on the lists initialized
+        in __init__:
 
         min_V, res_V, and max_V
         """
-        step_idx = round((value - self.min_V[channel])/self.res_V[channel])
-        assert self.max_V[channel] > value, "you're trying to set a value higher than what's allowed by the instrument!!"
+        step_idx = round((value - self.min_V[channel]) / self.res_V[channel])
+        assert self.max_V[channel] > value, (
+            "you're trying to set a voltage value "
+            "higher than what's allowed by the instrument!!"
+        )
         return self.min_V[channel] + step_idx * self.res_V[channel]
 
     @V_limit.setter
@@ -592,7 +596,7 @@ class HP6623A(gpib_eth):
             if self._known_output_state[channel] == 1:
                 self.set_output(channel, 0)
         else:
-            self.set_voltage(channel, self._V_round_to_allowed(channel,value))
+            self.set_voltage(channel, self._V_round_to_allowed(channel, value))
             if self._known_output_state[channel] == 0:
                 self.set_output(channel, 1)
         return
@@ -614,8 +618,11 @@ class HP6623A(gpib_eth):
 
         min_I, res_I, and max_I
         """
-        step_idx = round((value - self.min_I[channel])/self.res_I[channel])
-        assert self.max_I[channel] > value, "you're trying to set a value higher than what's allowed by the instrument!!"
+        step_idx = round((value - self.min_I[channel]) / self.res_I[channel])
+        assert self.max_I[channel] > value, (
+            "you're trying to set a current value higher than "
+            "what's allowed by the instrument!!"
+        )
         return self.min_I[channel] + step_idx * self.res_I[channel]
 
     @I_limit.setter
@@ -642,7 +649,7 @@ class HP6623A(gpib_eth):
                     f"{self.safe_current_on_enable} A. Set a smaller "
                     "current first."
                 )
-            self.set_current(channel, self._I_round_to_allowed(channel,value))
+            self.set_current(channel, self._I_round_to_allowed(channel, value))
             self.set_output(channel, 1)
             return
 
