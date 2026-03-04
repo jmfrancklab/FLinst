@@ -586,32 +586,51 @@ class HP6623A(gpib_eth):
         return self.get_voltage_setting(channel)
 
     def check_if_allowed(self, which, channel, value):
+        """Validate that a requested setpoint matches a supported discrete step.
+
+        Parameters
+        ----------
+        which : {"I", "V"}
+            Quantity being checked.
+        channel : int
+            Zero-based channel index.
+        value : float
+            Requested setpoint.
+
+        Raises
+        ------
+        AssertionError
+            If ``value`` is not already on one of the instrument's supported
+            discrete settings for the selected channel.
+        """
         rounded_value = self.round_to_allowed(which, channel, value)
         assert (
             abs((rounded_value - value) / value) < 1e-4
         ), f"{value} is not sufficiently close to allowed value of {rounded_value} -- consider using the round_to_allowed method first!"
 
     def round_to_allowed(self, which, *args):
-        """determine the closest allowed value
-        this relies on the lists initialized
-        in __init__:
-
-        min_V, res_V, and max_V
-
-        or
-
-        min_A, res_A, and max_A
+        """Round setpoints to the nearest instrument-supported discrete values.
 
         Parameters
-        ==========
-        which: str ['A','V']
-        channel: int
-            Channel number (0 indexed)
-            (can be skipped in positional arguments)
-        value: float
-            The value you want to round
-            (If only one positional argument, assume this is a list or
-            array instead)
+        ----------
+        which : {"I", "V"}
+            Quantity to round.
+        *args : tuple
+            Either ``(channel, value)`` for a single zero-based channel, or a
+            single iterable of per-channel values to round elementwise.
+
+        Returns
+        -------
+        float or list of float
+            Rounded value for a single channel, or a list of rounded values
+            when an iterable is provided.
+
+        Raises
+        ------
+        ValueError
+            If the arguments do not match one of the supported call forms.
+        AssertionError
+            If a requested value exceeds the instrument limit for its channel.
         """
         if len(args) == 2:
             channel, value = args

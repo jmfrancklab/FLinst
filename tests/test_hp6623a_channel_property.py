@@ -156,6 +156,20 @@ class TestHP6623AChannelProperty(unittest.TestCase):
         self.hp.V_limit = setval
         self.assertEqual(self.hp.V_limit, setval)
 
+    def test_non_allowed_value_raises(self):
+        """Reject values that do not match the instrument's discrete steps."""
+        self.require_channels(1)
+        with self.assertRaises(AssertionError):
+            self.hp.V_limit[0] = 0.2
+
+    def test_round_vector_to_allowed_then_set(self):
+        """Round a vector to allowed values before applying it."""
+        self.require_channels(3)
+        requested = np.array([0.2, 0.35, 0.4])
+        rounded = np.array(self.hp.round_to_allowed("V", requested))
+        self.hp.V_limit = rounded
+        np.testing.assert_allclose(list(self.hp.V_limit)[0:3], rounded)
+
     def test_len_and_iter(self):
         """Exercise len() and iteration of the proxy."""
         self.require_channels(3)
