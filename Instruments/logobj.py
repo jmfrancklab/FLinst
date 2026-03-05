@@ -43,7 +43,7 @@ class logobj(object):
             del self._totallog
         return
 
-    def add(self, time=None, Rx=None, power=None, field=None cmd=None):
+    def add(self, time=None, Rx=None, power=None, field=None, cmd=None):
         if time is None:
             time = timemodule.time()
         self.log_array[self.log_pos]["time"] = time
