@@ -31,6 +31,7 @@ from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import power_control
 from datetime import datetime
 
+
 def IR_measurement(
     vd_list_us,
     nPoints,
@@ -104,6 +105,7 @@ def IR_measurement(
     print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(("Name of saved data", vd_data.name()))
     return
+
 
 final_log = []
 
@@ -224,6 +226,9 @@ with power_control() as p:
     # we do not dip lock or anything here, because we assume
     # uw_dip_center_GHz stores the frequency of the center of the cavity
     # resonance, which was set from the microwave tuning gui
+    p.set_field(
+        config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
+    )
     p.mw_off()
     time.sleep(16.0)  # give some time for the power source to "settle"
     p.start_log()
