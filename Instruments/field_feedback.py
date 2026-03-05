@@ -20,12 +20,12 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1):
         Configuration dictionary containing 'z0_field_v_current_G_A' parameter.
     h : object
         LakeShore Hall sensor instance.
-    H1 : object
-        H1 shim stack instance with I_read property.
+    HP1 : object
+        HP1 Power Supply instance with I_read property.
     """
     dif_field_G = B0_des_G - h.field_in_G
     if dif_field_G < 0:
-        adjust_field(B0_des_G - 0.8, config_dict, h, H1)
+        adjust_field(B0_des_G - 0.8, config_dict, h, HP1)
     initial_B_field_G = h.field_in_G
     Z0_initial_current_A = HP1.I_read[0]
     if HP1.safe_current_on_enable is None:
