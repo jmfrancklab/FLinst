@@ -4,6 +4,52 @@ import numpy as np
 import time
 
 
+def Z0_adjustment(B0_des_G, config_dict, h, HP1):
+    """Adjust the current setting to achieve the desired Z0 field.
+
+    Use the actual measured field to scale the current_v_field_A_G
+    configuration parameter.
+
+    This is typically called *after* we've ramped to the field of interest.
+
+    Parameters
+    ----------
+    B0_des_G : float
+        Desired magnetic field in Gauss.
+    config_dict : dict
+        Configuration dictionary containing 'z0_field_v_current_G_A' parameter.
+    h : object
+        LakeShore Hall sensor instance.
+    H1 : object
+        H1 shim stack instance with I_read property.
+    """
+    dif_field_G = B0_des_G - h.field_in_G
+    if dif_field_G < 0:
+        adjust_field(B0_des_G - 0.8, config_dict, h, H1)
+    initial_B_field_G = h.field_in_G
+    Z0_initial_current_A = HP1.I_read[0]
+    if HP1.safe_current_on_enable is None:
+        HP1.safe_current_on_enable = 1.5
+    HP1.V_limit[0] = 15.0
+    HP1.I_limit[0] = HP1.round_to_allowed(
+        "I", dif_field_G / config_dict["z0_field_v_current_G_A"]
+    )
+
+    logging.debug(
+        strm(
+            "adjusting z0_field_v_current_G_A from",
+            config_dict["z0_field_v_current_G_A"],
+        )
+    )
+    # In order to get the G/A value, use the current flowing through the
+    # shim stack NOW and the field NOW
+    time.sleep(config_dict["magnet_settle_short"])
+    config_dict["z0_field_v_current_G_A"] = (
+        h.field_in_G - initial_B_field_G
+    ) / (HP1.I_read[0] - Z0_initial_current_A)
+    logging.debug(strm("to", config_dict["z0_field_v_current_G_A"]))
+
+
 def adjust_field(B0_des_G, config_dict, h, gen):
     """Adjust the current setting to achieve the desired B0 field.
 
@@ -38,7 +84,7 @@ def adjust_field(B0_des_G, config_dict, h, gen):
     gen.I_limit = I_setting
 
 
-def ramp_field(B0_des_G, config_dict, h, gen):
+def ramp_field(B0_des_G, config_dict, h, gen, HP1):
     """Ramp the field from where we are to where we want to be.
 
     **If we start at 0**: Calibrate the zero-point of the hall sensor
@@ -128,18 +174,15 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         else:
             # if it's not within tolerance, and it's not asking for a big
             # step, then it's asking for an intermediate step
-            logging.info(
-                "You are trying to adjust the field in an intermediate region."
-                "This will be handled by shimstack later. I am leaving field "
-                "as is."
-            )
-            num_field_matches += 1
-            if num_field_matches > 2:
-                break
+            Z0_adjustment(B0_des_G, config_dict, h, HP1)
+            if abs(h.field_in_G - B0_des_G) < 0.1:
+                num_field_matches += 1
+                if num_field_matches > 2:
+                    break
     if num_field_matches < 3:
         raise RuntimeError(
             "I tried 30 times to get my"
-            " field to match within 0.8 G"
+            " field to match within 0.1 G"
             " three times in a row, and it"
             " didn't work!"
         )
