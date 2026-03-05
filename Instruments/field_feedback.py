@@ -171,6 +171,14 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
                 gen,
             )
             num_field_matches = 0
+        elif field_discrepancy < 0.1:
+            num_field_matches += 1
+            if num_field_matches > 2:
+                logging.info(
+                    "Field discrepancy is lower than 0.1 G so I am not changing"
+                    "the field!"
+                )
+                break
         else:
             # if it's not within tolerance, and it's not asking for a big
             # step, then it's asking for an intermediate step
