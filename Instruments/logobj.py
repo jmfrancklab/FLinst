@@ -7,7 +7,13 @@ class logobj(object):
         self.log_list = []
         # {{{ this is a structured array
         self.log_dtype = dtype(
-            [("time", "f8"), ("Rx", "f8"), ("power", "f8"), ("cmd", "i8")]
+            [
+                ("time", "f8"),
+                ("Rx", "f8"),
+                ("power", "f8"),
+                ("field", "f8"),
+                ("cmd", "i8"),
+            ]
         )
         self.log_array = empty(array_len, dtype=self.log_dtype)
         self.log_dict = {
