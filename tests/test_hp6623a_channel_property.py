@@ -245,10 +245,14 @@ class TestHP6623AChannelProperty(unittest.TestCase):
                 for thisI in all_currents:
                     self.hp.I_limit[ch] = thisI
                     I_meas = self.hp.I_read[ch]
-                    if I_meas > 0:
+                    if I_meas > 0 and thisI != all_currents[0]: #Since current
+                    #                                           doesn't settle
+                    #                                           in the first
+                    #                                           setting
                         R_meas_list.append(self.hp.V_read[ch] / I_meas)
-                    I_meas_list.append(I_meas)
+                        I_meas_list.append(I_meas)
                 self.hp.output[ch] = 0
+                all_currents = all_currents[1:] # to match the lists
                 print(
                     "for channel",
                     ch,
