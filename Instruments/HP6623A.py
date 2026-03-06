@@ -734,7 +734,8 @@ class HP6623A(gpib_eth):
         else:
             raise ValueError("I don't understand the arguments!")
         the_values = getattr(self, "allowed_" + which)[channel]
-        return the_values[abs(np.argmin(value - the_values))]
+        return the_values[np.argmin(abs
+                                    (value - the_values))]
     @V_limit.setter
     def V_limit(self, channel, value):
         """this causes self.V_limit[channel] = value to yield a change on the
