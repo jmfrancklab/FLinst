@@ -115,6 +115,9 @@ class ShimCurrentMapping:
 
 with prologix_connection() as p:
     with HP6623A(prologix_instance=p, address=3) as HP1:
+        # {{{ Commented HP2 attributes since we are not using
+        # them currently. We will use them when we implement
+        # Z1 and Z2 correction.
 #        with HP6623A(prologix_instance=p, address=5) as HP2:
         if True:
             HP1.safe_current = 1.8
@@ -133,11 +136,11 @@ with prologix_connection() as p:
                 overvoltage=16.0,
             )
 
-            shims["Z0"] = shims.round("Z0", 0.6)
-            shims["Y"] = shims.round("Y", 0.6)
+            shims["Z0"] = shims.round("Z0", 1.0)
+            shims["Y"] = shims.round("Y", 1.0)
 #            shims["Z1"] = shims.round("Z1", 0.0)
 #            shims["Z2"] = shims.round("Z2", 0.0)
 #            shims["X"] = shims.round("X", 0.0)
-
+            # }}}
             input("Press enter to exit")
             shims[:] = 0.0
