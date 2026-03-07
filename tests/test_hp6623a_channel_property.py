@@ -1,0 +1,272 @@
+import importlib.util
+import os
+import pathlib
+import sys
+import types
+import unittest
+
+import numpy as np
+from numpy import r_
+
+# Create a minimal Instruments package so we can load only the needed modules.
+instruments_pkg = types.ModuleType("Instruments")
+instruments_pkg.__path__ = []
+sys.modules["Instruments"] = instruments_pkg
+
+# Load channel_property from disk for HP6623A dependency.
+channel_property_path = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "Instruments"
+    / "channel_property.py"
+)
+channel_property_spec = importlib.util.spec_from_file_location(
+    "Instruments.channel_property", channel_property_path
+)
+channel_property_module = importlib.util.module_from_spec(
+    channel_property_spec
+)
+channel_property_spec.loader.exec_module(channel_property_module)
+sys.modules["Instruments.channel_property"] = channel_property_module
+
+# Load gpib_eth from disk so we can use the real Prologix connection code.
+gpib_eth_path = (
+    pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "gpib_eth.py"
+)
+gpib_eth_spec = importlib.util.spec_from_file_location(
+    "Instruments.gpib_eth", gpib_eth_path
+)
+gpib_eth_module = importlib.util.module_from_spec(gpib_eth_spec)
+gpib_eth_spec.loader.exec_module(gpib_eth_module)
+sys.modules["Instruments.gpib_eth"] = gpib_eth_module
+
+# Load log_inst so HP6623A can access its logger dependency.
+log_inst_path = (
+    pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "log_inst.py"
+)
+log_inst_spec = importlib.util.spec_from_file_location(
+    "Instruments.log_inst", log_inst_path
+)
+log_inst_module = importlib.util.module_from_spec(log_inst_spec)
+log_inst_spec.loader.exec_module(log_inst_module)
+sys.modules["Instruments.log_inst"] = log_inst_module
+
+# Load HP6623A using the package context above to keep imports localized.
+hp6623a_path = (
+    pathlib.Path(__file__).resolve().parents[1] / "Instruments" / "HP6623A.py"
+)
+hp6623a_spec = importlib.util.spec_from_file_location(
+    "Instruments.HP6623A", hp6623a_path
+)
+hp6623a_module = importlib.util.module_from_spec(hp6623a_spec)
+hp6623a_spec.loader.exec_module(hp6623a_module)
+
+HP6623A = hp6623a_module.HP6623A
+prologix_connection = gpib_eth_module.prologix_connection
+
+
+class TestHP6623AChannelProperty(unittest.TestCase):
+    """Verify channel-aware property behavior on the actual HP6623A
+    hardware."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Connect to the instrument, or skip the suite if it is
+        unavailable."""
+        # Require an explicit address so the test never hits the wrong device.
+        if "HP6623A_ADDRESS" not in os.environ:
+            os.environ["HP6623A_ADDRESS"] = "3"
+        address = int(os.environ["HP6623A_ADDRESS"])
+        # Allow optional overrides for the Prologix connection settings.
+        if "PROLOGIX_IP" not in os.environ:
+            os.environ["PROLOGIX_IP"] = "192.168.0.162"
+        ip = os.environ["PROLOGIX_IP"]
+        if "PROLOGIX_PORT" not in os.environ:
+            os.environ["PROLOGIX_PORT"] = "1234"
+        port = int(os.environ["PROLOGIX_PORT"])
+
+        # Connect to the Prologix adapter and the HP6623A itself.
+        try:
+            cls.prologix = prologix_connection(ip=ip, port=port)
+        except Exception as exc:
+            raise unittest.SkipTest(
+                "prologix not available -- orig error:\n%s" % exc
+            )
+        try:
+            cls.hp = HP6623A(prologix_instance=cls.prologix, address=address)
+        except Exception as exc:
+            raise unittest.SkipTest(
+                "HP6623A not available -- orig error:\n%s" % exc
+            )
+
+    @classmethod
+    def tearDownClass(cls):
+        """Close the instrument connection after the test suite completes."""
+        if hasattr(cls, "hp"):
+            cls.hp.close()
+        if hasattr(cls, "prologix"):
+            cls.prologix.close()
+
+    def require_channels(self, count):
+        """Skip a test when the connected instrument has too few channels."""
+        if len(self.hp._known_output_state) < count:
+            self.skipTest("Not enough channels available for this test.")
+
+    def setUp(self):
+        """Reset all channels to zero to keep the hardware in a safe state."""
+        for ch in range(len(self.hp._known_output_state)):
+            self.hp.V_limit[ch] = 0
+
+    def tearDown(self):
+        """Return all channels to zero after each test."""
+        for ch in range(len(self.hp._known_output_state)):
+            self.hp.V_limit[ch] = 0
+
+    def test_scalar_get_set(self):
+        """Exercise scalar indexing and assignment on the instrument."""
+        self.require_channels(1)
+        self.hp.V_limit[0] = 0.1
+        self.assertAlmostEqual(self.hp.V_limit[0], 0.1, places=2)
+
+    def test_slice_get_set(self):
+        """Exercise slice indexing and scalar broadcasting."""
+        self.require_channels(3)
+        setval = [0.049, 0.051]
+        self.hp.V_limit[0:2] = setval
+        print(self.hp.V_limit[0:3])
+        self.assertEqual(self.hp.V_limit[0:3], [0.049, 0.051, 0.005])
+
+    def test_list_get_set(self):
+        """Exercise list indexing and list assignment."""
+        self.require_channels(3)
+        setval = [0.098, 0.197]
+        self.hp.V_limit[[0, 2]] = setval
+        setval = [setval[0], self.hp.V_limit[1], setval[1]]
+        self.assertEqual(self.hp.V_limit[0:3], setval)
+
+    def test_numpy_vector_set(self):
+        """Exercise numpy vector assignment for channel values."""
+        self.require_channels(3)
+        setval = np.array(self.hp.round_to_allowed("I", [0.196, 0.302]))
+        self.hp.I_limit[0:2] = setval
+        assert all(list(self.hp.I_limit)[0:2] == setval)
+
+    def test_direct_numpy_vector_set(self):
+        """Exercise direct vector assignment across all channels."""
+        self.require_channels(3)
+        setval = np.array(self.hp.round_to_allowed("I", [0.3, 0.3, 0]))
+        self.hp.I_limit = setval
+        self.assertEqual(self.hp.I_limit, setval)
+
+    def test_round_vector_to_allowed_then_set(self):
+        """Round a vector to allowed values before applying it."""
+        self.require_channels(3)
+        requested = np.array([0.8, 0.35, 0])
+        rounded = np.array(self.hp.round_to_allowed("I", requested))
+        self.hp.I_limit = rounded
+        np.testing.assert_allclose(list(self.hp.I_limit)[0:3], rounded)
+
+    def test_zero_reads_back_as_zero_when_output_is_off(self):
+        """Report zero when an off channel sits at the rounded-zero step."""
+        self.require_channels(1)
+        self.hp.V_limit[0] = 0
+        self.assertEqual(self.hp.V_limit[0], 0)
+        old_safe_current = self.hp.safe_current
+        self.hp.safe_current = 1.8
+        try:
+            self.hp.I_limit[0] = 0
+            self.assertEqual(self.hp.I_read[0], 0)
+        finally:
+            self.hp.safe_current = old_safe_current
+
+    def test_len_and_iter(self):
+        """Exercise len() and iteration of the proxy."""
+        self.require_channels(3)
+        setval = [0.0, 0.1, 0.197]
+        self.hp.V_limit[0:3] = setval
+        self.assertEqual(
+            len(self.hp.V_limit), len(self.hp._known_output_state)
+        )
+        self.assertEqual(list(self.hp.V_limit)[0:3], setval)
+
+    def test_invalid_index_and_direct_set(self):
+        """Exercise error paths for invalid index and direct attribute set."""
+        self.require_channels(1)
+        with self.assertRaises(IndexError):
+            _ = self.hp.V_limit[len(self.hp._known_output_state) + 1]
+        with self.assertRaises(AttributeError):
+            # Assignment to a scalar without indexing is not allowed.
+            self.hp.V_limit = 3
+
+    def test_I_limit_rounding_grid_over_range(self):
+        """Check that the stored allowed curents agree with the behavior of the
+        instrument."""
+        self.hp.safe_current = 1.8
+        n_steps = 70
+        for ch in [0, 1]:
+            with self.subTest(ch=ch):
+                for thisI in np.linspace(self.hp.min_I[ch], 1.5, n_steps):
+                    self.hp.I_limit[ch] = thisI
+                self.hp.I_limit[ch] = 0.0
+                result = np.array(sorted(list(self.hp.observed_I[ch])))
+                print(
+                    "for channel",
+                    ch,
+                    "allowed values are",
+                    result,
+                    "(",
+                    len(result),
+                    "/",
+                    n_steps,
+                    ")",
+                    "and the diff is",
+                    np.diff(result),
+                )
+                np.testing.assert_allclose(result, self.hp.allowed_I[ch])
+
+    def test_resistance_check(self):
+        """Check that the stored allowed curents agree with the behavior of the
+        instrument.
+
+        In order to run this test, you need a 3.9 Ω hooked up to channel 1 and
+        a 6.8 Ω hooked up to channel 2 (or else change the values for
+        R_meas_expected)
+        """
+        self.hp.safe_current = 1.8
+        R_meas_expected = [3.9, 6.8]
+        for ch in [0, 1]:
+            with self.subTest(ch=ch):
+                R_meas_list = []
+                I_meas_list = []
+                self.hp.V_limit[ch] = 15
+                all_currents = self.hp.allowed_I[ch]
+                all_currents = all_currents[3:] # remove 0 (div by zero error)
+                #                                 and next two lowest
+                #                                 (resistance precision)
+                for thisI in all_currents:
+                    self.hp.I_limit[ch] = thisI
+                    I_meas = self.hp.I_read[ch]
+                    if I_meas > 0 and thisI != all_currents[0]: #Since current
+                    #                                           doesn't settle
+                    #                                           in the first
+                    #                                           setting
+                        R_meas_list.append(self.hp.V_read[ch] / I_meas)
+                        I_meas_list.append(I_meas)
+                self.hp.output[ch] = 0
+                all_currents = all_currents[1:] # to match the lists
+                print(
+                    "for channel",
+                    ch,
+                    "I explore all allowed currents, and get observed R = ",
+                    R_meas_list,
+                    "and ΔI (set vs. obs) = ",
+                    np.array(I_meas_list) - np.array(all_currents),
+                )
+                np.testing.assert_allclose(
+                    R_meas_list, R_meas_expected[ch], atol=0.2
+                )
+                np.testing.assert_allclose(I_meas_list, all_currents,
+                                           rtol=0.03)
+
+
+if __name__ == "__main__":
+    unittest.main()
