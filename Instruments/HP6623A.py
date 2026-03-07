@@ -17,7 +17,8 @@ class HP6623A(gpib_eth):
             GPIB address of the HP6623A.
         """
         super().__init__(prologix_instance, address)
-        # {{{ track the set of actual observed values, in case we need to adjust the allowed values, below
+        # {{{ track the set of actual observed values,
+        # in case we need to adjust the allowed values, below
         self.observed_I = [set(), set(), set()]
         self.observed_V = [set(), set(), set()]
         # }}}
@@ -734,8 +735,8 @@ class HP6623A(gpib_eth):
         else:
             raise ValueError("I don't understand the arguments!")
         the_values = getattr(self, "allowed_" + which)[channel]
-        return the_values[np.argmin(abs
-                                    (value - the_values))]
+        return the_values[np.argmin(abs(value - the_values))]
+
     @V_limit.setter
     def V_limit(self, channel, value):
         """this causes self.V_limit[channel] = value to yield a change on the
