@@ -6,7 +6,6 @@ import types
 import unittest
 
 import numpy as np
-from numpy import r_
 
 # Create a minimal Instruments package so we can load only the needed modules.
 instruments_pkg = types.ModuleType("Instruments")
@@ -239,20 +238,20 @@ class TestHP6623AChannelProperty(unittest.TestCase):
                 I_meas_list = []
                 self.hp.V_limit[ch] = 15
                 all_currents = self.hp.allowed_I[ch]
-                all_currents = all_currents[3:] # remove 0 (div by zero error)
+                all_currents = all_currents[3:]  # remove 0 (div by zero error)
                 #                                 and next two lowest
                 #                                 (resistance precision)
                 for thisI in all_currents:
                     self.hp.I_limit[ch] = thisI
                     I_meas = self.hp.I_read[ch]
-                    if I_meas > 0 and thisI != all_currents[0]: #Since current
-                    #                                           doesn't settle
-                    #                                           in the first
-                    #                                           setting
+                    if I_meas > 0 and thisI != all_currents[0]:  # Since I does
+                        #                                         not settle
+                        #                                         in the first
+                        #                                         setting
                         R_meas_list.append(self.hp.V_read[ch] / I_meas)
                         I_meas_list.append(I_meas)
                 self.hp.output[ch] = 0
-                all_currents = all_currents[1:] # to match the lists
+                all_currents = all_currents[1:]  # to match the lists
                 print(
                     "for channel",
                     ch,
@@ -264,8 +263,9 @@ class TestHP6623AChannelProperty(unittest.TestCase):
                 np.testing.assert_allclose(
                     R_meas_list, R_meas_expected[ch], atol=0.2
                 )
-                np.testing.assert_allclose(I_meas_list, all_currents,
-                                           rtol=0.03)
+                np.testing.assert_allclose(
+                    I_meas_list, all_currents, rtol=0.03
+                )
 
 
 if __name__ == "__main__":
