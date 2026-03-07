@@ -9,7 +9,6 @@ __all__ = ["SerialInstrument", "GDS_scope", "AFG", "Bridge12", "power_control"]
 # except:
 #    print "warning! serial (USB) instruments not available!"
 #    __all__ = []
-from .channel_property import channel_property
 from .HP8672A import HP8672A
 from .HP6623A import HP6623A
 from .gigatronics import gigatronics
@@ -26,8 +25,7 @@ __all__ += [
     "adjust_field",
     "genesys",
     "gigatronics",
-    "logobj",
+    "logobj"
     "prologix_connection",
     "ramp_field",
-    "channel_property",
 ]
