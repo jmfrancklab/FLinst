@@ -85,8 +85,8 @@ def main():
                                         this_logobj.wg_has_been_flipped = True
                                     else:
                                         raise ValueError(
-                                            "I don't understand this 3 component"
-                                            " command"
+                                            "I don't understand this 3 "
+                                            "component command"
                                         )
                                 if len(args) == 2:
                                     match args[0]:
@@ -94,7 +94,9 @@ def main():
                                             logging.debug(
                                                 f"SET_POWER to {args[1]}"
                                             )
-                                            if not this_logobj.wg_has_been_flipped:
+                                            if not (
+                                                this_logobj.wg_has_been_flipped
+                                            ):
                                                 # {{{ then I need to turn
                                                 #     everything on
                                                 b.set_wg(True)
@@ -108,7 +110,8 @@ def main():
                                                 last_power += 3
                                                 nsecs = -1 * time.time()
                                                 logging.info(
-                                                    f"SETTING TO... {last_power}"
+                                                    "SETTING TO..."
+                                                    f"{last_power}"
                                                 )
                                                 b.set_power(last_power)
                                                 logging.debug(
@@ -139,7 +142,8 @@ def main():
                                                     )
                                                     b.set_power(last_power)
                                                     logging.debug(
-                                                        "returned from set power"
+                                                        "returned from set "
+                                                        "power"
                                                     )
                                                     for j in range(30):
                                                         if (
@@ -151,8 +155,8 @@ def main():
                                                             break
                                                     nsecs += time.time()
                                                     logging.debug(
-                                                        f"took, {j}, tries and,"
-                                                        f" {nsecs}, seconds"
+                                                        f"took, {j}, tries and"
+                                                        f", {nsecs}, seconds"
                                                     )
                                             logging.info(
                                                 "FINALLY - SETTING TO DESIRED"
@@ -173,29 +177,33 @@ def main():
                                                     break
                                             nsecs += time.time()
                                             logging.debug(
-                                                f"took, {j}, tries and, {nsecs},"
+                                                f"took {j} tries and, {nsecs}"
                                                 " seconds"
                                             )
                                         case b"SET_FREQ":
                                             logging.debug(
                                                 f"SET_FREQ to {args[1]}"
                                             )
-                                            if not this_logobj.wg_has_been_flipped:
+                                            if not (
+                                                this_logobj.wg_has_been_flipped
+                                            ):
                                                 raise ValueError(
-                                                    "Turn on the power (to a low"
-                                                    " value) before setting the"
-                                                    " frequency"
+                                                    "Turn on the power (to "
+                                                    "a low value) before "
+                                                    "setting the frequency"
                                                 )
                                             current_power = b.power_float()
                                             if current_power > 10:
                                                 raise ValueError(
                                                     "to manually set the"
                                                     " frequency, you"
-                                                    " must be at 10 dBm or less!"
-                                                    " Otherwise, you risk leaving"
-                                                    " the low-reflection dip, and"
-                                                    " sending all your power back"
-                                                    " at the amp!!"
+                                                    " must be at 10 dBm or"
+                                                    " less!"
+                                                    " Otherwise, you risk "
+                                                    "leaving the low-"
+                                                    "reflection dip, and"
+                                                    " sending all your power "
+                                                    "back at the amp!!"
                                                 )
                                             b.set_freq(float(args[1]))
                                         case b"SET_FIELD":
@@ -294,8 +302,8 @@ def main():
                                             )
                                         else:
                                             timelabels.append(
-                                                "set timeout to %g on receiving"
-                                                " command, '%s'"
+                                                "set timeout to %g on "
+                                                "receiving command, '%s'"
                                                 % (oldtimeout, data)
                                             )
                                         if len(data) > 0:
