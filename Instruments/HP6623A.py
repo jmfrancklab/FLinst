@@ -623,8 +623,9 @@ class HP6623A(gpib_eth):
         str stating whether the channel set_output is OFF or ON
 
         """
-        ch = self._require_channel(channel)
-        retval = float(self._query("OUT? %s" % str(ch)))
+        retval = float(
+            self._query("OUT? %s" % str(self._require_channel(channel)))
+        )
         if retval == 0:
             print("Ch %s output is OFF" % channel)
         elif retval == 1:
@@ -647,59 +648,64 @@ class HP6623A(gpib_eth):
         None
 
         """
-        ch = self._require_channel(channel)
         assert isinstance(value, int), "value must be int (or bool)"
         assert 0 <= value <= 1, "value must be 0 (False) or 1 (True)"
         value = 1 if value else 0
-        self.write("OUT %s,%s" % (str(ch), str(value)))
+        self.write(
+            "OUT %s,%s" % (str(self._require_channel(channel)), str(value))
+        )
         self._known_output_state[channel] = value
         return
 
     @channel_property
     def status(self, channel):
         """Query status register (STS?)."""
-        ch = self._require_channel(channel)
-        return int(float(self._query("STS? %s" % str(ch))))
+        return int(
+            float(self._query("STS? %s" % str(self._require_channel(channel))))
+        )
 
     @channel_property
     def accumulated_status(self, channel):
         """Query accumulated status register (ASTS?)."""
-        ch = self._require_channel(channel)
-        return int(float(self._query("ASTS? %s" % str(ch))))
+        return int(
+            float(self._query("ASTS? %s" % str(self._require_channel(channel))))
+        )
 
     @channel_property
     def fault(self, channel):
         """Query fault register (FAULT?)."""
-        ch = self._require_channel(channel)
-        return int(float(self._query("FAULT? %s" % str(ch))))
+        return int(
+            float(self._query("FAULT? %s" % str(self._require_channel(channel))))
+        )
 
     @channel_property
     def overvoltage(self, channel):
         """Overvoltage trip point (OVSET)."""
-        ch = self._require_channel(channel)
-        self.write("OVSET? %s" % str(ch))
+        self.write("OVSET? %s" % str(self._require_channel(channel)))
         return float(self.read())
 
     @overvoltage.setter
     def overvoltage(self, channel, value):
         """Set overvoltage trip point (OVSET)."""
-        ch = self._require_channel(channel)
-        self.write("OVSET %s,%s" % (str(ch), str(value)))
+        self.write(
+            "OVSET %s,%s"
+            % (str(self._require_channel(channel)), str(value))
+        )
         return
 
     @channel_property
     def ocp(self, channel):
         """Overcurrent protection enable (OCP)."""
-        ch = self._require_channel(channel)
-        self.write("OCP? %s" % str(ch))
+        self.write("OCP? %s" % str(self._require_channel(channel)))
         return int(float(self.read()))
 
     @ocp.setter
     def ocp(self, channel, value):
         """Enable/disable overcurrent protection (OCP)."""
-        ch = self._require_channel(channel)
         value = 1 if value else 0
-        self.write("OCP %s,%s" % (str(ch), str(value)))
+        self.write(
+            "OCP %s,%s" % (str(self._require_channel(channel)), str(value))
+        )
         return
 
     @channel_property
@@ -717,8 +723,7 @@ class HP6623A(gpib_eth):
         - Use this property to query the current mask value.
         - Per the manual, UNMASK sets the channel mask register directly.
         """
-        ch = self._require_channel(channel)
-        self.write("UNMASK? %s" % str(ch))
+        self.write("UNMASK? %s" % str(self._require_channel(channel)))
         return int(float(self.read()))
 
     @unmask.setter
@@ -741,20 +746,21 @@ class HP6623A(gpib_eth):
         - Per the manual, UNMASK sets the channel mask register directly.
         - Read back the current mask via this same property.
         """
-        ch = self._require_channel(channel)
-        self.write("UNMASK %s,%s" % (str(ch), str(value)))
+        self.write(
+            "UNMASK %s,%s" % (str(self._require_channel(channel)), str(value))
+        )
         return
 
     @channel_property
     def delay(self, channel):
         """Reprogramming delay in seconds (DLY)."""
-        ch = self._require_channel(channel)
-        self.write("DLY? %s" % str(ch))
+        self.write("DLY? %s" % str(self._require_channel(channel)))
         return float(self.read())
 
     @delay.setter
     def delay(self, channel, value):
         """Set reprogramming delay in seconds (DLY)."""
-        ch = self._require_channel(channel)
-        self.write("DLY %s,%s" % (str(ch), str(value)))
+        self.write(
+            "DLY %s,%s" % (str(self._require_channel(channel)), str(value))
+        )
         return
