@@ -178,13 +178,13 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
             num_field_matches = 0
 
     if num_field_matches < 3:
+        temp = (
+            config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
+        )
+
         raise RuntimeError(
             "I tried 30 times to get my"
-            f" field to match within {
-                config_dict['tolerance_Hz']
-                * 1e-6
-                / config_dict['gamma_eff_mhz_g']
-            } G"
+            f" field to match within {temp} G"
             f" or {config_dict['tolerance_Hz']} Hz three times"
             "in a row, and it didn't work!"
         )
