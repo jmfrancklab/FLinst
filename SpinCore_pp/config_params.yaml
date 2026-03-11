@@ -199,6 +199,16 @@ z0_field_v_current_G_A:
   default: 0.829
   description: |-
     the ratio of the field to the current at the center of the Z0 shim, in G/A
+HP1_address:
+  type: int
+  section: network_params
+  default: 3
+  description: Connection address of the HP1 power supply
+HP2_address:
+  type: int
+  section: network_params
+  default: 5
+  description: Connection address of the HP2 power supply
 magnet_settle_long:
   type: float
   section: current_params

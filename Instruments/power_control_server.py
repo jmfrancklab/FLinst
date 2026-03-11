@@ -7,6 +7,7 @@ from Instruments import (
     logobj,
     LakeShore475,
     genesys,
+    HP6623A,
 )
 from Instruments.field_feedback import ramp_field
 import SpinCore_pp
@@ -44,89 +45,70 @@ def main():
             ) as g:
                 with Bridge12() as b:
                     with LakeShore475(p) as h:
-                        sock = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM
-                        )
-                        sock.bind((IP, PORT))
-                        this_logobj = logobj()
+                        with HP6623A(
+                            prologix_instance=p,
+                            address=config_dict["HP1_address"],
+                        ) as HP1:
+                            sock = socket.socket(
+                                socket.AF_INET, socket.SOCK_STREAM
+                            )
+                            sock.bind((IP, PORT))
+                            this_logobj = logobj()
 
-                        def process_cmd(cmd, this_logobj):
-                            leave_open = True
-                            cmd = cmd.strip()
-                            print("I am processing", cmd)
-                            if this_logobj.currently_logging:
-                                this_logobj.add(
-                                    Rx=b.rxpowerdbm_float(),
-                                    power=g.read_power(),
-                                    cmd=cmd,
-                                )
-                            args = cmd.split(b" ")
-                            print("I split it to ", args)
-                            if len(args) == 3:
-                                if args[0] == b"DIP_LOCK":
-                                    freq1 = float(args[1])
-                                    freq2 = float(args[2])
-                                    _, _, min_f = b.lock_on_dip(
-                                        ini_range=(freq1 * 1e9, freq2 * 1e9)
+                            def process_cmd(cmd, this_logobj):
+                                leave_open = True
+                                cmd = cmd.strip()
+                                print("I am processing", cmd)
+                                if this_logobj.currently_logging:
+                                    this_logobj.add(
+                                        Rx=b.rxpowerdbm_float(),
+                                        power=g.read_power(),
+                                        cmd=cmd,
                                     )
-                                    b.set_freq(min_f)
-                                    min_f = float(b.freq_int()) * 1e3
-                                    conn.send(
-                                        ("%0.6f" % min_f).encode("ASCII")
-                                    )
-                                    this_logobj.wg_has_been_flipped = True
-                                else:
-                                    raise ValueError(
-                                        "I don't understand this 3 component"
-                                        " command"
-                                    )
-                            if len(args) == 2:
-                                match args[0]:
-                                    case b"SET_POWER":
-                                        logging.debug(
-                                            f"SET_POWER to {args[1]}"
+                                args = cmd.split(b" ")
+                                print("I split it to ", args)
+                                if len(args) == 3:
+                                    if args[0] == b"DIP_LOCK":
+                                        freq1 = float(args[1])
+                                        freq2 = float(args[2])
+                                        _, _, min_f = b.lock_on_dip(
+                                            ini_range=(
+                                                freq1 * 1e9,
+                                                freq2 * 1e9,
+                                            )
                                         )
-                                        if not this_logobj.wg_has_been_flipped:
-                                            # {{{ then I need to turn
-                                            #     everything on
-                                            b.set_wg(True)
-                                            b.set_rf(True)
-                                            b.set_amp(True)
-                                            # }}}
-                                            this_logobj.wg_has_been_flipped = (
-                                                True
-                                            )
-                                        dBm_setting = float(args[1])
-                                        last_power = b.power_float()
-                                        if dBm_setting > last_power + 3:
-                                            last_power += 3
-                                            nsecs = -1 * time.time()
-                                            logging.info(
-                                                f"SETTING TO... {last_power}"
-                                            )
-                                            b.set_power(last_power)
+                                        b.set_freq(min_f)
+                                        min_f = float(b.freq_int()) * 1e3
+                                        conn.send(
+                                            ("%0.6f" % min_f).encode("ASCII")
+                                        )
+                                        this_logobj.wg_has_been_flipped = True
+                                    else:
+                                        raise ValueError(
+                                            "I don't understand this 3 component"
+                                            " command"
+                                        )
+                                if len(args) == 2:
+                                    match args[0]:
+                                        case b"SET_POWER":
                                             logging.debug(
-                                                "returned from set power"
+                                                f"SET_POWER to {args[1]}"
                                             )
-                                            for j in range(30):
-                                                if (
-                                                    b.power_float()
-                                                    < last_power
-                                                ):
-                                                    time.sleep(0.1)
-                                                else:
-                                                    break
-                                            nsecs += time.time()
-                                            logging.debug(
-                                                f"took, {j}, tries and,"
-                                                f"{nsecs}, seconds"
-                                            )
-                                            while dBm_setting > last_power + 3:
+                                            if not this_logobj.wg_has_been_flipped:
+                                                # {{{ then I need to turn
+                                                #     everything on
+                                                b.set_wg(True)
+                                                b.set_rf(True)
+                                                b.set_amp(True)
+                                                # }}}
+                                                this_logobj.wg_has_been_flipped = True
+                                            dBm_setting = float(args[1])
+                                            last_power = b.power_float()
+                                            if dBm_setting > last_power + 3:
                                                 last_power += 3
                                                 nsecs = -1 * time.time()
                                                 logging.info(
-                                                    "SETTING TO..."
-                                                    f" {last_power}"
+                                                    f"SETTING TO... {last_power}"
                                                 )
                                                 b.set_power(last_power)
                                                 logging.debug(
@@ -143,171 +125,220 @@ def main():
                                                 nsecs += time.time()
                                                 logging.debug(
                                                     f"took, {j}, tries and,"
-                                                    f" {nsecs}, seconds"
+                                                    f"{nsecs}, seconds"
                                                 )
-                                        logging.info(
-                                            "FINALLY - SETTING TO DESIRED"
-                                            "POWER of {dBm_setting}"
-                                        )
-                                        nsecs = -1 * time.time()
-                                        b.set_power(dBm_setting)
-                                        logging.debug(
-                                            "returned from set power"
-                                        )
-                                        for j in range(30):
-                                            if b.power_float() < last_power:
-                                                time.sleep(0.1)
-                                            else:
-                                                break
-                                        nsecs += time.time()
-                                        logging.debug(
-                                            f"took, {j}, tries and, {nsecs},"
-                                            " seconds"
-                                        )
-                                    case b"SET_FREQ":
-                                        logging.debug(f"SET_FREQ to {args[1]}")
-                                        if not this_logobj.wg_has_been_flipped:
+                                                while (
+                                                    dBm_setting
+                                                    > last_power + 3
+                                                ):
+                                                    last_power += 3
+                                                    nsecs = -1 * time.time()
+                                                    logging.info(
+                                                        "SETTING TO..."
+                                                        f" {last_power}"
+                                                    )
+                                                    b.set_power(last_power)
+                                                    logging.debug(
+                                                        "returned from set power"
+                                                    )
+                                                    for j in range(30):
+                                                        if (
+                                                            b.power_float()
+                                                            < last_power
+                                                        ):
+                                                            time.sleep(0.1)
+                                                        else:
+                                                            break
+                                                    nsecs += time.time()
+                                                    logging.debug(
+                                                        f"took, {j}, tries and,"
+                                                        f" {nsecs}, seconds"
+                                                    )
+                                            logging.info(
+                                                "FINALLY - SETTING TO DESIRED"
+                                                "POWER of {dBm_setting}"
+                                            )
+                                            nsecs = -1 * time.time()
+                                            b.set_power(dBm_setting)
+                                            logging.debug(
+                                                "returned from set power"
+                                            )
+                                            for j in range(30):
+                                                if (
+                                                    b.power_float()
+                                                    < last_power
+                                                ):
+                                                    time.sleep(0.1)
+                                                else:
+                                                    break
+                                            nsecs += time.time()
+                                            logging.debug(
+                                                f"took, {j}, tries and, {nsecs},"
+                                                " seconds"
+                                            )
+                                        case b"SET_FREQ":
+                                            logging.debug(
+                                                f"SET_FREQ to {args[1]}"
+                                            )
+                                            if not this_logobj.wg_has_been_flipped:
+                                                raise ValueError(
+                                                    "Turn on the power (to a low"
+                                                    " value) before setting the"
+                                                    " frequency"
+                                                )
+                                            current_power = b.power_float()
+                                            if current_power > 10:
+                                                raise ValueError(
+                                                    "to manually set the"
+                                                    " frequency, you"
+                                                    " must be at 10 dBm or less!"
+                                                    " Otherwise, you risk leaving"
+                                                    " the low-reflection dip, and"
+                                                    " sending all your power back"
+                                                    " at the amp!!"
+                                                )
+                                            b.set_freq(float(args[1]))
+                                        case b"SET_FIELD":
+                                            B0_des_G = float(args[1])  # B in G
+                                            true_B0_G = ramp_field(
+                                                B0_des_G,
+                                                config_dict,
+                                                h,
+                                                gen,
+                                                HP1,
+                                            )
+                                            conn.send(
+                                                ("%0.2f" % true_B0_G).encode(
+                                                    "ASCII"
+                                                )
+                                            )
+                                        case _:
                                             raise ValueError(
-                                                "Turn on the power (to a low"
-                                                " value) before setting the"
-                                                " frequency"
+                                                "I don't understand this 2"
+                                                " component"
+                                                " command:" + str(args)
                                             )
-                                        current_power = b.power_float()
-                                        if current_power > 10:
+                                elif len(args) == 1:
+                                    match args[0]:
+                                        case b"CLOSE":
+                                            print("closing connection")
+                                            leave_open = False
+                                            b.soft_shutdown()
+                                            conn.close()
+                                        case b"GET_POWER":
+                                            result = b.power_float()
+                                            conn.send(
+                                                ("%0.1f" % result).encode(
+                                                    "ASCII"
+                                                )
+                                            )
+                                        case b"MW_OFF":
+                                            b.soft_shutdown()
+
+                                        case b"QUIT":
+                                            print("closing connection")
+                                            conn.close()
+                                            leave_open = False
+                                            quit()
+                                        case b"START_LOG":
+                                            this_logobj.currently_logging = (
+                                                True
+                                            )
+                                        case b"STOP_LOG":
+                                            this_logobj.currently_logging = (
+                                                False
+                                            )
+                                            retval = (
+                                                pickle.dumps(this_logobj)
+                                                + b"ENDTCPIPBLOCK"
+                                            )
+                                            conn.send(retval)
+                                            this_logobj.reset()
+                                        case b"MW_OFF":
+                                            b.soft_shutdown()
+                                        case b"GET_FIELD":
+                                            result = h.field_in_G
+                                            conn.send(
+                                                ("%0.2f" % result).encode(
+                                                    "ASCII"
+                                                )
+                                            )
+                                        case _:
                                             raise ValueError(
-                                                "to manually set the"
-                                                " frequency, you"
-                                                " must be at 10 dBm or less!"
-                                                " Otherwise, you risk leaving"
-                                                " the low-reflection dip, and"
-                                                " sending all your power back"
-                                                " at the amp!!"
+                                                "I don't understand this 1"
+                                                " component command"
+                                                + str(args)
                                             )
-                                        b.set_freq(float(args[1]))
-                                    case b"SET_FIELD":
-                                        B0_des_G = float(args[1])  # B in G
-                                        true_B0_G = ramp_field(
-                                            B0_des_G, config_dict, h, gen
-                                        )
-                                        conn.send(
-                                            ("%0.2f" % true_B0_G).encode(
-                                                "ASCII"
-                                            )
-                                        )
-                                    case _:
-                                        raise ValueError(
-                                            "I don't understand this 2"
-                                            " component"
-                                            " command:" + str(args)
-                                        )
-                            elif len(args) == 1:
-                                match args[0]:
-                                    case b"CLOSE":
-                                        print("closing connection")
-                                        leave_open = False
-                                        b.soft_shutdown()
-                                        conn.close()
-                                    case b"GET_POWER":
-                                        result = b.power_float()
-                                        conn.send(
-                                            ("%0.1f" % result).encode("ASCII")
-                                        )
-                                    case b"MW_OFF":
-                                        b.soft_shutdown()
+                                return leave_open
 
-                                    case b"QUIT":
-                                        print("closing connection")
-                                        conn.close()
-                                        leave_open = False
-                                        quit()
-                                    case b"START_LOG":
-                                        this_logobj.currently_logging = True
-                                    case b"STOP_LOG":
-                                        this_logobj.currently_logging = False
-                                        retval = (
-                                            pickle.dumps(this_logobj)
-                                            + b"ENDTCPIPBLOCK"
-                                        )
-                                        conn.send(retval)
-                                        this_logobj.reset()
-                                    case b"MW_OFF":
-                                        b.soft_shutdown()
-                                    case b"GET_FIELD":
-                                        result = h.field_in_G
-                                        conn.send(
-                                            ("%0.2f" % result).encode("ASCII")
-                                        )
-                                    case _:
-                                        raise ValueError(
-                                            "I don't understand this 1"
-                                            " component command" + str(args)
-                                        )
-                            return leave_open
-
-                        while True:
-                            sock.listen(1)
-                            print("I am listening")
-                            conn, addr = sock.accept()
-                            print("I have accepted from", addr)
-                            leave_open = True
-                            oldtimeout = conn.gettimeout()
-                            while leave_open:
-                                conn.settimeout(0.001)
-                                try:
-                                    data = conn.recv(1024)
-                                    timelist = []
-                                    timelabels = []
-                                    conn.settimeout(oldtimeout)
-                                    timelist.append(time.time())
-                                    if oldtimeout is None:
-                                        timelabels.append(
-                                            "set timeout to None on"
-                                            " receiving command,"
-                                            " '%s'" % (data)
-                                        )
-                                    else:
-                                        timelabels.append(
-                                            "set timeout to %g on receiving"
-                                            " command, '%s'"
-                                            % (oldtimeout, data)
-                                        )
-                                    if len(data) > 0:
-                                        for cmd in data.strip().split(b"\n"):
-                                            timelist.append(time.time())
-                                            timelabels.append(
-                                                "about to process"
-                                            )
-                                            leave_open = process_cmd(
-                                                cmd, this_logobj
-                                            )
-                                            timelist.append(time.time())
-                                            timelabels.append(
-                                                "processed %s" % cmd
-                                            )
-                                    else:
-                                        print("no data received")
+                            while True:
+                                sock.listen(1)
+                                print("I am listening")
+                                conn, addr = sock.accept()
+                                print("I have accepted from", addr)
+                                leave_open = True
+                                oldtimeout = conn.gettimeout()
+                                while leave_open:
+                                    conn.settimeout(0.001)
+                                    try:
+                                        data = conn.recv(1024)
+                                        timelist = []
+                                        timelabels = []
+                                        conn.settimeout(oldtimeout)
                                         timelist.append(time.time())
-                                        timelabels.append("no data received")
-                                    print("time to process:")
-                                    print(
-                                        " --> ".join(
-                                            [
-                                                timelabels[j]
-                                                + " --> "
-                                                + str(
-                                                    timelist[j + 1]
-                                                    - timelist[j]
+                                        if oldtimeout is None:
+                                            timelabels.append(
+                                                "set timeout to None on"
+                                                " receiving command,"
+                                                " '%s'" % (data)
+                                            )
+                                        else:
+                                            timelabels.append(
+                                                "set timeout to %g on receiving"
+                                                " command, '%s'"
+                                                % (oldtimeout, data)
+                                            )
+                                        if len(data) > 0:
+                                            for cmd in data.strip().split(
+                                                b"\n"
+                                            ):
+                                                timelist.append(time.time())
+                                                timelabels.append(
+                                                    "about to process"
                                                 )
-                                                for j in range(
-                                                    len(timelist) - 1
+                                                leave_open = process_cmd(
+                                                    cmd, this_logobj
                                                 )
-                                            ]
-                                            + [timelabels[-1]]
+                                                timelist.append(time.time())
+                                                timelabels.append(
+                                                    "processed %s" % cmd
+                                                )
+                                        else:
+                                            print("no data received")
+                                            timelist.append(time.time())
+                                            timelabels.append(
+                                                "no data received"
+                                            )
+                                        print("time to process:")
+                                        print(
+                                            " --> ".join(
+                                                [
+                                                    timelabels[j]
+                                                    + " --> "
+                                                    + str(
+                                                        timelist[j + 1]
+                                                        - timelist[j]
+                                                    )
+                                                    for j in range(
+                                                        len(timelist) - 1
+                                                    )
+                                                ]
+                                                + [timelabels[-1]]
+                                            )
                                         )
-                                    )
-                                except socket.timeout:
-                                    if this_logobj.currently_logging:
-                                        this_logobj.add(
-                                            Rx=b.rxpowerdbm_float(),
-                                            power=g.read_power(),
-                                        )
+                                    except socket.timeout:
+                                        if this_logobj.currently_logging:
+                                            this_logobj.add(
+                                                Rx=b.rxpowerdbm_float(),
+                                                power=g.read_power(),
+                                            )
