@@ -17,9 +17,116 @@ class HP6623A(gpib_eth):
             GPIB address of the HP6623A.
         """
         super().__init__(prologix_instance, address)
+        # {{{ track the set of actual observed values,
+        # in case we need to adjust the allowed values, below
+        self.observed_I = [set(), set(), set()]
+        self.observed_V = [set(), set(), set()]
+        # }}}
         self.write("ID?")
-        self.min_V = [-0.002, 0.000, 0.009]
-        self.res_V = [0.006, 0.006, 0.015]
+        # {{{ these are just determined from the observed values
+        self.allowed_I = [
+            np.r_[
+                0.0,
+                0.083,
+                0.107,
+                0.13,
+                0.154,
+                0.178,
+                0.201,
+                0.225,
+                0.248,
+                0.272,
+                0.296,
+                0.319,
+                0.343,
+                0.366,
+                0.39,
+                0.413,
+                0.437,
+                0.461,
+                0.484,
+                0.508,
+                0.531,
+                0.555,
+                0.579,
+                0.602,
+                0.626,
+                0.649,
+                0.673,
+                0.696,
+                0.72,
+                0.744,
+                0.767,
+                0.791,
+                0.814,
+                0.838,
+                0.862,
+                0.885,
+                0.909,
+                0.932,
+                0.956,
+                0.979,
+                1.003,
+                1.027,
+                1.05,
+                1.074,
+                1.097,
+                1.121,
+                1.145,
+                1.168,
+                1.192,
+                1.215,
+                1.239,
+                1.262,
+                1.286,
+                1.31,
+                1.333,
+                1.357,
+                1.38,
+                1.404,
+                1.428,
+                1.451,
+                1.475,
+                1.498,
+            ],
+            np.r_[
+                0.0,
+                0.13,
+                0.18,
+                0.22,
+                0.27,
+                0.32,
+                0.37,
+                0.41,
+                0.46,
+                0.51,
+                0.56,
+                0.6,
+                0.65,
+                0.7,
+                0.74,
+                0.79,
+                0.84,
+                0.89,
+                0.93,
+                0.98,
+                1.03,
+                1.08,
+                1.12,
+                1.17,
+                1.22,
+                1.27,
+                1.31,
+                1.36,
+                1.41,
+                1.46,
+                1.5,
+            ],
+            np.r_[0],
+        ]
+        # }}}
+        self.min_V = [0.000, 0.002, 0.018]
+        self.res_V = [0.0055, 0.0055, 0.0125]
         self.max_V = [20.2, 20.2, 50.5]
         self.min_I = [0.072, 0.110, 0.053]
         self.res_I = [0.025, 0.050, 0.010]
@@ -47,7 +154,7 @@ class HP6623A(gpib_eth):
 
         if len(self._known_output_state) < 1:
             raise ValueError("I can't even get one channel!")
-        self.safe_current_on_enable = None
+        self.safe_current = None
         return
 
     def check_id(self):
@@ -100,7 +207,6 @@ class HP6623A(gpib_eth):
         =======
         None
         """
-        self.check_if_allowed("V", ch, val)
         self.write("VSET %s,%s" % (str(ch + 1), str(val)))
         if val != 0.0:
             time.sleep(5)
@@ -152,22 +258,21 @@ class HP6623A(gpib_eth):
         None
 
         """
-        self.check_if_allowed("I", ch, val)
         if val == 0:
             # shortcut the logic for I=0, so we can bypass the checks
             self.write("ISET %s,%s" % (str(ch + 1), str(val)))
             return
-        if self.safe_current_on_enable is None:
+        if self.safe_current is None:
             raise ValueError(
                 "safe_current_on_enable is not set.  You need to"
                 " set it before you can do anything!"
             )
         else:
-            if abs(val) > self.safe_current_on_enable:
+            if abs(val) > self.safe_current:
                 raise ValueError(
                     "Refusing to enable output with current limit "
                     f"{val} A > safe_current_on_enable "
-                    f"{self.safe_current_on_enable} A. Set a smaller "
+                    f"{self.safe_current} A. Set a smaller "
                     "current first."
                 )
         if abs(val) > 1.8:
@@ -474,43 +579,11 @@ class HP6623A(gpib_eth):
     def V_limit(self, channel):
         "this allows self.V_limit[channel] to evaluate properly"
         value = self.get_voltage_setting(channel)
-        if (
-            self.output[channel] == 0
-            and
-            np.isclose(value, self.round_to_allowed("V", channel, value))
+        if self.output[channel] == 0 and np.isclose(
+            value, self.min_V[channel]
         ):
             return 0
         return value
-
-    def check_if_allowed(self, which, channel, value):
-        """Validate that a requested setpoint matches a supported discrete
-        step.
-
-        Parameters
-        ----------
-        which : {"I", "V"}
-            Quantity being checked.
-        channel : int
-            Zero-based channel index.
-        value : float
-            Requested setpoint.
-
-        Raises
-        ------
-        AssertionError
-            If ``value`` is not already on one of the instrument's supported
-            discrete settings for the selected channel.
-            A value of ``0`` is always allowed because it's possible
-            by disabling the output.
-        """
-        if value == 0:
-            return
-        rounded_value = self.round_to_allowed(which, channel, value)
-        assert abs((rounded_value - value) / value) < 1e-4, (
-            f"{value} is not sufficiently close to allowed value of"
-            f" {rounded_value} -- consider using the round_to_allowed"
-            " method first!"
-        )
 
     def round_to_allowed(self, which, *args):
         """Round setpoints to the nearest instrument-supported discrete values.
@@ -547,17 +620,8 @@ class HP6623A(gpib_eth):
             ]
         else:
             raise ValueError("I don't understand the arguments!")
-        if value == 0:
-            return 0
-        the_min = getattr(self, "min_" + which)
-        the_res = getattr(self, "res_" + which)
-        the_max = getattr(self, "max_" + which)
-        step_idx = round((value - the_min[channel]) / the_res[channel])
-        assert the_max[channel] > value, (
-            f"you're trying to set a {which} value "
-            "higher than what's allowed by the instrument!!"
-        )
-        return the_min[channel] + step_idx * the_res[channel]
+        the_values = getattr(self, "allowed_" + which)[channel]
+        return the_values[np.argmin(abs(value - the_values))]
 
     @V_limit.setter
     def V_limit(self, channel, value):
@@ -567,10 +631,12 @@ class HP6623A(gpib_eth):
             self.set_voltage(channel, 0)
             if self._known_output_state[channel] == 1:
                 self.output[channel] = 0
+            self.observed_V[channel] |= {0}
         else:
             self.set_voltage(channel, value)
             if self._known_output_state[channel] == 0:
                 self.output[channel] = 1
+            self.observed_V[channel] |= {self.get_voltage_setting(channel)}
         return
 
     @channel_property
@@ -582,10 +648,8 @@ class HP6623A(gpib_eth):
     def I_limit(self, channel):
         "this allows self.I_limit[channel] to evaluate properly"
         value = self.get_current_setting(channel)
-        if (
-            self.output[channel] == 0
-            and
-            np.isclose(value, self.round_to_allowed("I", channel, value))
+        if self.output[channel] == 0 and np.isclose(
+            value, self.min_I[channel]
         ):
             return 0
         return value
@@ -602,12 +666,12 @@ class HP6623A(gpib_eth):
             self.set_current(channel, 0)
             if self._known_output_state[channel] == 1:
                 self.output[channel] = 0
-            return
-        if self._known_output_state[channel] == 0:
+            self.observed_I[channel] |= {0}
+        else:
             self.set_current(channel, value)
-            self.output[channel] = 1
-            return
-        self.set_current(channel, value)
+            if self._known_output_state[channel] == 0:
+                self.output[channel] = 1
+            self.observed_I[channel] |= {self.get_current_setting(channel)}
         return
 
     @channel_property
