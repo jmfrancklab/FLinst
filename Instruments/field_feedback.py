@@ -183,10 +183,8 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
             # if it's not within tolerance, and it's not asking for a big
             # step, then it's asking for an intermediate step
             Z0_adjustment(B0_des_G, config_dict, h, HP1)
-            if abs(h.field_in_G - B0_des_G) < 0.1:
-                num_field_matches += 1
-                if num_field_matches > 2:
-                    break
+            num_field_matches = 0
+
     if num_field_matches < 3:
         raise RuntimeError(
             "I tried 30 times to get my"
