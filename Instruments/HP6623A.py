@@ -732,14 +732,18 @@ class HP6623A(gpib_eth):
     def accumulated_status(self, channel):
         """Query accumulated status register (ASTS?)."""
         return int(
-            float(self._query("ASTS? %s" % str(self._require_channel(channel))))
+            float(
+                self._query("ASTS? %s" % str(self._require_channel(channel)))
+            )
         )
 
     @channel_property
     def fault(self, channel):
         """Query fault register (FAULT?)."""
         return int(
-            float(self._query("FAULT? %s" % str(self._require_channel(channel))))
+            float(
+                self._query("FAULT? %s" % str(self._require_channel(channel)))
+            )
         )
 
     @channel_property
@@ -752,8 +756,7 @@ class HP6623A(gpib_eth):
     def overvoltage(self, channel, value):
         """Set overvoltage trip point (OVSET)."""
         self.write(
-            "OVSET %s,%s"
-            % (str(self._require_channel(channel)), str(value))
+            "OVSET %s,%s" % (str(self._require_channel(channel)), str(value))
         )
         return
 
