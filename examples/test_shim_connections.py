@@ -106,7 +106,7 @@ class ShimCurrentMapping:
 
     def round(self, key, value):
         hp_inst, ch = self._shim_dict[key]
-        return hp_inst.round_to_allowed("I", value)
+        return hp_inst.round_to_allowed("I", ch, value)
 
     def connections(self):
         """Return an iterable of (name, (instrument, channel)) pairs."""
@@ -115,18 +115,22 @@ class ShimCurrentMapping:
 
 with prologix_connection() as p:
     with HP6623A(prologix_instance=p, address=3) as HP1:
-        with HP6623A(prologix_instance=p, address=5) as HP2:
-            HP1.safe_current_on_enable = 1.8
-            HP2.safe_current_on_enable = 1.8
+        # {{{ Commented HP2 attributes since we are not using
+        # them currently. We will use them when we implement
+        # Z1 and Z2 correction.
+        # with HP6623A(prologix_instance=p, address=5) as HP2:
+        if True:
+            HP1.safe_current = 1.8
+            #    HP2.safe_current = 1.8
 
             shims = ShimCurrentMapping(
                 OrderedDict(
                     {
                         "Z0": (HP1, 0),
                         "Y": (HP1, 1),
-                        "Z1": (HP2, 0),
-                        "Z2": (HP2, 1),
-                        "X": (HP2, 2),
+                        #     "Z1": (HP2, 0),
+                        #     "Z2": (HP2, 1),
+                        #     "X": (HP2, 2),
                     }
                 ),
                 overvoltage=16.0,
@@ -134,9 +138,9 @@ with prologix_connection() as p:
 
             shims["Z0"] = shims.round("Z0", 1.0)
             shims["Y"] = shims.round("Y", 1.0)
-            shims["Z1"] = shims.round("Z1", 0.0)
-            shims["Z2"] = shims.round("Z2", 0.0)
-            shims["X"] = shims.round("X", 0.0)
-
+            # shims["Z1"] = shims.round("Z1", 0.0)
+            # shims["Z2"] = shims.round("Z2", 0.0)
+            # shims["X"] = shims.round("X", 0.0)
+            # }}}
             input("Press enter to exit")
             shims[:] = 0.0
