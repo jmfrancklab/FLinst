@@ -32,7 +32,7 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1):
         HP1.safe_current_on_enable = 1.5
     HP1.V_limit[0] = 15.0
     HP1.I_limit[0] = HP1.round_to_allowed(
-        "I", dif_field_G / config_dict["z0_field_v_current_G_A"]
+        "I", 0, dif_field_G / config_dict["z0_field_v_current_G_A"]
     )
 
     logging.debug(
