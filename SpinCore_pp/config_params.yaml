@@ -28,7 +28,7 @@ SW_kHz:
 tolerance_Hz:
   type: float
   section: acq_params
-  default: 10.0
+  default: 90.0
   description: |
     How close to our target field is good enough, assuming we are able to
     adjust our field with arbitrary precision
@@ -234,6 +234,16 @@ genesys_ip:
   section: network_params
   default: 192.168.0.199
   description: IP address of the genesys PS connection
+prologix_ip:
+  type: str
+  section: network_params
+  default: 192.168.0.162
+  description: IP address of the prologix connection
+prologix_port:
+  type: int
+  section: network_params
+  default: 1234
+  description: Port number of the prologix connection
 gigatronics_address:
   type: int
   section: network_params

@@ -40,7 +40,9 @@ def main():
     config_dict = SpinCore_pp.configuration("active.ini")
     with (
         genesys(config_dict["genesys_ip"]) as gen,
-        prologix_connection() as p,
+        prologix_connection(
+            ip=config_dict["prologix_ip"], port=config_dict["prologix_port"]
+        ) as p,
         gigatronics(
             prologix_instance=p, address=config_dict["gigatronics_address"]
         ) as g,
@@ -83,7 +85,7 @@ def main():
                     this_logobj.wg_has_been_flipped = True
                 else:
                     raise ValueError(
-                        "I don't understand this 3 component" " command"
+                        "I don't understand this 3 component command"
                     )
             if len(args) == 2:
                 match args[0]:
@@ -112,12 +114,12 @@ def main():
                                     break
                             nsecs += time.time()
                             logging.debug(
-                                f"took, {j}, tries and," f"{nsecs}, seconds"
+                                f"took, {j}, tries and,{nsecs}, seconds"
                             )
                             while dBm_setting > last_power + 3:
                                 last_power += 3
                                 nsecs = -1 * time.time()
-                                logging.info("SETTING TO..." f" {last_power}")
+                                logging.info(f"SETTING TO... {last_power}")
                                 b.set_power(last_power)
                                 logging.debug("returned from set power")
                                 for j in range(30):
@@ -127,8 +129,7 @@ def main():
                                         break
                                 nsecs += time.time()
                                 logging.debug(
-                                    f"took, {j}, tries and,"
-                                    f" {nsecs}, seconds"
+                                    f"took, {j}, tries and, {nsecs}, seconds"
                                 )
                         logging.info(
                             "FINALLY - SETTING TO DESIRED"
@@ -144,7 +145,7 @@ def main():
                                 break
                         nsecs += time.time()
                         logging.debug(
-                            f"took, {j}, tries and, {nsecs}," " seconds"
+                            f"took, {j}, tries and, {nsecs}, seconds"
                         )
                     case b"SET_FREQ":
                         logging.debug(f"SET_FREQ to {args[1]}")
