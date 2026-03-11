@@ -136,6 +136,9 @@ class HP6623A(gpib_eth):
             logger.debug(
                 "Detected HP power supply with ID string %s" % idstring
             )
+            print(
+                "Detected HP power supply with ID string %s" % idstring
+            )
         else:
             raise ValueError(
                 "Not detecting identity as HP power supply. "
@@ -143,17 +146,20 @@ class HP6623A(gpib_eth):
                 "connections and address settings, and make sure the "
                 f"instrument is powered on. (Returned ID string: {idstring})"
             )
-
+        self.initialized = False
         self._known_output_state = []
         for j in range(8):
+            print(f"I am inside the loop {self.output[j]}")
             try:
                 x = self.output[j]
                 self._known_output_state.append(x)
             except Exception:
+                print(f"Break at try {j}")
                 break
 
         if len(self._known_output_state) < 1:
             raise ValueError("I can't even get one channel!")
+        self.initialized = True
         self.safe_current = None
         return
 
@@ -165,7 +171,7 @@ class HP6623A(gpib_eth):
     def _require_channel(self, ch):
         if not isinstance(ch, int):
             raise TypeError(f"channel must be int, got {type(ch).__name__}")
-        if not (0 <= ch < len(self._known_output_state)):
+        if not (0 <= ch < len(self._known_output_state)) and self.initialized is True:
             raise IndexError(
                 f"channel {ch} out of range for "
                 f"{len(self._known_output_state)} outputs"
@@ -688,7 +694,7 @@ class HP6623A(gpib_eth):
 
         """
         retval = float(
-            self._query("OUT? %s" % str(self._require_channel(channel)))
+            self.write("OUT? %s" % str(self._require_channel(channel)))
         )
         if retval == 0:
             print("Ch %s output is OFF" % channel)
@@ -715,7 +721,7 @@ class HP6623A(gpib_eth):
         assert isinstance(value, int), "value must be int (or bool)"
         assert 0 <= value <= 1, "value must be 0 (False) or 1 (True)"
         value = 1 if value else 0
-        self.write(
+        self._query(
             "OUT %s,%s" % (str(self._require_channel(channel)), str(value))
         )
         self._known_output_state[channel] = value
