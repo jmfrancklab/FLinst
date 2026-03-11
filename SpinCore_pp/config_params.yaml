@@ -28,7 +28,7 @@ SW_kHz:
 tolerance_Hz:
   type: float
   section: acq_params
-  default: 450.0
+  default: 10.0
   description: |
     How close to our target field is good enough, assuming we are able to
     adjust our field with arbitrary precision
