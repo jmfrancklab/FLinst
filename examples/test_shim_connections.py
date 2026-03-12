@@ -24,7 +24,7 @@ class ShimCurrentMapping:
         self._shim_dict = shim_dict
         self._default_v_limit = default_v_limit
         for _, (inst, ch) in self.connections():
-            inst.set_overvoltage(ch, overvoltage)
+            inst.overvoltage[ch] = overvoltage
 
     def __len__(self):
         return len(self._shim_dict)

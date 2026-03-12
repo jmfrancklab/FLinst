@@ -153,7 +153,6 @@ class HP6623A(gpib_eth):
                 # Truncate to the channels that actually worked.
                 self._known_output_state = self._known_output_state[:j]
                 break
-
         if len(self._known_output_state) < 1:
             raise ValueError("I can't even get one channel!")
         self.safe_current = None
@@ -693,7 +692,7 @@ class HP6623A(gpib_eth):
 
         """
         retval = float(
-            self.write("OUT? %s" % str(self._require_channel(channel)))
+            self._query("OUT? %s" % str(self._require_channel(channel)))
         )
         if retval == 0:
             print("Ch %s output is OFF" % channel)
@@ -720,7 +719,7 @@ class HP6623A(gpib_eth):
         assert isinstance(value, int), "value must be int (or bool)"
         assert 0 <= value <= 1, "value must be 0 (False) or 1 (True)"
         value = 1 if value else 0
-        self._query(
+        self.write(
             "OUT %s,%s" % (str(self._require_channel(channel)), str(value))
         )
         self._known_output_state[channel] = value
