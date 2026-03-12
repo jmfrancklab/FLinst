@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 
-def Z0_adjustment(B0_des_G, config_dict, h, HP1):
+def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
     """Adjust the current setting to achieve the desired Z0 field.
 
     Use the actual measured field to scale the current_v_field_A_G
@@ -25,7 +25,7 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1):
     """
     dif_field_G = B0_des_G - h.field_in_G
     if dif_field_G < 0:
-        adjust_field(B0_des_G - 0.8, config_dict, h, HP1)
+        adjust_field(B0_des_G - 0.8, config_dict, h, HP1, gen)
     initial_B_field_G = h.field_in_G
     Z0_initial_current_A = HP1.I_read[0]
     if HP1.safe_current is None:
@@ -174,7 +174,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
         else:
             # if it's not within tolerance, and it's not asking for a big
             # step, then it's asking for an intermediate step
-            Z0_adjustment(B0_des_G, config_dict, h, HP1)
+            Z0_adjustment(B0_des_G, config_dict, h, HP1, gen)
             num_field_matches = 0
 
     if num_field_matches < 3:
