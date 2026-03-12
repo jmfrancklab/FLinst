@@ -36,7 +36,6 @@ from PySide6.QtWidgets import (
 )
 from SpinCore_pp.ppg import run_spin_echo
 import SpinCore_pp  # just for config file, but whatever...
-from pyspecdata import gammabar_H
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
