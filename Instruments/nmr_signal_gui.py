@@ -44,20 +44,28 @@ from Instruments import (
     genesys,
     LakeShore475,
     prologix_connection,
+    power_control,
 )
-from Instruments.field_feedback import ramp_field
 
 # All power supply parameters are now controlled by the config_dict
 
+
 class NMRWindow(QMainWindow):
     def __init__(
-        self, mygenesys, myLakeShore475, myconfig, parent=None, ini_field=None
+        self,
+        mygenesys,
+        myLakeShore475,
+        myconfig,
+        myPowerControl,
+        parent=None,
+        ini_field=None,
     ):
         assert isinstance(mygenesys, genesys)
         assert isinstance(myLakeShore475, LakeShore475)
         self.g = mygenesys
         self.myconfig = myconfig
         self.h = myLakeShore475
+        self.p = myPowerControl
         if ini_field is not None:
             self.prev_field = (
                 ini_field  # prev_field is the last field that we *asked* for
@@ -134,60 +142,6 @@ class NMRWindow(QMainWindow):
 
         QMessageBox.information(self, "Click!", msg)
 
-    def set_field_conditional(
-        self, Field, min_change_Hz=50.0, coarse_step_Hz=0.4e-4 * gammabar_H
-    ):
-        """If the field is off by more min_change_Hz/γ_H*1e4, then change the
-        field.
-
-        If we are directly controlling the current, read the field from the
-        hall sensor and use it to adjust the current_v_field_A_G parameter.
-
-        There is no mention of the gamma_eff_MHz_G parameter in this code,
-        because that is adjusted by the `regen_plots` function (b/c that is
-        where we determine the signal peak, which we need in order to determine
-        the **actual** field, which comes not from the Hall probe, but from the
-        NMR signal.)
-
-        Parameters
-        ==========
-        min_change_Hz : float
-            The frequency offset that we are OK with (*i.e.* we expect a drift
-            of at least this much)
-        coarse_step_Hz : float
-            The frequency difference between which we switch between two
-            different mechanisms of changing the field (e.g. on the bruker,
-            there were two different commands, or for homebuilt, where we
-            plan on using main field vs. B₀ shim)
-        """
-        # Because we called ramp_field to set our initial field, our
-        # current_v_field_A_G has already been adjusted, so we don't need to
-        # readjust here
-        if (
-            hasattr(self, "prev_field")
-            and abs(Field - self.prev_field) > min_change_Hz / gammabar_H * 1e4
-            and abs(Field - self.prev_field)
-            < coarse_step_Hz / gammabar_H * 1e4
-        ):
-            print(
-                "You have an intermediate difference in field.  In the future,"
-                " we will use the shim stack to adjust for this difference"
-            )
-        elif (
-            hasattr(self, "prev_field")
-            and abs(Field - self.prev_field) < min_change_Hz / gammabar_H * 1e4
-        ):
-            print(
-                f"You seem to be within {min_change_Hz} Hz, so I'm not"
-                " changing the field"
-            )
-        else:
-            # we enter this block if we've been asked to make a coarse step
-            ramp_field(Field, self.myconfig, self.h, self.g)
-            self.prev_field = (
-                Field  # prev_field is the last field that we *asked* for
-            )
-
     def generate_data(self):
         # {{{let computer set field
         print(
@@ -204,8 +158,8 @@ class NMRWindow(QMainWindow):
         )
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
-        self.set_field_conditional(Field)
-        print("returned from set_field_conditional")
+        self.p.set_field(Field)
+        print("Field is adjusted to", Field, "G")
         # }}}
         # {{{acquire echo
         print("about to run_spin_echo")
@@ -516,11 +470,16 @@ def main():
     B0_from_carrier_G = (
         myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
     )
-    with genesys("192.168.0.199") as g:
-        with prologix_connection() as pro_log:
-            with LakeShore475(pro_log) as h:
-                ramp_field(B0_from_carrier_G, myconfig, h, g)
-                tunwin = NMRWindow(g, h, myconfig, ini_field=B0_from_carrier_G)
-                tunwin.show()
-                app.exec()
+    with (
+        genesys(myconfig["genesys_ip"]) as g,
+        prologix_connection(
+            ip=myconfig["prologix_ip"], port=myconfig["prologix_port"]
+        ) as pro_log,
+        LakeShore475(pro_log) as h,
+        power_control() as p,
+    ):
+        p.set_field(B0_from_carrier_G)
+        tunwin = NMRWindow(g, h, myconfig, p, ini_field=B0_from_carrier_G)
+        tunwin.show()
+        app.exec()
     myconfig.write()
