@@ -28,8 +28,8 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1):
         adjust_field(B0_des_G - 0.8, config_dict, h, HP1)
     initial_B_field_G = h.field_in_G
     Z0_initial_current_A = HP1.I_read[0]
-    if HP1.safe_current_on_enable is None:
-        HP1.safe_current_on_enable = 1.5
+    if HP1.safe_current is None:
+        HP1.safe_current = 1.5
     HP1.V_limit[0] = 15.0
     HP1.I_limit[0] = HP1.round_to_allowed(
         "I", 0, dif_field_G / config_dict["z0_field_v_current_G_A"]
