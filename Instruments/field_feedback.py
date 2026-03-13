@@ -203,8 +203,8 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
         logging.info("Z0 Shim is off")
         gen.I_limit = 0
         gen.output = False
-        logging.info("The PS is off.") 
-        return
+        logging.info("The PS is off.")
+        return h.field_in_G
     
     if ramp_steps > 4:
         time.sleep(config_dict["magnet_settle_long"])
