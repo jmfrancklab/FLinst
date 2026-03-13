@@ -27,13 +27,12 @@ class channel_proxy:
                    proxy[[...]] = iterable      (length must match)
     """
 
-    __slots__ = ("_owner", "_prop", "size","first_index")
+    __slots__ = ("_owner", "_prop", "size")
 
-    def __init__(self, owner, prop, zero_indexed=False):
+    def __init__(self, owner, prop):
         self._owner = owner
         self._prop = prop
         self.size = len(owner._known_output_state)
-        self.first_index = 0 if zero_indexed else 1
 
     def _norm_int_index(self, i):
         n = self.size
@@ -60,10 +59,8 @@ class channel_proxy:
     def __getitem__(self, idx):
         inds, is_scalar = self._indices(idx)
         if is_scalar:
-            return self._prop._fget(self._owner, inds[0] + self.first_index)
-        return [
-            self._prop._fget(self._owner, i + self.first_index) for i in inds
-        ]
+            return self._prop._fget(self._owner, inds[0])
+        return [self._prop._fget(self._owner, i) for i in inds]
 
     def __setitem__(self, idx, value):
         fset = self._prop._fset
@@ -71,14 +68,14 @@ class channel_proxy:
             raise AttributeError("can't set (no setter defined)")
         inds, is_scalar = self._indices(idx)
         if is_scalar:
-            fset(self._owner, inds[0] + self.first_index, value)
+            fset(self._owner, inds[0], value)
             return
         is_iterable = hasattr(value, "__iter__") and not isinstance(
             value, (str, bytes)
         )
         if not is_iterable:
             for i in inds:
-                fset(self._owner, i + self.first_index, value)
+                fset(self._owner, i, value)
             return
         vals = list(value)
         if len(vals) != len(inds):
@@ -87,7 +84,7 @@ class channel_proxy:
                 f"values for {len(inds)} indices"
             )
         for i, v in zip(inds, vals):
-            fset(self._owner, i + self.first_index, v)
+            fset(self._owner, i, v)
 
     def __len__(self):
         return self.size
@@ -163,12 +160,11 @@ class channel_property:
     - Slices are intentionally not implemented (raise TypeError).
     """
 
-    def __init__(self, fget, zero_indexed=False):
+    def __init__(self, fget):
         self._fget = fget
         self._fset = None
         self._name = getattr(fget, "__name__", None)
         self.__doc__ = getattr(fget, "__doc__", None)
-        self.zero_indexed = zero_indexed
 
     def __set_name__(self, owner, name):
         self._name = name
@@ -176,7 +172,7 @@ class channel_property:
     def __get__(self, owner, owner_type=None):
         if owner is None:
             return self
-        return channel_proxy(owner, self, zero_indexed=self.zero_indexed)
+        return channel_proxy(owner, self)
 
     def __set__(self, owner, value):
         is_iterable = hasattr(value, "__iter__") and not isinstance(
@@ -189,7 +185,7 @@ class channel_property:
             )
         # Allow vector-style assignment across all channels when an iterable is
         # provided.
-        proxy = channel_proxy(owner, self, zero_indexed=self.zero_indexed)
+        proxy = channel_proxy(owner, self)
         proxy[:] = value
         return
 
