@@ -143,22 +143,17 @@ class HP6623A(gpib_eth):
                 "connections and address settings, and make sure the "
                 f"instrument is powered on. (Returned ID string: {idstring})"
             )
-        # Start with a list of None for each channel, and then fill in
-        # the ones we can query not to get an error from "_require_channel"
-        # function and "_norm_int_index" function from channel_property.py
-        # since we cannot query a channel when it is not present in
-        # the _known_output_state list.
-        self._known_output_state = [None] * 8
+        self._known_output_state = []
         for j in range(8):
             try:
-                x = self.output[j]
-                self._known_output_state[j] = x
+                # we use the raw command used by output to check if the channel
+                # exists (use raw command to avoid dependence on
+                # _known_output_state, which is what we're trying to populate
+                # here)
+                x = float(self.respond(f"OUT? {(j + 1):d}"))
+                self._known_output_state.append(x)
             except Exception:
-                # Truncate to the channels that actually worked.
-                self._known_output_state = self._known_output_state[:j]
                 break
-        if len(self._known_output_state) < 1:
-            raise ValueError("I can't even get one channel!")
         self.safe_current = None
         return
 
@@ -720,7 +715,9 @@ class HP6623A(gpib_eth):
     def status(self, channel):
         """Query status register (STS?)."""
         return int(
-            float(self.respond("STS? %s" % str(self._require_channel(channel))))
+            float(
+                self.respond("STS? %s" % str(self._require_channel(channel)))
+            )
         )
 
     @channel_property
