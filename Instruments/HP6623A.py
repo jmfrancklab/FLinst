@@ -143,11 +143,11 @@ class HP6623A(gpib_eth):
                 "connections and address settings, and make sure the "
                 f"instrument is powered on. (Returned ID string: {idstring})"
             )
-        # TODO ☐: add a comment here explaining
-        #         the need for this change. i.e.
-        #         why can't you just sart with
-        #         an empty list and then
-        #         append??
+        # Start with a list of None for each channel, and then fill in
+        # the ones we can query not to get an error from "_require_channel"
+        # function and "_norm_int_index" function from channel_property.py
+        # since we cannot query a channel when it is not present in
+        # the _known_output_state list.
         self._known_output_state = [None] * 8
         for j in range(8):
             try:
@@ -170,16 +170,7 @@ class HP6623A(gpib_eth):
     def _require_channel(self, ch):
         if not isinstance(ch, int):
             raise TypeError(f"channel must be int, got {type(ch).__name__}")
-        if (
-            not (0 <= ch < len(self._known_output_state))
-            # TODO ☐: remove the following?  I
-            #         don't understand where
-            #         this even comes from, so
-            #         if it's required an
-            #         explanatory comment is
-            #         required.
-            and self.initialized is True
-        ):
+        if not (0 <= ch < len(self._known_output_state)):
             raise IndexError(
                 f"channel {ch} out of range for "
                 f"{len(self._known_output_state)} outputs"
