@@ -27,7 +27,7 @@ class channel_proxy:
                    proxy[[...]] = iterable      (length must match)
     """
 
-    __slots__ = ("_owner", "_prop", "size")
+    __slots__ = ("_owner", "_prop", "size","first_index")
 
     def __init__(self, owner, prop, zero_indexed=False):
         self._owner = owner
