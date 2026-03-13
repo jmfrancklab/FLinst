@@ -208,7 +208,7 @@ HP1_address:
     Z0 coil.
 Z0_channel:
   type: int
-  selection: network_params
+  section: network_params
   default: 0
   description: The channel of the Z0 coil.
 HP2_address:
