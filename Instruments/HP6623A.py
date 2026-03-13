@@ -177,16 +177,6 @@ class HP6623A(gpib_eth):
             )
         return ch + 1
 
-    def _query(self, cmd):
-        self.write(cmd)
-        return self.read()
-
-    def _query_float(self, cmd):
-        return float(self._query(cmd))
-
-    def _query_int(self, cmd):
-        return int(float(self._query(cmd)))
-
     def set_voltage(self, ch, val):
         r"""set voltage (in Volts) on specific channel
 
@@ -693,7 +683,7 @@ class HP6623A(gpib_eth):
 
         """
         retval = float(
-            self._query("OUT? %s" % str(self._require_channel(channel)))
+            self.respond("OUT? %s" % str(self._require_channel(channel)))
         )
         if retval == 0:
             print("Ch %s output is OFF" % channel)
@@ -730,7 +720,7 @@ class HP6623A(gpib_eth):
     def status(self, channel):
         """Query status register (STS?)."""
         return int(
-            float(self._query("STS? %s" % str(self._require_channel(channel))))
+            float(self.respond("STS? %s" % str(self._require_channel(channel))))
         )
 
     @channel_property
@@ -738,7 +728,7 @@ class HP6623A(gpib_eth):
         """Query accumulated status register (ASTS?)."""
         return int(
             float(
-                self._query("ASTS? %s" % str(self._require_channel(channel)))
+                self.respond("ASTS? %s" % str(self._require_channel(channel)))
             )
         )
 
@@ -747,7 +737,7 @@ class HP6623A(gpib_eth):
         """Query fault register (FAULT?)."""
         return int(
             float(
-                self._query("FAULT? %s" % str(self._require_channel(channel)))
+                self.respond("FAULT? %s" % str(self._require_channel(channel)))
             )
         )
 
