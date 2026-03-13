@@ -136,7 +136,6 @@ class HP6623A(gpib_eth):
             logger.debug(
                 "Detected HP power supply with ID string %s" % idstring
             )
-            print("Detected HP power supply with ID string %s" % idstring)
         else:
             raise ValueError(
                 "Not detecting identity as HP power supply. "
@@ -144,6 +143,11 @@ class HP6623A(gpib_eth):
                 "connections and address settings, and make sure the "
                 f"instrument is powered on. (Returned ID string: {idstring})"
             )
+        # TODO ☐: add a comment here explaining
+        #         the need for this change. i.e.
+        #         why can't you just sart with
+        #         an empty list and then
+        #         append??
         self._known_output_state = [None] * 8
         for j in range(8):
             try:
@@ -168,6 +172,12 @@ class HP6623A(gpib_eth):
             raise TypeError(f"channel must be int, got {type(ch).__name__}")
         if (
             not (0 <= ch < len(self._known_output_state))
+            # TODO ☐: remove the following?  I
+            #         don't understand where
+            #         this even comes from, so
+            #         if it's required an
+            #         explanatory comment is
+            #         required.
             and self.initialized is True
         ):
             raise IndexError(

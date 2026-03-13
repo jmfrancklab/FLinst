@@ -23,22 +23,34 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
     HP1 : object
         HP1 Power Supply instance with I_read property.
     """
-    if HP1.output[0] == 0:
-        HP1.V_limit[0] = 15.0
-        HP1.output[0] = 1
-    dif_field_G = B0_des_G - h.field_in_G
-    if dif_field_G < 0:
-        adjust_field(B0_des_G - 0.8, config_dict, h, gen)
-    initial_B_field_G = h.field_in_G
-    Z0_initial_current_A = HP1.I_read[0]
-    if HP1.safe_current is None:
-        HP1.safe_current = 1.5
-    
-    HP1.I_limit[0] = HP1.round_to_allowed(
-        "I", 0, dif_field_G / config_dict["z0_field_v_current_G_A"]
+    assert (
+        HP1.V_limit[config_dict["Z0_channel"]] > 14.0
+        and hasattr(HP1, "safe_current")
+        and HP1.safe_current < 1.81
+    ), (
+        "The Z0 channel wasn't properly set up!!."
+        "  This is the fault of the containing program"
     )
-
-    if (HP1.I_read[0] - Z0_initial_current_A) != 0:
+    initial_field_G = h.field_in_G
+    dif_field_G = B0_des_G - initial_field_G
+    desired_Z0_current_A = dif_field_G / config_dict["z0_field_v_current_G_A"]
+    # need to include existing
+    Z0_initial_current_A = HP1.I_read[config_dict["Z0_channel"]]
+    desired_Z0_current_A += Z0_initial_current_A
+    # {{{ we can only use Z0 to increase the current, and we don't want
+    #     to ask for an unreasonable current
+    main_field_adjusted = False
+    if desired_Z0_current_A < 0:
+        adjust_main_field(B0_des_G - 0.8, config_dict, h, gen)
+        main_field_adjusted = True
+    elif desired_Z0_current_A > 1.5:
+        adjust_main_field(B0_des_G, config_dict, h, gen)
+        main_field_adjusted = True
+    # }}}
+    HP1.I_limit[config_dict["Z0_channel"]] = HP1.round_to_allowed(
+        "I", 0, desired_Z0_current_A
+    )
+    if (HP1.I_read[config_dict["Z0_channel"]] - Z0_initial_current_A) != 0:
         logging.debug(
             strm(
                 "adjusting z0_field_v_current_G_A from",
@@ -47,15 +59,60 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
         )
         # In order to get the G/A value, use the current flowing through the
         # shim stack NOW and the field NOW
-        time.sleep(config_dict["magnet_settle_short"])
-        
-        config_dict["z0_field_v_current_G_A"] = (
-            h.field_in_G - initial_B_field_G
-        ) / (HP1.I_read[0] - Z0_initial_current_A)
-        logging.debug(strm("to", config_dict["z0_field_v_current_G_A"]))
+        # {{{ BUT, we need to make sure the field has settled before
+        #     doing so.  Use the same schema as elsewhere for this
+        num_field_matches = 0
+        B0_last_G = 0
+        for j in range(30):
+            time.sleep(config_dict["magnet_settle_short"])
+            B0_now_G = h.field_in_G
+            field_discrepancy = abs(B0_now_G - B0_last_G)
+            if (
+                field_discrepancy
+                < config_dict["tolerance_Hz"]
+                * 1e-6
+                / config_dict["gamma_eff_mhz_g"]
+            ):
+                num_field_matches += 1
+            else:
+                B0_last_G = B0_now_G
+                num_field_matches = 0
+            if num_field_matches > 2:
+                break
+        if not (num_field_matches > 2):
+            print(" ".join(["WARNING! "] * 3 + ["field is not stabilizing!"]))
+        # }}}
+        # {{{ If we have changed the main field, or if we have not
+        #     changed our Z0 field by much, we don't have the info we
+        #     need to update our proportionality constant.  Otherwise,
+        #     let's update it.
+        if (
+            not main_field_adjusted
+            and abs(
+                Z0_initial_current_A - HP1.I_read[config_dict["Z0_channel"]]
+            )
+            > 0.5
+        ):
+            delta_I = (
+                HP1.I_read[config_dict["Z0_channel"]] - Z0_initial_current_A
+            )
+            delta_B = B0_last_G - initial_field_G
+            logging.debug(
+                strm(
+                    "Changed current by",
+                    delta_I,
+                    "to get a change in field of",
+                    delta_B,
+                    "so update z0_field_v_current_G_A from",
+                    config_dict["z0_field_v_current_G_A"],
+                )
+            )
+            config_dict["z0_field_v_current_G_A"] = delta_B / delta_I
+            logging.debug(strm("to", config_dict["z0_field_v_current_G_A"]))
+        # }}}
 
 
-def adjust_field(B0_des_G, config_dict, h, gen):
+def adjust_main_field(B0_des_G, config_dict, h, gen):
     """Adjust the current setting to achieve the desired B0 field.
 
     Use the actual measured field to scale the current_v_field_A_G
@@ -133,8 +190,8 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
     temp_I_meas = gen.I_meas
     ramp_steps = int(abs(I_setting - temp_I_meas) * 2)
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
-    for I in np.linspace(temp_I_meas, I_setting, ramp_steps):
-        gen.I_limit = I
+    for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
+        gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
     if ramp_steps > 4:
         time.sleep(config_dict["magnet_settle_long"])
@@ -169,7 +226,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
             (B0_des_G < 20 and field_discrepancy > 5)
             or (B0_des_G >= 20 and field_discrepancy > 0.8)
         ):
-            adjust_field(
+            adjust_main_field(
                 B0_des_G,
                 config_dict,
                 h,

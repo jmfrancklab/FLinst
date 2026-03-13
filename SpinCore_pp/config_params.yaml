@@ -203,7 +203,14 @@ HP1_address:
   type: int
   section: network_params
   default: 3
-  description: Connection address of the HP1 power supply
+  description: |
+    Connection address of the HP1 power supply.  This one must have the
+    Z0 coil.
+Z0_channel:
+  type: int
+  selection: network_params
+  default: 0
+  description: The channel of the Z0 coil.
 HP2_address:
   type: int
   section: network_params

@@ -53,6 +53,8 @@ def main():
             address=config_dict["HP1_address"],
         ) as HP1,
     ):
+        HP1.V_limit[config_dict["Z0_channel"]] = 15.0
+        HP1.safe_current = 1.8
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))
         this_logobj = logobj()

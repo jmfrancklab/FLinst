@@ -39,12 +39,7 @@ import SpinCore_pp  # just for config file, but whatever...
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
-from Instruments import (
-    genesys,
-    LakeShore475,
-    prologix_connection,
-    power_control,
-)
+from Instruments import power_control
 
 # All power supply parameters are now controlled by the config_dict
 
@@ -52,18 +47,13 @@ from Instruments import (
 class NMRWindow(QMainWindow):
     def __init__(
         self,
-        mygenesys,
-        myLakeShore475,
-        myconfig,
         myPowerControl,
+        myconfig,
         parent=None,
         ini_field=None,
     ):
-        assert isinstance(mygenesys, genesys)
-        assert isinstance(myLakeShore475, LakeShore475)
-        self.g = mygenesys
+        assert isinstance(myPowerControl, power_control)
         self.myconfig = myconfig
-        self.h = myLakeShore475
         self.p = myPowerControl
         if ini_field is not None:
             self.prev_field = (
@@ -158,7 +148,7 @@ class NMRWindow(QMainWindow):
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
         self.p.set_field(Field)
-        print("Field is adjusted to", Field, "G")
+        print("Field is adjusted (using server) to", Field, "G")
         # }}}
         # {{{acquire echo
         print("about to run_spin_echo")
@@ -469,16 +459,9 @@ def main():
     B0_from_carrier_G = (
         myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
     )
-    with (
-        genesys(myconfig["genesys_ip"]) as g,
-        prologix_connection(
-            ip=myconfig["prologix_ip"], port=myconfig["prologix_port"]
-        ) as pro_log,
-        LakeShore475(pro_log) as h,
-        power_control() as p,
-    ):
+    with power_control() as p:
         p.set_field(B0_from_carrier_G)
-        tunwin = NMRWindow(g, h, myconfig, p, ini_field=B0_from_carrier_G)
+        tunwin = NMRWindow(p, myconfig, ini_field=B0_from_carrier_G)
         tunwin.show()
         app.exec()
     myconfig.write()
