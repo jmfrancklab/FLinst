@@ -145,7 +145,7 @@ class HP6623A(gpib_eth):
             )
         # TODO ☐: add a comment here explaining
         #         the need for this change. i.e.
-        #         why can't you just sart with
+        #         why can't you just start with
         #         an empty list and then
         #         append??
         self._known_output_state = [None] * 8
