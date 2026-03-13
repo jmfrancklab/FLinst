@@ -33,10 +33,13 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
     )
     initial_field_G = h.field_in_G
     dif_field_G = B0_des_G - initial_field_G
+    # {{{ the desired current is the combination of the change we want
+    #     to make and the current that's running through Z0 before the
+    #     change (and we want to save the latter)
     desired_Z0_current_A = dif_field_G / config_dict["z0_field_v_current_G_A"]
-    # need to include existing
     Z0_initial_current_A = HP1.I_read[config_dict["Z0_channel"]]
     desired_Z0_current_A += Z0_initial_current_A
+    # }}}
     # {{{ we can only use Z0 to increase the current, and we don't want
     #     to ask for an unreasonable current
     main_field_adjusted = False
