@@ -191,14 +191,14 @@ class HP6623A(gpib_eth):
         =======
         None
         """
-        self.write("VSET %s,%s" % (str(ch + 1), str(val)))
+        self.write("VSET %s,%s" % (self._GPIB_index(ch), str(val)))
         if val != 0.0:
             time.sleep(5)
         return
 
     def get_voltage_setting(self, ch):
         r"""query voltage setting (VSET?) for specific channel"""
-        self.write("VSET? %s" % str(ch + 1))
+        self.write("VSET? %s" % self._GPIB_index(ch))
         return float(self.read())
 
     def get_voltage(self, ch):
@@ -213,7 +213,7 @@ class HP6623A(gpib_eth):
         Voltage reading (in Volts) as float
 
         """
-        self.write("VOUT? %s" % str(ch + 1))
+        self.write("VOUT? %s" % self._GPIB_index(ch))
         return float(self.read())
 
     def set_current(self, ch, val):
@@ -244,7 +244,7 @@ class HP6623A(gpib_eth):
         """
         if val == 0:
             # shortcut the logic for I=0, so we can bypass the checks
-            self.write("ISET %s,%s" % (str(ch + 1), str(val)))
+            self.write("ISET %s,%s" % (self._GPIB_index(ch), str(val)))
             return
         if self.safe_current is None:
             raise ValueError(
@@ -263,12 +263,12 @@ class HP6623A(gpib_eth):
             raise ValueError(
                 f"Requested current {val} A exceeds max safe current 1.8 A"
             )
-        self.write("ISET %s,%s" % (str(ch + 1), str(val)))
+        self.write("ISET %s,%s" % (self._GPIB_index(ch), str(val)))
         return
 
     def get_current_setting(self, ch):
         r"""query current setting (ISET?) for specific channel"""
-        self.write("ISET? %s" % str(ch + 1))
+        self.write("ISET? %s" % self._GPIB_index(ch))
         return float(self.read())
 
     def get_current(self, ch):
@@ -282,10 +282,10 @@ class HP6623A(gpib_eth):
         =======
         Current reading (in Amps) as float
         """
-        self.write("IOUT? %s" % str(ch + 1))
+        self.write("IOUT? %s" % self._GPIB_index(ch))
         curr_reading = float(self.read())
         for i in range(30):
-            self.write("IOUT? %s" % str(ch + 1))
+            self.write("IOUT? %s" % self._GPIB_index(ch))
             this_val = float(self.read())
             if curr_reading == this_val:
                 break
@@ -298,12 +298,12 @@ class HP6623A(gpib_eth):
 
     def reset_overvoltage(self, ch):
         """Reset overvoltage crowbar circuit (OVRST)."""
-        self.write("OVRST %s" % str(ch + 1))
+        self.write("OVRST %s" % self._GPIB_index(ch))
         return
 
     def reset_overcurrent(self, ch):
         """Reset output after overcurrent protection (OCRST)."""
-        self.write("OCRST %s" % str(ch + 1))
+        self.write("OCRST %s" % self._GPIB_index(ch))
         return
 
     def clear(self):
@@ -473,7 +473,7 @@ class HP6623A(gpib_eth):
         input_num : int
             Multiplexer input number (1-8).
         """
-        self.write("VMUX? %s,%s" % (str(ch + 1), str(input_num)))
+        self.write("VMUX? %s,%s" % (self._GPIB_index(ch), str(input_num)))
         return float(self.read())
 
     # Calibration commands (Appendix A)
@@ -495,17 +495,17 @@ class HP6623A(gpib_eth):
         vhi : float
             Measured high-voltage calibration value.
         """
-        self.write("VDATA %s,%s,%s" % (str(ch + 1), str(vlo), str(vhi)))
+        self.write("VDATA %s,%s,%s" % (self._GPIB_index(ch), str(vlo), str(vhi)))
         return
 
     def vhi(self, ch):
         """Drive channel to the high voltage calibration point (VHI)."""
-        self.write("VHI %s" % str(ch + 1))
+        self.write("VHI %s" % self._GPIB_index(ch))
         return
 
     def vlo(self, ch):
         """Drive channel to the low voltage calibration point (VLO)."""
-        self.write("VLO %s" % str(ch + 1))
+        self.write("VLO %s" % self._GPIB_index(ch))
         return
 
     def idata(self, ch, ilo, ihi):
@@ -526,22 +526,22 @@ class HP6623A(gpib_eth):
         ihi : float
             Measured high-current calibration value.
         """
-        self.write("IDATA %s,%s,%s" % (str(ch + 1), str(ilo), str(ihi)))
+        self.write("IDATA %s,%s,%s" % (self._GPIB_index(ch), str(ilo), str(ihi)))
         return
 
     def ihi(self, ch):
         """Drive channel to the high current calibration point (IHI)."""
-        self.write("IHI %s" % str(ch + 1))
+        self.write("IHI %s" % self._GPIB_index(ch))
         return
 
     def ilo(self, ch):
         """Drive channel to the low current calibration point (ILO)."""
-        self.write("ILO %s" % str(ch + 1))
+        self.write("ILO %s" % self._GPIB_index(ch))
         return
 
     def ovcal(self, ch):
         """Run overvoltage calibration routine for a channel (OVCAL)."""
-        self.write("OVCAL %s" % str(ch + 1))
+        self.write("OVCAL %s" % self._GPIB_index(ch))
         return
 
     def close(self):

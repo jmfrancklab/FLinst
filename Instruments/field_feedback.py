@@ -196,7 +196,6 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
         gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
-
     if B0_des_G == 0:
         HP1.I_limit[config_dict["Z0_channel"]] = 0
         HP1.output[config_dict["Z0_channel"]] = 0
@@ -205,7 +204,6 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
         gen.output = False
         logging.info("The PS is off.")
         return h.field_in_G
-    
     if ramp_steps > 4:
         time.sleep(config_dict["magnet_settle_long"])
     # }}}
