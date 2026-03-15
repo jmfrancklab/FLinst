@@ -143,44 +143,28 @@ class HP6623A(gpib_eth):
                 "connections and address settings, and make sure the "
                 f"instrument is powered on. (Returned ID string: {idstring})"
             )
-
         self._known_output_state = []
         for j in range(8):
             try:
-                x = self.output[j]
+                # we use the raw command used by output to check if the channel
+                # exists (use raw command to avoid dependence on
+                # _known_output_state, which is what we're trying to populate
+                # here)
+                x = float(self.respond(f"OUT? {self._GPIB_index(j):d}"))
                 self._known_output_state.append(x)
             except Exception:
                 break
-
-        if len(self._known_output_state) < 1:
-            raise ValueError("I can't even get one channel!")
         self.safe_current = None
         return
+
+    def _GPIB_index(self, channel):
+        """Convert 0-based channel index to 1-based for GPIB commands."""
+        return channel + 1
 
     def check_id(self):
         self.write("ID?")
         retval = self.read()
         return retval
-
-    def _require_channel(self, ch):
-        if not isinstance(ch, int):
-            raise TypeError(f"channel must be int, got {type(ch).__name__}")
-        if not (0 <= ch < len(self._known_output_state)):
-            raise IndexError(
-                f"channel {ch} out of range for "
-                f"{len(self._known_output_state)} outputs"
-            )
-        return ch + 1
-
-    def _query(self, cmd):
-        self.write(cmd)
-        return self.read()
-
-    def _query_float(self, cmd):
-        return float(self._query(cmd))
-
-    def _query_int(self, cmd):
-        return int(float(self._query(cmd)))
 
     def set_voltage(self, ch, val):
         r"""set voltage (in Volts) on specific channel
@@ -207,14 +191,14 @@ class HP6623A(gpib_eth):
         =======
         None
         """
-        self.write("VSET %s,%s" % (str(ch + 1), str(val)))
+        self.write("VSET %s,%s" % (self._GPIB_index(ch), str(val)))
         if val != 0.0:
             time.sleep(5)
         return
 
     def get_voltage_setting(self, ch):
         r"""query voltage setting (VSET?) for specific channel"""
-        self.write("VSET? %s" % str(ch + 1))
+        self.write("VSET? %s" % self._GPIB_index(ch))
         return float(self.read())
 
     def get_voltage(self, ch):
@@ -229,7 +213,7 @@ class HP6623A(gpib_eth):
         Voltage reading (in Volts) as float
 
         """
-        self.write("VOUT? %s" % str(ch + 1))
+        self.write("VOUT? %s" % self._GPIB_index(ch))
         return float(self.read())
 
     def set_current(self, ch, val):
@@ -260,7 +244,7 @@ class HP6623A(gpib_eth):
         """
         if val == 0:
             # shortcut the logic for I=0, so we can bypass the checks
-            self.write("ISET %s,%s" % (str(ch + 1), str(val)))
+            self.write("ISET %s,%s" % (self._GPIB_index(ch), str(val)))
             return
         if self.safe_current is None:
             raise ValueError(
@@ -279,12 +263,12 @@ class HP6623A(gpib_eth):
             raise ValueError(
                 f"Requested current {val} A exceeds max safe current 1.8 A"
             )
-        self.write("ISET %s,%s" % (str(ch + 1), str(val)))
+        self.write("ISET %s,%s" % (self._GPIB_index(ch), str(val)))
         return
 
     def get_current_setting(self, ch):
         r"""query current setting (ISET?) for specific channel"""
-        self.write("ISET? %s" % str(ch + 1))
+        self.write("ISET? %s" % self._GPIB_index(ch))
         return float(self.read())
 
     def get_current(self, ch):
@@ -298,10 +282,10 @@ class HP6623A(gpib_eth):
         =======
         Current reading (in Amps) as float
         """
-        self.write("IOUT? %s" % str(ch + 1))
+        self.write("IOUT? %s" % self._GPIB_index(ch))
         curr_reading = float(self.read())
         for i in range(30):
-            self.write("IOUT? %s" % str(ch + 1))
+            self.write("IOUT? %s" % self._GPIB_index(ch))
             this_val = float(self.read())
             if curr_reading == this_val:
                 break
@@ -314,12 +298,12 @@ class HP6623A(gpib_eth):
 
     def reset_overvoltage(self, ch):
         """Reset overvoltage crowbar circuit (OVRST)."""
-        self.write("OVRST %s" % str(ch + 1))
+        self.write("OVRST %s" % self._GPIB_index(ch))
         return
 
     def reset_overcurrent(self, ch):
         """Reset output after overcurrent protection (OCRST)."""
-        self.write("OCRST %s" % str(ch + 1))
+        self.write("OCRST %s" % self._GPIB_index(ch))
         return
 
     def clear(self):
@@ -489,7 +473,7 @@ class HP6623A(gpib_eth):
         input_num : int
             Multiplexer input number (1-8).
         """
-        self.write("VMUX? %s,%s" % (str(ch + 1), str(input_num)))
+        self.write("VMUX? %s,%s" % (self._GPIB_index(ch), str(input_num)))
         return float(self.read())
 
     # Calibration commands (Appendix A)
@@ -511,17 +495,19 @@ class HP6623A(gpib_eth):
         vhi : float
             Measured high-voltage calibration value.
         """
-        self.write("VDATA %s,%s,%s" % (str(ch + 1), str(vlo), str(vhi)))
+        self.write(
+            "VDATA %s,%s,%s" % (self._GPIB_index(ch), str(vlo), str(vhi))
+        )
         return
 
     def vhi(self, ch):
         """Drive channel to the high voltage calibration point (VHI)."""
-        self.write("VHI %s" % str(ch + 1))
+        self.write("VHI %s" % self._GPIB_index(ch))
         return
 
     def vlo(self, ch):
         """Drive channel to the low voltage calibration point (VLO)."""
-        self.write("VLO %s" % str(ch + 1))
+        self.write("VLO %s" % self._GPIB_index(ch))
         return
 
     def idata(self, ch, ilo, ihi):
@@ -542,22 +528,24 @@ class HP6623A(gpib_eth):
         ihi : float
             Measured high-current calibration value.
         """
-        self.write("IDATA %s,%s,%s" % (str(ch + 1), str(ilo), str(ihi)))
+        self.write(
+            "IDATA %s,%s,%s" % (self._GPIB_index(ch), str(ilo), str(ihi))
+        )
         return
 
     def ihi(self, ch):
         """Drive channel to the high current calibration point (IHI)."""
-        self.write("IHI %s" % str(ch + 1))
+        self.write("IHI %s" % self._GPIB_index(ch))
         return
 
     def ilo(self, ch):
         """Drive channel to the low current calibration point (ILO)."""
-        self.write("ILO %s" % str(ch + 1))
+        self.write("ILO %s" % self._GPIB_index(ch))
         return
 
     def ovcal(self, ch):
         """Run overvoltage calibration routine for a channel (OVCAL)."""
-        self.write("OVCAL %s" % str(ch + 1))
+        self.write("OVCAL %s" % self._GPIB_index(ch))
         return
 
     def close(self):
@@ -687,9 +675,7 @@ class HP6623A(gpib_eth):
         str stating whether the channel set_output is OFF or ON
 
         """
-        retval = float(
-            self._query("OUT? %s" % str(self._require_channel(channel)))
-        )
+        retval = float(self.respond(f"OUT? {str(self._GPIB_index(channel))}"))
         if retval == 0:
             print("Ch %s output is OFF" % channel)
         elif retval == 1:
@@ -715,9 +701,7 @@ class HP6623A(gpib_eth):
         assert isinstance(value, int), "value must be int (or bool)"
         assert 0 <= value <= 1, "value must be 0 (False) or 1 (True)"
         value = 1 if value else 0
-        self.write(
-            "OUT %s,%s" % (str(self._require_channel(channel)), str(value))
-        )
+        self.write(f"OUT {str(self._GPIB_index(channel))},{value}")
         self._known_output_state[channel] = value
         return
 
@@ -725,51 +709,46 @@ class HP6623A(gpib_eth):
     def status(self, channel):
         """Query status register (STS?)."""
         return int(
-            float(self._query("STS? %s" % str(self._require_channel(channel))))
+            float(self.respond(f"STS? {str(self._GPIB_index(channel))}"))
         )
 
     @channel_property
     def accumulated_status(self, channel):
         """Query accumulated status register (ASTS?)."""
         return int(
-            float(self._query("ASTS? %s" % str(self._require_channel(channel))))
+            float(self.respond(f"ASTS? {str(self._GPIB_index(channel))}"))
         )
 
     @channel_property
     def fault(self, channel):
         """Query fault register (FAULT?)."""
         return int(
-            float(self._query("FAULT? %s" % str(self._require_channel(channel))))
+            float(self.respond(f"FAULT? {str(self._GPIB_index(channel))}"))
         )
 
     @channel_property
     def overvoltage(self, channel):
         """Overvoltage trip point (OVSET)."""
-        self.write("OVSET? %s" % str(self._require_channel(channel)))
+        self.write(f"OVSET? {str(self._GPIB_index(channel))}")
         return float(self.read())
 
     @overvoltage.setter
     def overvoltage(self, channel, value):
         """Set overvoltage trip point (OVSET)."""
-        self.write(
-            "OVSET %s,%s"
-            % (str(self._require_channel(channel)), str(value))
-        )
+        self.write(f"OVSET {str(self._GPIB_index(channel))},{value}")
         return
 
     @channel_property
     def ocp(self, channel):
         """Overcurrent protection enable (OCP)."""
-        self.write("OCP? %s" % str(self._require_channel(channel)))
+        self.write(f"OCP? {str(self._GPIB_index(channel))}")
         return int(float(self.read()))
 
     @ocp.setter
     def ocp(self, channel, value):
         """Enable/disable overcurrent protection (OCP)."""
         value = 1 if value else 0
-        self.write(
-            "OCP %s,%s" % (str(self._require_channel(channel)), str(value))
-        )
+        self.write(f"OCP {str(self._GPIB_index(channel))},{value}")
         return
 
     @channel_property
@@ -787,7 +766,7 @@ class HP6623A(gpib_eth):
         - Use this property to query the current mask value.
         - Per the manual, UNMASK sets the channel mask register directly.
         """
-        self.write("UNMASK? %s" % str(self._require_channel(channel)))
+        self.write(f"UNMASK? {str(self._GPIB_index(channel))}")
         return int(float(self.read()))
 
     @unmask.setter
@@ -810,21 +789,17 @@ class HP6623A(gpib_eth):
         - Per the manual, UNMASK sets the channel mask register directly.
         - Read back the current mask via this same property.
         """
-        self.write(
-            "UNMASK %s,%s" % (str(self._require_channel(channel)), str(value))
-        )
+        self.write(f"UNMASK {str(self._GPIB_index(channel))},{value}")
         return
 
     @channel_property
     def delay(self, channel):
         """Reprogramming delay in seconds (DLY)."""
-        self.write("DLY? %s" % str(self._require_channel(channel)))
+        self.write(f"DLY? {str(self._GPIB_index(channel))}")
         return float(self.read())
 
     @delay.setter
     def delay(self, channel, value):
         """Set reprogramming delay in seconds (DLY)."""
-        self.write(
-            "DLY %s,%s" % (str(self._require_channel(channel)), str(value))
-        )
+        self.write(f"DLY {str(self._GPIB_index(channel))},{value}")
         return

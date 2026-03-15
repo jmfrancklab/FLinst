@@ -3,7 +3,7 @@ FAIL=0  # Initialize the fail variable
 
 for file in $CHANGED_FILES; do
   awk -v file="$file" '
-    /TODO ☐/ {
+    /(☐[[:space:]]*TODO|TODO[[:space:]]*☐)/ {
       if (!reported) { printf("❌ Found TODO ☐ in %s\n", file); reported=1 }
       count++
       printf("%s:%d:%s\n", file, FNR, $0)

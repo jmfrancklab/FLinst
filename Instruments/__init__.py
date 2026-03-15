@@ -16,14 +16,14 @@ from .gigatronics import gigatronics
 from .gpib_eth import prologix_connection
 from .logobj import logobj
 from .hall_probe import LakeShore475
-from .field_feedback import adjust_field, ramp_field
+from .field_feedback import adjust_main_field, ramp_field
 from .genesys import genesys
 
 __all__ += [
     "HP6623A",
     "HP8672A",
     "LakeShore475",
-    "adjust_field",
+    "adjust_main_field",
     "genesys",
     "gigatronics",
     "logobj",
