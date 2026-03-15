@@ -495,7 +495,9 @@ class HP6623A(gpib_eth):
         vhi : float
             Measured high-voltage calibration value.
         """
-        self.write("VDATA %s,%s,%s" % (self._GPIB_index(ch), str(vlo), str(vhi)))
+        self.write(
+            "VDATA %s,%s,%s" % (self._GPIB_index(ch), str(vlo), str(vhi))
+        )
         return
 
     def vhi(self, ch):
@@ -526,7 +528,9 @@ class HP6623A(gpib_eth):
         ihi : float
             Measured high-current calibration value.
         """
-        self.write("IDATA %s,%s,%s" % (self._GPIB_index(ch), str(ilo), str(ihi)))
+        self.write(
+            "IDATA %s,%s,%s" % (self._GPIB_index(ch), str(ilo), str(ihi))
+        )
         return
 
     def ihi(self, ch):
