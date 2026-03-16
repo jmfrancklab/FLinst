@@ -44,7 +44,7 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
     #     to ask for an unreasonable current
     main_field_adjusted = False
     if desired_Z0_current_A < 0:
-        adjust_main_field(B0_des_G - 1.5, config_dict, h, gen)
+        adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
         main_field_adjusted = True
     elif desired_Z0_current_A > 1.5:
         adjust_main_field(B0_des_G, config_dict, h, gen)
