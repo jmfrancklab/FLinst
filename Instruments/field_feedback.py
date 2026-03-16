@@ -248,14 +248,12 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
             config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
         )
 
-        logging.info(
+        raise RuntimeError(
             "I tried 60 times to get my"
             f" field to match within {temp} G"
             f" or {config_dict['tolerance_Hz']} Hz three times"
-            "in a row, and it didn't work! Now the field is {h.field_in_G} G, "
-            f"and the discrepancy is {h.field_in_G - B0_des_G} G"
+            "in a row, and it didn't work!
         )
-        return h.field_in_G
     # }}}
 
     true_B0_G = h.field_in_G
