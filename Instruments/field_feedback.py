@@ -44,7 +44,7 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
     #     to ask for an unreasonable current
     main_field_adjusted = False
     if desired_Z0_current_A < 0:
-        adjust_main_field(B0_des_G - 0.8, config_dict, h, gen)
+        adjust_main_field(B0_des_G - 1.5, config_dict, h, gen)
         main_field_adjusted = True
     elif desired_Z0_current_A > 1.5:
         adjust_main_field(B0_des_G, config_dict, h, gen)
@@ -214,7 +214,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
     #     within 0.8 G of our desired
     #     value
     num_field_matches = 0
-    for j in range(30):
+    for j in range(60):
         time.sleep(config_dict["magnet_settle_short"])
         field_discrepancy = abs(h.field_in_G - B0_des_G)
         if field_discrepancy > 2.0:
@@ -235,7 +235,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
             (B0_des_G < 20 and field_discrepancy > 5)
-            or (B0_des_G >= 20 and field_discrepancy > 0.8)
+            or (B0_des_G >= 20 and field_discrepancy > 2)
         ):
             adjust_main_field(
                 B0_des_G,
@@ -256,7 +256,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
         )
 
         raise RuntimeError(
-            "I tried 30 times to get my"
+            "I tried 60 times to get my"
             f" field to match within {temp} G"
             f" or {config_dict['tolerance_Hz']} Hz three times"
             "in a row, and it didn't work!"
