@@ -26,7 +26,6 @@ class HP6623A(gpib_eth):
         # {{{ these are just determined from the observed values
         self.allowed_I = [
             np.r_[
-                0.0,
                 0.083,
                 0.107,
                 0.13,
@@ -90,7 +89,6 @@ class HP6623A(gpib_eth):
                 1.498,
             ],
             np.r_[
-                0.0,
                 0.13,
                 0.18,
                 0.22,
