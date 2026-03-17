@@ -42,28 +42,16 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
     # }}}
     # {{{ we can only use Z0 to increase the current, and we don't want
     #     to ask for an unreasonable current
-    main_field_adjusted = False
     if desired_Z0_current_A < 0:
         adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
-        main_field_adjusted = True
     elif desired_Z0_current_A > 1.5:
         adjust_main_field(B0_des_G, config_dict, h, gen)
-        main_field_adjusted = True
     # }}}
     HP1.I_limit[config_dict["Z0_channel"]] = HP1.round_to_allowed(
         "I", 0, desired_Z0_current_A
     )
     if (HP1.I_read[config_dict["Z0_channel"]] - Z0_initial_current_A) != 0:
-        logging.debug(
-            strm(
-                "adjusting z0_field_v_current_G_A from",
-                config_dict["z0_field_v_current_G_A"],
-            )
-        )
-        # In order to get the G/A value, use the current flowing through the
-        # shim stack NOW and the field NOW
-        # {{{ BUT, we need to make sure the field has settled before
-        #     doing so.  Use the same schema as elsewhere for this
+        # {{{ Check if the field is stabilizing
         num_field_matches = 0
         B0_last_G = 0
         for j in range(30):
@@ -84,26 +72,6 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
                 break
         if not (num_field_matches > 2):
             print(" ".join(["WARNING! "] * 3 + ["field is not stabilizing!"]))
-        # }}}
-        # {{{ If we have changed the main field, or if we have not
-        #     changed our Z0 field by much, we don't have the info we
-        #     need to update our proportionality constant.  Otherwise,
-        #     let's update it.
-        delta_I = HP1.I_read[config_dict["Z0_channel"]] - Z0_initial_current_A
-        delta_B = B0_last_G - initial_field_G
-        if not main_field_adjusted and abs(delta_I) > 0.5 and abs(delta_B) > 0:
-            logging.debug(
-                strm(
-                    "Changed current by",
-                    delta_I,
-                    "to get a change in field of",
-                    delta_B,
-                    "so update z0_field_v_current_G_A from",
-                    config_dict["z0_field_v_current_G_A"],
-                )
-            )
-            config_dict["z0_field_v_current_G_A"] = delta_B / delta_I
-            logging.debug(strm("to", config_dict["z0_field_v_current_G_A"]))
         # }}}
 
 
@@ -226,8 +194,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            (B0_des_G < 20 and field_discrepancy > 5)
-            or (B0_des_G >= 20 and field_discrepancy > 2)
+            field_discrepancy > 2
         ):
             adjust_main_field(
                 B0_des_G,
