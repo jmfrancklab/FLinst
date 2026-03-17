@@ -26,6 +26,7 @@ class HP6623A(gpib_eth):
         # {{{ these are just determined from the observed values
         self.allowed_I = [
             np.r_[
+                0.0,
                 0.083,
                 0.107,
                 0.13,
@@ -89,6 +90,7 @@ class HP6623A(gpib_eth):
                 1.498,
             ],
             np.r_[
+                0.0,
                 0.13,
                 0.18,
                 0.22,
@@ -674,6 +676,10 @@ class HP6623A(gpib_eth):
 
         """
         retval = float(self.respond(f"OUT? {str(self._GPIB_index(channel))}"))
+        if retval == 0:
+            print("Ch %s output is OFF" % channel)
+        elif retval == 1:
+            print("Ch %s output is ON" % channel)
         return retval
 
     @output.setter
@@ -697,10 +703,6 @@ class HP6623A(gpib_eth):
         value = 1 if value else 0
         self.write(f"OUT {str(self._GPIB_index(channel))},{value}")
         self._known_output_state[channel] = value
-        if value == 0:
-            print("Ch %s output is OFF" % channel)
-        elif value == 1:
-            print("Ch %s output is ON" % channel)
         return
 
     @channel_property

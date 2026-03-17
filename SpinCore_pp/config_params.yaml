@@ -196,7 +196,7 @@ adc_offset:
 z0_field_v_current_G_A:
   type: float
   section: acq_params
-  default: 1.57
+  default: 0.829
   description: |-
     the ratio of the field to the current at the center of the Z0 shim, in G/A
 HP1_address:
