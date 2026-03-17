@@ -91,7 +91,6 @@ def Z0_adjustment(B0_des_G, config_dict, h, HP1, gen):
         #     let's update it.
         delta_I = HP1.I_read[config_dict["Z0_channel"]] - Z0_initial_current_A
         delta_B = B0_last_G - initial_field_G
-        print(B0_last_G)
         if not main_field_adjusted and abs(delta_I) > 0.5 and abs(delta_B) > 0:
             logging.debug(
                 strm(
@@ -248,14 +247,12 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
             config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
         )
 
-        logging.info(
+        raise RuntimeError(
             "I tried 60 times to get my"
             f" field to match within {temp} G"
             f" or {config_dict['tolerance_Hz']} Hz three times"
-            "in a row, and it didn't work! Now the field is {h.field_in_G} G, "
-            f"and the discrepancy is {h.field_in_G - B0_des_G} G"
+            "in a row, and it didn't work!"
         )
-        return h.field_in_G
     # }}}
 
     true_B0_G = h.field_in_G
