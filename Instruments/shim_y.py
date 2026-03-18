@@ -10,6 +10,8 @@ from pyspecdata import getDATADIR
 from numpy import r_
 import os
 import time
+import matplotlib.pyplot as plt
+import numpy as np
 import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
@@ -28,7 +30,49 @@ settle_s = 2.0
 skip_field_setting = False
 auto_adc_offset = False
 restore_initial_current = True
+filter_timeconst = 10e-3
 # }}}
+
+
+def fwhm(trace):
+    x = trace.getaxis("t2")
+    y = abs(trace.data)
+    peak_idx = y.argmax()
+    peak_height = y[peak_idx]
+    half_height = peak_height / 2.0
+    left_idx = peak_idx
+    while left_idx > 0 and y[left_idx] >= half_height:
+        left_idx -= 1
+    right_idx = peak_idx
+    while right_idx < len(y) - 1 and y[right_idx] >= half_height:
+        right_idx += 1
+    if left_idx == peak_idx:
+        left_cross = x[peak_idx]
+    else:
+        left_cross = np.interp(
+            half_height,
+            [y[left_idx], y[left_idx + 1]],
+            [x[left_idx], x[left_idx + 1]],
+        )
+    if right_idx == peak_idx:
+        right_cross = x[peak_idx]
+    else:
+        right_cross = np.interp(
+            half_height,
+            [y[right_idx], y[right_idx - 1]],
+            [x[right_idx], x[right_idx - 1]],
+        )
+    return x[peak_idx], left_cross, right_cross, right_cross - left_cross
+
+
+def integrate_energy(trace, left_lim, right_lim):
+    x = trace.getaxis("t2")
+    y = abs(trace.data) ** 2
+    mask = np.logical_and(x >= left_lim, x <= right_lim)
+    if not mask.any():
+        return 0.0
+    return np.trapz(y[mask], x[mask])
+
 
 # {{{ importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
@@ -174,4 +218,84 @@ data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, "shim_y")
 config_dict.write()
+# }}}
+
+# {{{ process and plot
+for_plot = data.C
+if config_dict["nScans"] > 1:
+    for_plot.mean("nScans")
+for_plot.ft("ph1", unitary=True)
+signal = for_plot["ph1", 1].C
+signal.ift("t2")
+signal *= np.exp(
+    -abs(signal.fromaxis("t2") - config_dict["tau_us"] * 1e-6)
+    / filter_timeconst
+)
+for j in range(len(y_current_list)):
+    center_idx = abs(signal["y_current", j]).argmax("t2", raw_index=True).data
+    this_fid = np.array(signal["y_current", j].data, copy=True)
+    this_fid[:center_idx] = 0
+    this_fid[center_idx] /= 2.0
+    phase_ref = this_fid[center_idx]
+    if abs(phase_ref) > 0:
+        this_fid /= phase_ref / abs(phase_ref)
+    signal["y_current", j].data[:] = this_fid
+signal.ft("t2", shift=True)
+
+linewidth = np.zeros(len(y_current_list))
+peak_position = np.zeros(len(y_current_list))
+left_edge = np.zeros(len(y_current_list))
+right_edge = np.zeros(len(y_current_list))
+for j in range(len(y_current_list)):
+    (
+        peak_position[j],
+        left_edge[j],
+        right_edge[j],
+        linewidth[j],
+    ) = fwhm(signal["y_current", j])
+
+widest_idx = linewidth.argmax()
+left_offset = left_edge[widest_idx] - peak_position[widest_idx]
+right_offset = right_edge[widest_idx] - peak_position[widest_idx]
+energy = np.zeros(len(y_current_list))
+for j in range(len(y_current_list)):
+    energy[j] = integrate_energy(
+        signal["y_current", j],
+        peak_position[j] + left_offset,
+        peak_position[j] + right_offset,
+    )
+
+best_idx = energy.argmax()
+print("best Y current based on energy is", y_current_list[best_idx], "A")
+
+fig, ax = plt.subplots(2, 1, figsize=(8, 10), constrained_layout=True)
+mesh = ax[0].pcolormesh(
+    signal.getaxis("t2") / 1e3,
+    y_current_list,
+    abs(signal.data),
+    shading="auto",
+)
+for j in range(len(y_current_list)):
+    ax[0].plot(
+        np.array([left_edge[j], right_edge[j]]) / 1e3,
+        np.array([y_current_list[j], y_current_list[j]]),
+        color="w",
+        alpha=0.3,
+    )
+ax[0].set_xlabel("frequency shift / kHz")
+ax[0].set_ylabel("Y current / A")
+ax[0].set_title("Echo-phase spectrum vs Y current")
+fig.colorbar(mesh, ax=ax[0], label="abs(signal)")
+
+ax[1].plot(y_current_list, energy, "o-", color="k", label="energy")
+ax[1].axvline(y_current_list[best_idx], color="k", ls=":", alpha=0.5)
+ax[1].set_xlabel("Y current / A")
+ax[1].set_ylabel("energy", color="k")
+ax[1].tick_params(axis="y", labelcolor="k")
+ax2 = ax[1].twinx()
+ax2.plot(y_current_list, linewidth / 1e3, "s-", color="r", label="FWHM")
+ax2.set_ylabel("FWHM / kHz", color="r")
+ax2.tick_params(axis="y", labelcolor="r")
+ax[1].set_title("Energy and linewidth vs Y current")
+plt.show()
 # }}}
