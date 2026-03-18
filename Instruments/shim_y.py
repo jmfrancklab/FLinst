@@ -26,7 +26,7 @@ Y_channel = 1
 y_current_max = 1.5
 y_voltage_limit = 15.0
 settle_s = 2.0
-skip_field_setting = False
+set_B_field = False
 auto_adc_offset = False
 filter_timeconst = 10e-3
 # }}}
@@ -122,7 +122,7 @@ if auto_adc_offset:
 # }}}
 
 # {{{ set field
-if not skip_field_setting:
+if set_B_field:
     input(
         "I'm assuming that you've tuned your probe to %f since that's"
         " what's in your .ini file. Hit enter if this is true"
@@ -152,14 +152,16 @@ with (
     ) as HP1,
 ):
     HP1.safe_current = 1.6
+    initial_current = HP1.I_limit[Y_channel]
     y_current_list = HP1.allowed_I[Y_channel]
     y_current_list = y_current_list[y_current_list <= y_current_max]
     assert len(y_current_list) > 0, (
         "No allowed Y currents are less than or equal to y_current_max"
     )
     print("acquiring at Y currents:", y_current_list)
+    HP1.V_limit[Y_channel] = y_voltage_limit
+    HP1.I_limit[Y_channel] = 0
     for idx, this_current in enumerate(y_current_list):
-        HP1.V_limit[Y_channel] = y_voltage_limit
         HP1.I_limit[Y_channel] = this_current
         HP1.output[Y_channel] = 1
         print(
@@ -188,10 +190,10 @@ with (
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    HP1.I_limit[Y_channel] = 0.0
-    HP1.V_limit[Y_channel] = 0.0
+    HP1.V_limit[Y_channel] = 0
+    HP1.I_limit[Y_channel] = 0
     HP1.output[Y_channel] = 0
-    print("turned off Y shim channel")
+    print("Y shim is turned off")
 
 data.rename("indirect", "y_current")
 data.setaxis("y_current", y_current_list).set_units("y_current", "A")
@@ -221,17 +223,20 @@ signal *= np.exp(
     -abs(signal.fromaxis("t2") - config_dict["tau_us"] * 1e-6)
     / filter_timeconst
 )
+# {{{ Zero phasing and FID slicing
 for j in range(len(y_current_list)):
     center_idx = abs(signal["y_current", j]).argmax("t2", raw_index=True).data
     this_fid = np.array(signal["y_current", j].data, copy=True)
     this_fid[:center_idx] = 0
-    this_fid[center_idx] /= 2.0
+    this_fid[center_idx] *= 0.5
     phase_ref = this_fid[center_idx]
     if abs(phase_ref) > 0:
         this_fid /= phase_ref / abs(phase_ref)
     signal["y_current", j].data[:] = this_fid
 signal.ft("t2", shift=True)
-
+# }}}
+# {{{ Calculate FWHM  each Y current, using the same
+# frequency range for energy integration
 linewidth = np.zeros(len(y_current_list))
 peak_position = np.zeros(len(y_current_list))
 left_edge = np.zeros(len(y_current_list))
@@ -243,7 +248,9 @@ for j in range(len(y_current_list)):
         right_edge[j],
         linewidth[j],
     ) = fwhm(signal["y_current", j])
-
+# }}}
+# {{{ Determine the Y current with the largest FWHM
+# to set the frequency range in energy integration
 widest_idx = linewidth.argmax()
 left_offset = left_edge[widest_idx] - peak_position[widest_idx]
 right_offset = right_edge[widest_idx] - peak_position[widest_idx]
@@ -254,7 +261,7 @@ for j in range(len(y_current_list)):
         peak_position[j] + left_offset,
         peak_position[j] + right_offset,
     )
-
+# }}}
 best_idx = energy.argmax()
 print("best Y current based on energy is", y_current_list[best_idx], "A")
 
@@ -280,12 +287,12 @@ fig.colorbar(mesh, ax=ax[0], label="abs(signal)")
 ax[1].plot(y_current_list, energy, "o-", color="k", label="energy")
 ax[1].axvline(y_current_list[best_idx], color="k", ls=":", alpha=0.5)
 ax[1].set_xlabel("Y current / A")
-ax[1].set_ylabel("energy", color="k")
+ax[1].set_ylabel("Energy / a.u.", color="k")
 ax[1].tick_params(axis="y", labelcolor="k")
 ax2 = ax[1].twinx()
 ax2.plot(y_current_list, linewidth / 1e3, "s-", color="r", label="FWHM")
 ax2.set_ylabel("FWHM / kHz", color="r")
 ax2.tick_params(axis="y", labelcolor="r")
-ax[1].set_title("Energy and linewidth vs Y current")
+ax[1].set_title("Energy and FWHM linewidth vs Y current")
 plt.show()
 # }}}
