@@ -46,8 +46,8 @@ def ramp_field(
     HP1,
     settling_attempts=60,
     main_field_threshold_G=2.0,
-    Z0_min_current=0,
-    Z0_max_current=1.5,
+    Z0_min_current_A=0,
+    Z0_max_current_A=1.5,
 ):
     """Ramp the field from where we are to where we want to be.
 
@@ -73,11 +73,11 @@ def ramp_field(
         If the field discrepancy is above this threshold, we consider it a
         "main field" discrepancy and adjust the main field.  Otherwise, we
         consider it a "Z0" discrepancy and adjust Z0.
-    Z0_min_current: float (default 0)
+    Z0_min_current_A: float (default 0)
         The minimum current we allow for the Z0 shim coil (right now limited by
         unipolar source).  If the desired Z0 current is outside this range, we
         adjust the main field instead.
-    Z0_max_current: float (default 1.5)
+    Z0_max_current_A: float (default 1.5)
         The maximum current we allow for the Z0 shim coil.  If the desired Z0
         current is outside this range, we adjust the main field instead.
     """
@@ -178,9 +178,9 @@ def ramp_field(
             # }}}
             # {{{ we can only use Z0 to increase the current, and we don't want
             #     to ask for an unreasonable current
-            if desired_Z0_current_A < Z0_min_current:
+            if desired_Z0_current_A < Z0_min_current_A:
                 adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
-            elif desired_Z0_current_A > Z0_max_current:
+            elif desired_Z0_current_A > Z0_max_current_A:
                 adjust_main_field(B0_des_G, config_dict, h, gen)
             # }}}
             HP1.I_limit[config_dict["Z0_channel"]] = HP1.round_to_allowed(
