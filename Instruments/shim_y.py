@@ -1,107 +1,67 @@
-"""Scan the Y shim current and score the NMR signal.
+"""
+Y shim sweep
+============
 
-The Y coil acts like a Z1 shim in this setup, so the goal is to maximize a
-single scalar derived from the acquired transient.  This script reuses the
-existing SpinCore spin-echo acquisition path and reduces each scan to either:
-
-- integrated ``abs(signal)``
-- integrated ``|signal|^2`` ("energy")
-- peak ``abs(signal)``
-
-It then plots a line scan versus Y current and leaves the supply at the best
-current unless told otherwise.
+Acquire a series of spin echoes while stepping the Y shim current.
+The saved dataset can then be processed to determine the best Y shim.
 """
 
-from __future__ import annotations
-
-import logging
-import time
-from dataclasses import dataclass
-from pathlib import Path
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pyspecdata as psp
+from pyspecdata import getDATADIR
 from numpy import r_
-
+import os
+import time
 import SpinCore_pp
-from Instruments import HP6623A, power_control, prologix_connection
+from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
+from Instruments import HP6623A, prologix_connection, power_control
+from datetime import datetime
 
+my_exp_type = "ODNP_NMR_comp/Echoes"
+assert os.path.exists(getDATADIR(exp_type=my_exp_type))
 
-logger = logging.getLogger(__name__)
-DEFAULT_SERVER_IP = "127.0.0.1"
+# {{{ user settings
+Y_channel = 1
+y_current_center = None
+y_current_span = 0.6
+y_voltage_limit = 15.0
+settle_s = 2.0
+skip_field_setting = False
+auto_adc_offset = False
+restore_initial_current = True
+# }}}
 
-
-@dataclass
-class Settings:
-    config: str | None = None
-    metric: str = "energy"
-    currents: list[float] | None = None
-    center: float | None = None
-    span: float = 0.6
-    start: float | None = None
-    stop: float | None = None
-    points: int = 11
-    y_channel: int = 1
-    hp_address: int | None = None
-    v_limit: float = 15.0
-    settle_s: float = 2.0
-    apo_ms: float | None = 10.0
-    t_start_us: float | None = None
-    t_stop_us: float | None = None
-    server_ip: str = DEFAULT_SERVER_IP
-    skip_field: bool = False
-    auto_adc: bool = False
-    restore_initial: bool = False
-    save_prefix: str | None = None
-    log_level: str = "INFO"
-
-
-# Edit these values directly before running the script.
-SETTINGS = Settings(
-    metric="energy",
-    center=None,
-    span=0.6,
-    start=None,
-    stop=None,
-    points=11,
-    currents=None,
-    y_channel=1,
-    hp_address=None,
-    v_limit=15.0,
-    settle_s=2.0,
-    apo_ms=10.0,
-    t_start_us=None,
-    t_stop_us=None,
-    server_ip=DEFAULT_SERVER_IP,
-    skip_field=False,
-    auto_adc=False,
-    restore_initial=False,
-    save_prefix=None,
-    log_level="INFO",
+# {{{ importing acquisition parameters
+config_dict = SpinCore_pp.configuration("active.ini")
+(
+    nPoints,
+    config_dict["SW_kHz"],
+    config_dict["acq_time_ms"],
+) = get_integer_sampling_intervals(
+    config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
+ph1_cyc = r_[0, 1, 2, 3]
+nPhaseSteps = len(ph1_cyc)
+# }}}
 
+# {{{ add file saving parameters to config dict
+config_dict["type"] = "shim_y"
+config_dict["date"] = datetime.now().strftime("%y%m%d")
+config_dict["shim_y_counter"] += 1
+# }}}
 
-def resolve_config_path(config_path: str | None) -> Path:
-    """Locate the active config file."""
-    candidates = []
-    if config_path is not None:
-        candidates.append(Path(config_path).expanduser())
-    candidates += [
-        Path("active.ini"),
-        Path("examples/active.ini"),
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate.resolve()
-    raise FileNotFoundError(
-        "Could not find a config file. Use --config to point at active.ini."
-    )
+# {{{ check total points
+total_pts = nPoints * nPhaseSteps
+assert total_pts < 2**14, (
+    "You are trying to acquire %d points (too many points) -- either"
+    " change SW or acq time so nPoints x nPhaseSteps is less than 16384"
+    "\nyou could try reducing the acq_time_ms to %f"
+    % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
+)
+# }}}
 
-
-def stabilize_adc_offset(max_tries: int = 20) -> int:
-    """Repeat the ADC offset measurement until it stops moving."""
+# {{{ optionally remeasure adc offset
+if auto_adc_offset:
+    print("adc was ", config_dict["adc_offset"], end=" and ")
     counter = 0
     first = True
     result1 = result2 = result3 = None
@@ -112,349 +72,106 @@ def stabilize_adc_offset(max_tries: int = 20) -> int:
         result2 = SpinCore_pp.adc_offset()
         time.sleep(0.1)
         result3 = SpinCore_pp.adc_offset()
+        if counter > 20:
+            raise RuntimeError("after 20 tries, I can't stabilize ADC")
         counter += 1
-        if counter > max_tries:
-            raise RuntimeError("Could not stabilize ADC offset")
-    return result3
+    config_dict["adc_offset"] = result3
+    print("adc determined to be:", config_dict["adc_offset"])
+# }}}
 
-
-def acquire_echo(config_dict, n_points, sw_khz, adc_offset):
-    """Acquire one spin-echo transient using the existing pulse program."""
-    echo_data = run_spin_echo(
-        nScans=config_dict["nScans"],
-        indirect_idx=0,
-        indirect_len=1,
-        deblank_us=config_dict["deblank_us"],
-        adcOffset=adc_offset,
-        carrierFreq_MHz=config_dict["carrierFreq_MHz"],
-        nPoints=n_points,
-        nEchoes=1,
-        plen=config_dict["beta_90_s_sqrtW"],
-        repetition_us=config_dict["repetition_us"],
-        amplitude=config_dict["amplitude"],
-        tau_us=config_dict["tau_us"],
-        SW_kHz=sw_khz,
-        ret_data=None,
-        deadtime_us=config_dict["deadtime_us"],
+# {{{ set field
+if not skip_field_setting:
+    input(
+        "I'm assuming that you've tuned your probe to %f since that's"
+        " what's in your .ini file. Hit enter if this is true"
+        % config_dict["carrierFreq_MHz"]
     )
-    echo_data.chunk("t", ["ph1", "t2"], [4, -1])
-    echo_data.setaxis("ph1", r_[0.0, 1.0, 2.0, 3.0] / 4)
-    if "nScans" in echo_data.dimlabels:
-        echo_data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-    echo_data.reorder(["ph1", "nScans", "t2"])
-    echo_data.squeeze()
-    echo_data.set_units("t2", "s")
-    return echo_data
-
-
-def scalar_from_trace(trace, metric: str) -> float:
-    """Convert a 1D nddata trace into a scalar score."""
-    time_axis = trace.getaxis("t2")
-    if len(time_axis) > 1:
-        dt = float(np.diff(time_axis).mean())
-    else:
-        dt = 1.0
-    trace_data = np.asarray(trace.data, dtype=np.float64)
-    if metric == "energy":
-        return float(np.sum(trace_data**2) * dt)
-    if metric == "absint":
-        return float(np.sum(np.abs(trace_data)) * dt)
-    if metric == "peak":
-        return float(np.max(np.abs(trace_data)))
-    raise ValueError(f"Unknown metric {metric!r}")
-
-
-def process_echo(
-    echo_data,
-    tau_us: float,
-    metric: str,
-    apo_s: float | None,
-    t_start_us: float | None,
-    t_stop_us: float | None,
-):
-    """Reduce raw echo data to a single scalar and a plotted trace."""
-    data = echo_data.C
-    data.ft("ph1", unitary=True)
-    if "nScans" in data.dimlabels and int(psp.ndshape(data)["nScans"]) > 1:
-        data.mean("nScans")
-    data.ft("t2", shift=True)
-    analytic = data["t2" : (0, None)] * 2
-    analytic.ift("t2")
-    if apo_s is not None and apo_s > 0:
-        analytic *= np.exp(
-            -abs(analytic.fromaxis("t2") - tau_us * 1e-6) / apo_s
-        )
-    signal_trace = abs(analytic["ph1", 1])
-    noise_trace = analytic["ph1", r_[0, 2, 3]].run(np.std, "ph1")
-    signal_trace -= noise_trace
-    signal_trace.data = np.maximum(
-        np.real(np.asarray(signal_trace.data, dtype=np.float64)),
-        0.0,
-    )
-    if t_start_us is not None or t_stop_us is not None:
-        start_s = None if t_start_us is None else t_start_us * 1e-6
-        stop_s = None if t_stop_us is None else t_stop_us * 1e-6
-        signal_trace = signal_trace["t2" : (start_s, stop_s)]
-        noise_trace = noise_trace["t2" : (start_s, stop_s)]
-    score = scalar_from_trace(signal_trace, metric)
-    return score, signal_trace, noise_trace
-
-
-def build_current_array(hp_supply, channel, settings):
-    """Generate and instrument-round the list of requested shim currents."""
-    if settings.currents is not None:
-        requested = np.array(settings.currents, dtype=float)
-    else:
-        start = settings.start
-        stop = settings.stop
-        if start is None or stop is None:
-            current_center = hp_supply.I_limit[channel]
-            if settings.center is not None:
-                current_center = settings.center
-            span = settings.span
-            start = current_center - span / 2.0
-            stop = current_center + span / 2.0
-        requested = np.linspace(start, stop, settings.points)
-    if np.any(requested < 0):
-        raise ValueError("This shim script only supports non-negative current")
-    rounded = []
-    for value in requested:
-        if np.isclose(value, 0.0):
-            new_value = 0.0
-        else:
-            new_value = hp_supply.round_to_allowed("I", channel, value)
-        if not rounded or not np.isclose(rounded[-1], new_value):
-            rounded.append(float(new_value))
-    return np.array(rounded, dtype=float)
-
-
-def set_y_current(hp_supply, channel, current_amps, v_limit):
-    """Apply the Y current to the chosen supply channel."""
-    if np.isclose(current_amps, 0.0):
-        hp_supply.I_limit[channel] = 0.0
-        hp_supply.V_limit[channel] = 0.0
-        hp_supply.output[channel] = 0
-        return
-    hp_supply.V_limit[channel] = v_limit
-    hp_supply.I_limit[channel] = current_amps
-    hp_supply.output[channel] = 1
-
-
-def plot_results(
-    current_axis,
-    score_axis,
-    trace_matrix,
-    best_index,
-    metric,
-    save_prefix: str | None,
-):
-    """Plot the line scan and the signal traces."""
-    fig, axes = plt.subplots(
-        3,
-        1,
-        figsize=(9, 10),
-        constrained_layout=True,
-    )
-    axes[0].plot(current_axis, score_axis.data, "o-", lw=1.5)
-    axes[0].axvline(current_axis[best_index], color="r", ls=":")
-    axes[0].set_ylabel(metric)
-    axes[0].set_xlabel("Y current / A")
-    axes[0].set_title("Y shim line scan")
-
-    mesh = axes[1].pcolormesh(
-        trace_matrix.getaxis("t2") * 1e6,
-        trace_matrix.getaxis("y_current"),
-        trace_matrix.data,
-        shading="auto",
-    )
-    axes[1].set_xlabel("t2 / us")
-    axes[1].set_ylabel("Y current / A")
-    axes[1].set_title("Processed signal trace")
-    fig.colorbar(mesh, ax=axes[1], label="abs(signal) - noise")
-
-    best_trace = trace_matrix["y_current", best_index]
-    axes[2].plot(best_trace.getaxis("t2") * 1e6, best_trace.data)
-    axes[2].set_xlabel("t2 / us")
-    axes[2].set_ylabel("signal")
-    axes[2].set_title(f"Best trace at {current_axis[best_index]:0.3f} A")
-
-    if save_prefix is not None:
-        figure_path = Path(f"{save_prefix}.png")
-        csv_path = Path(f"{save_prefix}.csv")
-        fig.savefig(figure_path, dpi=150)
-        np.savetxt(
-            csv_path,
-            np.column_stack([current_axis, score_axis.data]),
-            delimiter=",",
-            header=f"y_current_A,{metric}",
-            comments="",
-        )
-    plt.show()
-
-
-def main():
-    settings = SETTINGS
-    logging.basicConfig(
-        level=getattr(logging, settings.log_level.upper(), logging.INFO),
-        format="%(levelname)s:%(name)s:%(message)s",
-    )
-    config_path = resolve_config_path(settings.config)
-    config_dict = SpinCore_pp.configuration(str(config_path))
-    hp_address = (
-        config_dict["HP1_address"]
-        if settings.hp_address is None
-        else settings.hp_address
-    )
-    n_points, sw_khz, acq_time_ms = SpinCore_pp.get_integer_sampling_intervals(
-        SW_kHz=config_dict["SW_kHz"],
-        time_per_segment_ms=config_dict["acq_time_ms"],
-    )
-    logger.info(
-        "Using %d points, actual SW %.6f kHz, actual acq %.6f ms",
-        n_points,
-        sw_khz,
-        acq_time_ms,
-    )
-    adc_offset = config_dict["adc_offset"]
-    if settings.auto_adc:
-        adc_offset = stabilize_adc_offset()
-        config_dict["adc_offset"] = adc_offset
-        config_dict.write()
-        logger.info("ADC offset updated to %d", adc_offset)
-    if not settings.skip_field:
-        target_field = (
-            config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
-        )
-        with power_control(ip=settings.server_ip) as field_control:
-            true_field = field_control.set_field(target_field)
-        logger.info(
-            "Field requested at %.6f G and measured at %.6f G",
-            target_field,
-            true_field,
-        )
-    with prologix_connection(
-        ip=config_dict["prologix_ip"],
-        port=config_dict["prologix_port"],
-    ) as prologix:
-        with HP6623A(
-            prologix_instance=prologix,
-            address=hp_address,
-        ) as hp_supply:
-            hp_supply.safe_current = 1.8
-            y_channel = settings.y_channel
-            initial_current = hp_supply.I_limit[y_channel]
-            current_axis = build_current_array(hp_supply, y_channel, settings)
-            logger.info(
-                "Scanning Y current values: %s",
-                ", ".join(f"{j:0.3f}" for j in current_axis),
-            )
-            score_axis = psp.nddata(np.zeros(len(current_axis)), ["y_current"])
-            score_axis.setaxis("y_current", current_axis)
-            trace_matrix = None
-            best_index = None
-            try:
-                for j, current_amps in enumerate(current_axis):
-                    set_y_current(
-                        hp_supply,
-                        y_channel,
-                        current_amps,
-                        settings.v_limit,
-                    )
-                    logger.info(
-                        "Acquiring at Y current %.6f A (%d/%d)",
-                        current_amps,
-                        j + 1,
-                        len(current_axis),
-                    )
-                    time.sleep(settings.settle_s)
-                    echo_data = acquire_echo(
-                        config_dict,
-                        n_points,
-                        sw_khz,
-                        adc_offset,
-                    )
-                    score, signal_trace, _ = process_echo(
-                        echo_data,
-                        tau_us=config_dict["tau_us"],
-                        metric=settings.metric,
-                        apo_s=(
-                            settings.apo_ms * 1e-3
-                            if settings.apo_ms is not None
-                            else None
-                        ),
-                        t_start_us=settings.t_start_us,
-                        t_stop_us=settings.t_stop_us,
-                    )
-                    if trace_matrix is None:
-                        trace_matrix = psp.ndshape(
-                            [
-                                len(current_axis),
-                                len(signal_trace.getaxis("t2")),
-                            ],
-                            ["y_current", "t2"],
-                        ).alloc(dtype=float)
-                        trace_matrix.setaxis("y_current", current_axis)
-                        trace_matrix.setaxis("t2", signal_trace.getaxis("t2"))
-                        trace_matrix.set_units("t2", "s")
-                    score_axis["y_current", j] = score
-                    trace_matrix["y_current", j] = signal_trace.data
-                    logger.info(
-                        "Score at %.6f A is %.6g",
-                        current_amps,
-                        score,
-                    )
-                best_index = int(np.argmax(score_axis.data))
-                best_current = float(current_axis[best_index])
-                logger.info(
-                    "Best Y current is %.6f A with %s score %.6g",
-                    best_current,
-                    settings.metric,
-                    float(score_axis.data[best_index]),
-                )
-                if settings.restore_initial:
-                    set_y_current(
-                        hp_supply,
-                        y_channel,
-                        initial_current,
-                        settings.v_limit,
-                    )
-                    logger.info(
-                        "Restored initial Y current %.6f A",
-                        initial_current,
-                    )
-                else:
-                    set_y_current(
-                        hp_supply,
-                        y_channel,
-                        best_current,
-                        settings.v_limit,
-                    )
-                    logger.info("Left Y shim at %.6f A", best_current)
-            except Exception:
-                set_y_current(
-                    hp_supply,
-                    y_channel,
-                    initial_current,
-                    settings.v_limit,
-                )
-                logger.exception(
-                    "Aborting the scan and restoring the initial Y current"
-                )
-                raise
+    field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
     print(
-        "Best Y current: "
-        f"{current_axis[best_index]:0.6f} A "
-        f"({settings.metric}={float(score_axis.data[best_index]):0.6g})"
+        "Based on that, and the gamma_eff_MHz_G you have in your .ini"
+        " file, I'm setting the field to %f" % field_G
     )
-    plot_results(
-        current_axis,
-        score_axis,
-        trace_matrix,
-        best_index,
-        settings.metric,
-        settings.save_prefix,
-    )
+    with power_control() as p:
+        assert field_G < 3700, "are you crazy??? field is too high!"
+        assert field_G > 3300, "are you crazy?? field is too low!"
+        field_G = p.set_field(field_G)
+        print("field set to ", field_G)
+# }}}
 
+data = None
+with prologix_connection(
+    ip=config_dict["prologix_ip"],
+    port=config_dict["prologix_port"],
+) as p:
+    with HP6623A(
+        prologix_instance=p,
+        address=config_dict["HP1_address"],
+    ) as HP1:
+        HP1.safe_current = 1.8
+        initial_current = HP1.I_limit[Y_channel]
+        if y_current_center is None:
+            y_current_center = initial_current
+        y_current_start = y_current_center - y_current_span / 2.0
+        y_current_stop = y_current_center + y_current_span / 2.0
+        y_current_list = HP1.allowed_I[Y_channel]
+        y_current_list = y_current_list[
+            (y_current_list >= y_current_start)
+            & (y_current_list <= y_current_stop)
+        ]
+        assert len(y_current_list) > 0, (
+            "No allowed Y currents fall inside the requested range"
+        )
+        print("acquiring at Y currents:", y_current_list)
+        for idx, this_current in enumerate(y_current_list):
+            HP1.V_limit[Y_channel] = y_voltage_limit
+            HP1.I_limit[Y_channel] = this_current
+            HP1.output[Y_channel] = 1
+            print(
+                "set Y shim to",
+                HP1.I_limit[Y_channel],
+                "A and waiting",
+                settle_s,
+                "s",
+            )
+            time.sleep(settle_s)
+            data = run_spin_echo(
+                deadtime_us=config_dict["deadtime_us"],
+                deblank_us=config_dict["deblank_us"],
+                nScans=config_dict["nScans"],
+                indirect_idx=idx,
+                indirect_len=len(y_current_list),
+                ph1_cyc=ph1_cyc,
+                amplitude=config_dict["amplitude"],
+                adcOffset=config_dict["adc_offset"],
+                carrierFreq_MHz=config_dict["carrierFreq_MHz"],
+                nPoints=nPoints,
+                nEchoes=config_dict["nEchoes"],
+                plen=config_dict["beta_90_s_sqrtW"],
+                repetition_us=config_dict["repetition_us"],
+                tau_us=config_dict["tau_us"],
+                SW_kHz=config_dict["SW_kHz"],
+                ret_data=data,
+            )
+        if restore_initial_current:
+            HP1.V_limit[Y_channel] = y_voltage_limit
+            HP1.I_limit[Y_channel] = initial_current
+            if initial_current == 0:
+                HP1.output[Y_channel] = 0
+            print("restored Y shim current to", HP1.I_limit[Y_channel], "A")
 
-if __name__ == "__main__":
-    main()
+data.rename("indirect", "y_current")
+data.setaxis("y_current", y_current_list).set_units("y_current", "A")
+
+# {{{ chunk and save data
+data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
+data.setaxis("ph1", ph1_cyc / 4)
+if config_dict["nScans"] > 1:
+    data.setaxis("nScans", r_[0 : config_dict["nScans"]])
+data.reorder(["nScans", "ph1", "y_current", "t2"])
+data.set_units("t2", "s")
+data.set_prop("postproc_type", "spincore_SE_v2")
+data.set_prop("coherence_pathway", {"ph1": +1})
+data.set_prop("acq_params", config_dict.asdict())
+config_dict = save_data(data, my_exp_type, config_dict, "shim_y")
+config_dict.write()
+# }}}
