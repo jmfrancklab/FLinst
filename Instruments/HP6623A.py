@@ -698,9 +698,9 @@ class HP6623A(gpib_eth):
         self.write(f"OUT {str(self._GPIB_index(channel))},{value}")
         self._known_output_state[channel] = value
         if value == 0:
-            print("Ch %s output is OFF" % channel)
+            logger.debug("Ch %s output is OFF" % channel)
         elif value == 1:
-            print("Ch %s output is ON" % channel)
+            logger.debug("Ch %s output is ON" % channel)
         return
 
     @channel_property
