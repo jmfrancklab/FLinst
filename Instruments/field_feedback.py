@@ -109,7 +109,8 @@ def adjust_main_field(B0_des_G, config_dict, h, gen):
     gen.I_limit = I_setting
 
 
-def ramp_field(B0_des_G, config_dict, h, gen, HP1):
+def ramp_field(B0_des_G, config_dict, h, gen, HP1,
+               settling_attempts=60):
     """Ramp the field from where we are to where we want to be.
 
     **If we start at 0**: Calibrate the zero-point of the hall sensor
@@ -128,6 +129,8 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
     gen : object
         Genesys power supply object with output, V_limit, I_limit, and I_meas
         properties.
+    settling_attempts: int (default 60)
+        How many times should we attempt to observe a stable field.
     """
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     # {{{ First, we ramp from whatever
@@ -174,7 +177,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
     #     within 0.8 G of our desired
     #     value
     num_field_matches = 0
-    for j in range(60):
+    for j in range(settling_attempts):
         time.sleep(config_dict["magnet_settle_short"])
         field_discrepancy = abs(h.field_in_G - B0_des_G)
         if field_discrepancy > 2.0:
@@ -215,7 +218,7 @@ def ramp_field(B0_des_G, config_dict, h, gen, HP1):
         )
 
         raise RuntimeError(
-            "I tried 60 times to get my"
+            f"I tried {settling_attempts} times to get my"
             f" field to match within {temp} G"
             f" or {config_dict['tolerance_Hz']} Hz three times"
             "in a row, and it didn't work!"
