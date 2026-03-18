@@ -23,13 +23,11 @@ assert os.path.exists(getDATADIR(exp_type=my_exp_type))
 
 # {{{ user settings
 Y_channel = 1
-y_current_center = None
-y_current_span = 0.6
+y_current_max = 1.5
 y_voltage_limit = 15.0
 settle_s = 2.0
 skip_field_setting = False
 auto_adc_offset = False
-restore_initial_current = True
 filter_timeconst = 10e-3
 # }}}
 
@@ -143,65 +141,57 @@ if not skip_field_setting:
 # }}}
 
 data = None
-with prologix_connection(
-    ip=config_dict["prologix_ip"],
-    port=config_dict["prologix_port"],
-) as p:
-    with HP6623A(
+with (
+    prologix_connection(
+        ip=config_dict["prologix_ip"],
+        port=config_dict["prologix_port"],
+    ) as p,
+    HP6623A(
         prologix_instance=p,
         address=config_dict["HP1_address"],
-    ) as HP1:
-        HP1.safe_current = 1.8
-        initial_current = HP1.I_limit[Y_channel]
-        if y_current_center is None:
-            y_current_center = initial_current
-        y_current_start = y_current_center - y_current_span / 2.0
-        y_current_stop = y_current_center + y_current_span / 2.0
-        y_current_list = HP1.allowed_I[Y_channel]
-        y_current_list = y_current_list[
-            (y_current_list >= y_current_start)
-            & (y_current_list <= y_current_stop)
-        ]
-        assert len(y_current_list) > 0, (
-            "No allowed Y currents fall inside the requested range"
+    ) as HP1,
+):
+    HP1.safe_current = 1.6
+    y_current_list = HP1.allowed_I[Y_channel]
+    y_current_list = y_current_list[y_current_list <= y_current_max]
+    assert len(y_current_list) > 0, (
+        "No allowed Y currents are less than or equal to y_current_max"
+    )
+    print("acquiring at Y currents:", y_current_list)
+    for idx, this_current in enumerate(y_current_list):
+        HP1.V_limit[Y_channel] = y_voltage_limit
+        HP1.I_limit[Y_channel] = this_current
+        HP1.output[Y_channel] = 1
+        print(
+            "set Y shim to",
+            HP1.I_limit[Y_channel],
+            "A and waiting",
+            settle_s,
+            "s",
         )
-        print("acquiring at Y currents:", y_current_list)
-        for idx, this_current in enumerate(y_current_list):
-            HP1.V_limit[Y_channel] = y_voltage_limit
-            HP1.I_limit[Y_channel] = this_current
-            HP1.output[Y_channel] = 1
-            print(
-                "set Y shim to",
-                HP1.I_limit[Y_channel],
-                "A and waiting",
-                settle_s,
-                "s",
-            )
-            time.sleep(settle_s)
-            data = run_spin_echo(
-                deadtime_us=config_dict["deadtime_us"],
-                deblank_us=config_dict["deblank_us"],
-                nScans=config_dict["nScans"],
-                indirect_idx=idx,
-                indirect_len=len(y_current_list),
-                ph1_cyc=ph1_cyc,
-                amplitude=config_dict["amplitude"],
-                adcOffset=config_dict["adc_offset"],
-                carrierFreq_MHz=config_dict["carrierFreq_MHz"],
-                nPoints=nPoints,
-                nEchoes=config_dict["nEchoes"],
-                plen=config_dict["beta_90_s_sqrtW"],
-                repetition_us=config_dict["repetition_us"],
-                tau_us=config_dict["tau_us"],
-                SW_kHz=config_dict["SW_kHz"],
-                ret_data=data,
-            )
-        if restore_initial_current:
-            HP1.V_limit[Y_channel] = y_voltage_limit
-            HP1.I_limit[Y_channel] = initial_current
-            if initial_current == 0:
-                HP1.output[Y_channel] = 0
-            print("restored Y shim current to", HP1.I_limit[Y_channel], "A")
+        time.sleep(settle_s)
+        data = run_spin_echo(
+            deadtime_us=config_dict["deadtime_us"],
+            deblank_us=config_dict["deblank_us"],
+            nScans=config_dict["nScans"],
+            indirect_idx=idx,
+            indirect_len=len(y_current_list),
+            ph1_cyc=ph1_cyc,
+            amplitude=config_dict["amplitude"],
+            adcOffset=config_dict["adc_offset"],
+            carrierFreq_MHz=config_dict["carrierFreq_MHz"],
+            nPoints=nPoints,
+            nEchoes=config_dict["nEchoes"],
+            plen=config_dict["beta_90_s_sqrtW"],
+            repetition_us=config_dict["repetition_us"],
+            tau_us=config_dict["tau_us"],
+            SW_kHz=config_dict["SW_kHz"],
+            ret_data=data,
+        )
+    HP1.I_limit[Y_channel] = 0.0
+    HP1.V_limit[Y_channel] = 0.0
+    HP1.output[Y_channel] = 0
+    print("turned off Y shim channel")
 
 data.rename("indirect", "y_current")
 data.setaxis("y_current", y_current_list).set_units("y_current", "A")
