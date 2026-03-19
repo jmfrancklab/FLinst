@@ -6,11 +6,10 @@ Acquire a series of spin echoes while stepping the Y shim current.
 The saved dataset can then be processed to determine the best Y shim.
 """
 
-from pyspecdata import getDATADIR
+from pyspecdata import getDATADIR, figlist_var, nddata
 from numpy import r_
 import os
 import time
-import matplotlib.pyplot as plt
 import numpy as np
 import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals
@@ -291,34 +290,18 @@ for j in range(len(y_current_list)):
 best_idx = energy.argmax()
 print("best Y current based on energy is", y_current_list[best_idx], "A")
 
-fig, ax = plt.subplots(2, 1, figsize=(8, 10), constrained_layout=True)
-mesh = ax[0].pcolormesh(
-    signal.getaxis("t2") / 1e3,
-    y_current_list,
-    abs(signal.data),
-    shading="auto",
-)
-for j in range(len(y_current_list)):
-    ax[0].plot(
-        np.array([left_edge[j], right_edge[j]]) / 1e3,
-        np.array([y_current_list[j], y_current_list[j]]),
-        color="w",
-        alpha=0.3,
-    )
-ax[0].set_xlabel("frequency shift / kHz")
-ax[0].set_ylabel("Y current / A")
-ax[0].set_title("Echo-phase spectrum vs Y current")
-fig.colorbar(mesh, ax=ax[0], label="abs(signal)")
+signal_for_plot = abs(signal).C
+signal_for_plot.setaxis("t2", lambda x: x / 1e3).set_units("t2", "kHz")
+energy_nd = nddata(energy, "y_current")
+energy_nd.setaxis("y_current", y_current_list).set_units("y_current", "A")
+linewidth_nd = nddata(linewidth / 1e3, "y_current")
+linewidth_nd.setaxis("y_current", y_current_list).set_units("y_current", "A")
 
-ax[1].plot(y_current_list, energy, "o-", color="k", label="energy")
-ax[1].axvline(y_current_list[best_idx], color="k", ls=":", alpha=0.5)
-ax[1].set_xlabel("Y current / A")
-ax[1].set_ylabel("Energy / a.u.", color="k")
-ax[1].tick_params(axis="y", labelcolor="k")
-ax2 = ax[1].twinx()
-ax2.plot(y_current_list, linewidth / 1e3, "s-", color="r", label="FWHM")
-ax2.set_ylabel("FWHM / kHz", color="r")
-ax2.tick_params(axis="y", labelcolor="r")
-ax[1].set_title("Energy and FWHM linewidth vs Y current")
-plt.show()
+with figlist_var() as fl:
+    fl.next("Raw DCCT")
+    fl.image(signal_for_plot)
+    fl.next("Energy and FWHM linewidth vs Y current", legend=True)
+    fl.plot(energy_nd, "o-", label="energy")
+    fl.plot(linewidth_nd, "s-", label="FWHM / kHz")
+    fl.show()
 # }}}
