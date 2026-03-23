@@ -1,39 +1,9 @@
 from pyspecdata import figlist_var, nddata, find_file
+from numpy import r_
 import numpy as np
 import matplotlib.pyplot as plt
 import pyspecProcScripts as prscr
 from pyspecProcScripts.load_data import proc_spincore_generalproc_v1
-
-
-def fwhm(trace):
-    x = trace.getaxis("t2")
-    y = abs(trace.data)
-    peak_idx = y.argmax()
-    peak_height = y[peak_idx]
-    half_height = peak_height / 2.0
-    left_idx = peak_idx
-    while left_idx > 0 and y[left_idx] >= half_height:
-        left_idx -= 1
-    right_idx = peak_idx
-    while right_idx < len(y) - 1 and y[right_idx] >= half_height:
-        right_idx += 1
-    if left_idx == peak_idx:
-        left_cross = x[peak_idx]
-    else:
-        left_cross = np.interp(
-            half_height,
-            [y[left_idx], y[left_idx + 1]],
-            [x[left_idx], x[left_idx + 1]],
-        )
-    if right_idx == peak_idx:
-        right_cross = x[peak_idx]
-    else:
-        right_cross = np.interp(
-            half_height,
-            [y[right_idx], y[right_idx - 1]],
-            [x[right_idx], x[right_idx - 1]],
-        )
-    return x[peak_idx], left_cross, right_cross, right_cross - left_cross
 
 
 def integrate_energy(trace, left_lim, right_lim):
@@ -94,27 +64,13 @@ with figlist_var() as fl:
     signal.ft("t2", shift=False)
     if slicing:
         signal = signal["t2" : (-8e3, 8e3)]
-    linewidth = np.zeros(len(signal.getaxis("y_current")))
-    peak_position = np.zeros(len(signal.getaxis("y_current")))
-    left_edge = np.zeros(len(signal.getaxis("y_current")))
-    right_edge = np.zeros(len(signal.getaxis("y_current")))
-    for j in range(len(signal.getaxis("y_current"))):
-        (
-            peak_position[j],
-            left_edge[j],
-            right_edge[j],
-            linewidth[j],
-        ) = fwhm(signal["y_current", j])
-
-    widest_idx = linewidth.argmax()
-    left_offset = left_edge[widest_idx] - peak_position[widest_idx]
-    right_offset = right_edge[widest_idx] - peak_position[widest_idx]
     energy = np.zeros(len(signal.getaxis("y_current")))
+    left_lim, right_lim = signal.getaxis("t2")[r_[0, -1]]
     for j in range(len(signal.getaxis("y_current"))):
         energy[j] = integrate_energy(
             signal["y_current", j],
-            peak_position[j] + left_offset,
-            peak_position[j] + right_offset,
+            left_lim,
+            right_lim,
         )
 
     best_idx = energy.argmax()
@@ -133,10 +89,6 @@ with figlist_var() as fl:
     energy_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
         "y_current", "A"
     )
-    linewidth_nd = nddata(linewidth, "y_current")
-    linewidth_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
-        "y_current", "A"
-    )
 
     fl.next("Raw DCCT")
     ax_dcct = plt.gca()
@@ -149,18 +101,8 @@ with figlist_var() as fl:
     ax_dcct.set_yticklabels([f"{y_current_vals[j]:0.2f}" for j in y_tick_idx])
     ax_dcct.set_ylabel("Y current / A")
 
-    fl.next("Energy and FWHM linewidth vs Y current")
+    fl.next("Energy vs Y current")
     ax_energy = plt.gca()
     fl.plot(energy_nd, "o-", ax=ax_energy, label="energy")
     ax_energy.set_ylabel("energy")
-    ax_linewidth = ax_energy.twinx()
-    fl.plot(
-        linewidth_nd,
-        "s-",
-        ax=ax_linewidth,
-        color="orange",
-        label="FWHM",
-    )
-    ax_linewidth.set_ylabel("FWHM / Hz")
     ax_energy.legend(loc="upper left")
-    ax_linewidth.legend(loc="upper right")
