@@ -36,40 +36,6 @@ slicing = True
 # }}}
 
 
-# TODO ☐: this looks a bit like GPT slop to me -- I hesitate to say that
-#         unless it's hand-written, but there is a really
-#         straightforward way of doing this, so we'll discuss.
-def fwhm(trace):
-    x = trace.getaxis("t2")
-    y = abs(trace.data)
-    peak_idx = y.argmax()
-    peak_height = y[peak_idx]
-    half_height = peak_height / 2.0
-    left_idx = peak_idx
-    while left_idx > 0 and y[left_idx] >= half_height:
-        left_idx -= 1
-    right_idx = peak_idx
-    while right_idx < len(y) - 1 and y[right_idx] >= half_height:
-        right_idx += 1
-    if left_idx == peak_idx:
-        left_cross = x[peak_idx]
-    else:
-        left_cross = np.interp(
-            half_height,
-            [y[left_idx], y[left_idx + 1]],
-            [x[left_idx], x[left_idx + 1]],
-        )
-    if right_idx == peak_idx:
-        right_cross = x[peak_idx]
-    else:
-        right_cross = np.interp(
-            half_height,
-            [y[right_idx], y[right_idx - 1]],
-            [x[right_idx], x[right_idx - 1]],
-        )
-    return x[peak_idx], left_cross, right_cross, right_cross - left_cross
-
-
 def integrate_energy(trace, left_lim, right_lim):
     x = trace.getaxis("t2")
     y = abs(trace.data) ** 2
@@ -97,7 +63,10 @@ config_dict["type"] = "shim_y"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["shim_y_counter"] += 1
 filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
+    f"{config_dict['date']}_"
+    f"{config_dict['chemical']}_"
+    f"{config_dict['type']}_"
+    f"{config_dict['shim_y_counter']}"
 )
 # }}}
 
@@ -221,7 +190,7 @@ data.set_prop("acq_params", config_dict.asdict())
 data.name(config_dict["type"] + "_" + str(config_dict["shim_y_counter"]))
 target_directory = getDATADIR(exp_type=my_exp_type)
 filename_out = filename + ".h5"
-nodename = data.name()
+nodename = config_dict["type"]
 if os.path.exists(f"{target_directory}{filename_out}"):
     print("this file already exists so we will add a node to it!")
     with h5py.File(
@@ -271,33 +240,14 @@ signal.ft("t2", shift=False)
 if slicing:
     signal = signal["t2" : (-8e3, 8e3)]
 # }}}
-# {{{ Calculate FWHM  each Y current, using the same
-# frequency range for energy integration
-linewidth = np.zeros(len(y_current_list))
-peak_position = np.zeros(len(y_current_list))
-left_edge = np.zeros(len(y_current_list))
-right_edge = np.zeros(len(y_current_list))
-for j in range(len(y_current_list)):
-    (
-        peak_position[j],
-        left_edge[j],
-        right_edge[j],
-        linewidth[j],
-    ) = fwhm(signal["y_current", j])
-# }}}
-# {{{ Determine the Y current with the largest FWHM
-# to set the frequency range in energy integration
-widest_idx = linewidth.argmax()
-left_offset = left_edge[widest_idx] - peak_position[widest_idx]
-right_offset = right_edge[widest_idx] - peak_position[widest_idx]
 energy = np.zeros(len(y_current_list))
+left_lim, right_lim = signal.getaxis("t2")[r_[0, -1]]
 for j in range(len(y_current_list)):
     energy[j] = integrate_energy(
         signal["y_current", j],
-        peak_position[j] + left_offset,
-        peak_position[j] + right_offset,
+        left_lim,
+        right_lim,
     )
-# }}}
 best_idx = energy.argmax()
 print("best Y current based on energy is", y_current_list[best_idx], "A")
 
@@ -308,10 +258,6 @@ signal_for_plot.setaxis("y_current", signal.getaxis("y_current")).set_units(
 )
 energy_nd = nddata(energy, "y_current")
 energy_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
-    "y_current", "A"
-)
-linewidth_nd = nddata(linewidth, "y_current")
-linewidth_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
     "y_current", "A"
 )
 
@@ -329,20 +275,10 @@ with figlist_var() as fl:
     ax_dcct.set_yticklabels([f"{y_current_vals[j]:0.2f}" for j in y_tick_idx])
     ax_dcct.set_ylabel("Y current / A")
 
-    fl.next("Energy and FWHM linewidth vs Y current")
+    fl.next("Energy vs Y current")
     ax_energy = plt.gca()
     fl.plot(energy_nd, "o-", ax=ax_energy, label="energy")
     ax_energy.set_ylabel("energy")
-    ax_linewidth = ax_energy.twinx()
-    fl.plot(
-        linewidth_nd,
-        "s-",
-        ax=ax_linewidth,
-        color="orange",
-        label="FWHM",
-    )
-    ax_linewidth.set_ylabel("FWHM / Hz")
     ax_energy.legend(loc="upper left")
-    ax_linewidth.legend(loc="upper right")
     fl.show()
 # }}}
