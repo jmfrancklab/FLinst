@@ -15,7 +15,12 @@ tau_us:
   description: |-
     extra delay added between 90° and 180° pulse -- note this is not the same as τ_echo!
     see eq 6 of coherence paper
-deblank_us:
+shim_y_current_A:
+  type: float
+  section: acq_params
+  default: 0.60
+  description: |-
+    Current running through the Y shim coil in A to get the minimum linewidth.
   type: float
   section: acq_params
   default: null
