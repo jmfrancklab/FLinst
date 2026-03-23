@@ -32,7 +32,7 @@ settle_s = 2.0
 set_B_field = False
 auto_adc_offset = False
 filter_timeconst = 4e-3
-slicing = True
+slicing = False
 # }}}
 
 
