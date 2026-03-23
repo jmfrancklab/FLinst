@@ -1,5 +1,4 @@
 from pyspecdata import figlist_var, nddata, find_file
-from numpy import r_
 import numpy as np
 import matplotlib.pyplot as plt
 import pyspecProcScripts as prscr
