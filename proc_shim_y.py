@@ -1,8 +1,9 @@
-from pyspecdata import figlist_var, nddata
+from pyspecdata import figlist_var, nddata, find_file
 from numpy import r_
 import numpy as np
-import SpinCore_pp
+import matplotlib.pyplot as plt
 import pyspecProcScripts as prscr
+from pyspecProcScripts.load_data import proc_spincore_generalproc_v1
 
 
 def fwhm(trace):
@@ -42,26 +43,28 @@ def integrate_energy(trace, left_lim, right_lim):
     mask = np.logical_and(x >= left_lim, x <= right_lim)
     if not mask.any():
         return 0.0
-    return np.trapz(y[mask], x[mask])
+    return np.trapezoid(y[mask], x[mask])
 
 
-filter_timeconst = 10e-3
+filter_timeconst = 4e-3
+slicing = True
+my_lookup = dict(prscr.lookup_table)
+my_lookup["spincore_SE_v2"] = proc_spincore_generalproc_v1
 
 # {{{ choose file manually
 thisfile, exptype, nodename = (
-    "260107_hydroxytempo_ODNP_1.h5",
+    "260319_hydroxytempo_shim_y.h5",
     "ODNP_NMR_comp/Echoes",
-    "shim_y",
+    "shim_y_1",
 )
 # }}}
 
 with figlist_var() as fl:
-    config_dict = SpinCore_pp.configuration("active.ini")
     data = find_file(
         thisfile,
         exp_type=exptype,
         expno=nodename,
-        lookup=prscr.lookup_table,
+        lookup=my_lookup,
     )
     assert data.get_units("t2") is not None, (
         "bad data file! units of s for t2 should be stored in nddata!"
@@ -69,11 +72,13 @@ with figlist_var() as fl:
     for_plot = data.C
     if "nScans" in for_plot.dimlabels:
         for_plot.mean("nScans")
-    for_plot.ft("ph1", unitary=True)
+    if not for_plot.get_ft_prop("ph1"):
+        for_plot.ft("ph1", unitary=True)
     signal = for_plot["ph1", 1].C
     signal.ift("t2")
+    acq_params = signal.get_prop("acq_params")
     signal *= np.exp(
-        -abs(signal.fromaxis("t2") - config_dict["tau_us"] * 1e-6)
+        -abs(signal.fromaxis("t2") - acq_params["tau_us"] * 1e-6)
         / filter_timeconst
     )
     for j in range(len(signal.getaxis("y_current"))):
@@ -87,8 +92,9 @@ with figlist_var() as fl:
         if abs(phase_ref) > 0:
             this_fid /= phase_ref / abs(phase_ref)
         signal["y_current", j].data[:] = this_fid
-    signal.ft("t2", shift=True)
-
+    signal.ft("t2", shift=False)
+    if slicing:
+        signal = signal["t2" : (-8e3, 8e3)]
     linewidth = np.zeros(len(signal.getaxis("y_current")))
     peak_position = np.zeros(len(signal.getaxis("y_current")))
     left_edge = np.zeros(len(signal.getaxis("y_current")))
@@ -121,17 +127,41 @@ with figlist_var() as fl:
 
     signal_for_plot = abs(signal).C
     signal_for_plot.setaxis("t2", lambda x: x / 1e3).set_units("t2", "kHz")
+    signal_for_plot.setaxis(
+        "y_current", signal.getaxis("y_current")
+    ).set_units("y_current", "A")
     energy_nd = nddata(energy, "y_current")
     energy_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
         "y_current", "A"
     )
-    linewidth_nd = nddata(linewidth / 1e3, "y_current")
+    linewidth_nd = nddata(linewidth, "y_current")
     linewidth_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
         "y_current", "A"
     )
 
     fl.next("Raw DCCT")
-    fl.image(signal_for_plot)
-    fl.next("Energy and FWHM linewidth vs Y current", legend=True)
-    fl.plot(energy_nd, "o-", label="energy")
-    fl.plot(linewidth_nd, "s-", label="FWHM / kHz")
+    ax_dcct = plt.gca()
+    fl.image(signal_for_plot, ax=ax_dcct, human_units=False)
+    y_current_vals = signal.getaxis("y_current")
+    y_tick_idx = np.linspace(
+        0, len(y_current_vals) - 1, min(6, len(y_current_vals)), dtype=int
+    )
+    ax_dcct.set_yticks(y_tick_idx)
+    ax_dcct.set_yticklabels([f"{y_current_vals[j]:0.2f}" for j in y_tick_idx])
+    ax_dcct.set_ylabel("Y current / A")
+
+    fl.next("Energy and FWHM linewidth vs Y current")
+    ax_energy = plt.gca()
+    fl.plot(energy_nd, "o-", ax=ax_energy, label="energy")
+    ax_energy.set_ylabel("energy")
+    ax_linewidth = ax_energy.twinx()
+    fl.plot(
+        linewidth_nd,
+        "s-",
+        ax=ax_linewidth,
+        color="orange",
+        label="FWHM",
+    )
+    ax_linewidth.set_ylabel("FWHM / Hz")
+    ax_energy.legend(loc="upper left")
+    ax_linewidth.legend(loc="upper right")
