@@ -6,6 +6,8 @@ Acquire a series of spin echoes while stepping the Y shim current.
 The saved dataset can then be processed to determine the best Y shim.
 """
 
+# TODO ☐: this belongs in examples, not here
+
 from pyspecdata import getDATADIR, figlist_var, nddata
 from numpy import r_
 import os
@@ -34,6 +36,9 @@ slicing = True
 # }}}
 
 
+# TODO ☐: this looks a bit like GPT slop to me -- I hesitate to say that
+#         unless it's hand-written, but there is a really
+#         straightforward way of doing this, so we'll discuss.
 def fwhm(trace):
     x = trace.getaxis("t2")
     y = abs(trace.data)
@@ -310,6 +315,8 @@ linewidth_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
     "y_current", "A"
 )
 
+# TODO ☐: you really need to separate your acquisition scripts from your
+#         processing scripts.  There are many reasons to do that.
 with figlist_var() as fl:
     fl.next("Raw DCCT")
     ax_dcct = plt.gca()
