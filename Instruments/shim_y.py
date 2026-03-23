@@ -11,6 +11,7 @@ from numpy import r_
 import os
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals
 from SpinCore_pp.ppg import run_spin_echo
@@ -28,7 +29,8 @@ y_voltage_limit = 15.0
 settle_s = 2.0
 set_B_field = False
 auto_adc_offset = False
-filter_timeconst = 10e-3
+filter_timeconst = 4e-3
+slicing = True
 # }}}
 
 
@@ -69,7 +71,7 @@ def integrate_energy(trace, left_lim, right_lim):
     mask = np.logical_and(x >= left_lim, x <= right_lim)
     if not mask.any():
         return 0.0
-    return np.trapz(y[mask], x[mask])
+    return np.trapezoid(y[mask], x[mask])
 
 
 # {{{ importing acquisition parameters
@@ -164,9 +166,9 @@ with (
     print("acquiring at Y currents:", y_current_list)
     HP1.V_limit[Y_channel] = y_voltage_limit
     HP1.I_limit[Y_channel] = 0
+    HP1.output[Y_channel] = 1
     for idx, this_current in enumerate(y_current_list):
         HP1.I_limit[Y_channel] = this_current
-        HP1.output[Y_channel] = 1
         print(
             "set Y shim to",
             HP1.I_limit[Y_channel],
@@ -239,13 +241,15 @@ config_dict.write()
 
 # {{{ process and plot
 for_plot = data.C
-if config_dict["nScans"] > 1:
+if "nScans" in for_plot.dimlabels:
     for_plot.mean("nScans")
-for_plot.ft("ph1", unitary=True)
+if not for_plot.get_ft_prop("ph1"):
+    for_plot.ft("ph1", unitary=True)
 signal = for_plot["ph1", 1].C
 signal.ift("t2")
+acq_params = signal.get_prop("acq_params")
 signal *= np.exp(
-    -abs(signal.fromaxis("t2") - config_dict["tau_us"] * 1e-6)
+    -abs(signal.fromaxis("t2") - acq_params["tau_us"] * 1e-6)
     / filter_timeconst
 )
 # {{{ Zero phasing and FID slicing
@@ -258,7 +262,9 @@ for j in range(len(y_current_list)):
     if abs(phase_ref) > 0:
         this_fid /= phase_ref / abs(phase_ref)
     signal["y_current", j].data[:] = this_fid
-signal.ft("t2", shift=True)
+signal.ft("t2", shift=False)
+if slicing:
+    signal = signal["t2" : (-8e3, 8e3)]
 # }}}
 # {{{ Calculate FWHM  each Y current, using the same
 # frequency range for energy integration
@@ -292,16 +298,44 @@ print("best Y current based on energy is", y_current_list[best_idx], "A")
 
 signal_for_plot = abs(signal).C
 signal_for_plot.setaxis("t2", lambda x: x / 1e3).set_units("t2", "kHz")
+signal_for_plot.setaxis("y_current", signal.getaxis("y_current")).set_units(
+    "y_current", "A"
+)
 energy_nd = nddata(energy, "y_current")
-energy_nd.setaxis("y_current", y_current_list).set_units("y_current", "A")
-linewidth_nd = nddata(linewidth / 1e3, "y_current")
-linewidth_nd.setaxis("y_current", y_current_list).set_units("y_current", "A")
+energy_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
+    "y_current", "A"
+)
+linewidth_nd = nddata(linewidth, "y_current")
+linewidth_nd.setaxis("y_current", signal.getaxis("y_current")).set_units(
+    "y_current", "A"
+)
 
 with figlist_var() as fl:
     fl.next("Raw DCCT")
-    fl.image(signal_for_plot)
-    fl.next("Energy and FWHM linewidth vs Y current", legend=True)
-    fl.plot(energy_nd, "o-", label="energy")
-    fl.plot(linewidth_nd, "s-", label="FWHM / kHz")
+    ax_dcct = plt.gca()
+    fl.image(signal_for_plot, ax=ax_dcct, human_units=False)
+    y_current_vals = signal.getaxis("y_current")
+    y_tick_idx = np.linspace(
+        0, len(y_current_vals) - 1, min(6, len(y_current_vals)), dtype=int
+    )
+    ax_dcct.set_yticks(y_tick_idx)
+    ax_dcct.set_yticklabels([f"{y_current_vals[j]:0.2f}" for j in y_tick_idx])
+    ax_dcct.set_ylabel("Y current / A")
+
+    fl.next("Energy and FWHM linewidth vs Y current")
+    ax_energy = plt.gca()
+    fl.plot(energy_nd, "o-", ax=ax_energy, label="energy")
+    ax_energy.set_ylabel("energy")
+    ax_linewidth = ax_energy.twinx()
+    fl.plot(
+        linewidth_nd,
+        "s-",
+        ax=ax_linewidth,
+        color="orange",
+        label="FWHM",
+    )
+    ax_linewidth.set_ylabel("FWHM / Hz")
+    ax_energy.legend(loc="upper left")
+    ax_linewidth.legend(loc="upper right")
     fl.show()
 # }}}
