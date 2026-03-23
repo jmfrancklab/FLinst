@@ -86,7 +86,6 @@ py.install_sources(files([
     'Instruments/version.py',
     'Instruments/cmd.py',
     'Instruments/HP6623A.py',
-    'Instruments/shim_y.py',
     'Instruments/gpib_eth.py',
     'Instruments/power_control_server_dummy.py',
     'Instruments/channel_property.py',
