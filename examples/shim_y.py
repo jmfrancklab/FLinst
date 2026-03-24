@@ -25,13 +25,7 @@ assert os.path.exists(getDATADIR(exp_type=my_exp_type))
 config_dict = SpinCore_pp.configuration("active.ini")
 
 # {{{ user settings
-# TODO ☐: I actually think you want a string like this in your active.ini:
-#         shim_addr: "{"Y1":(12,0), "Z2":(12,1)}".
-#         You can eval this into a dictionary -- where the
-#         first in the pair is the gpib address and the second is the channel
-#         index.  You should also have the voltage limit (same for all
-#         channels, simple float) set there as well.
-Y_channel = 1
+Y_channel = config_dict["shim_address"]["Y"][1]
 y_current_max = (
     1.5  # this is set only in this script, since it doesn't pertain
 )
@@ -103,7 +97,7 @@ with (
     ) as p,
     HP6623A(
         prologix_instance=p,
-        address=config_dict["HP1_address"],
+        address=config_dict["shim_address"]["Y"][0],
     ) as HP1,
 ):
     HP1.safe_current = 1.6
