@@ -30,13 +30,15 @@ assert os.path.exists(getDATADIR(exp_type=my_exp_type))
 #         index.  You should also have the voltage limit (same for all
 #         channels, simple float) set there as well.
 Y_channel = 1
-y_current_max = 1.5 # this is set only in this script, since it doesn't pertain
+y_current_max = (
+    1.5  # this is set only in this script, since it doesn't pertain
+)
 #                     to anything else
 y_voltage_limit = 15.0
 # TODO ☐: the following should be one of your magnet settle settings from
 #         active.ini, or make a new one for shims
 settle_s = 2.0
-set_B_field = False # this is also particular to this script
+set_B_field = False  # this is also particular to this script
 # }}}
 
 # {{{ importing acquisition parameters
@@ -158,7 +160,7 @@ if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
 data.reorder(["nScans", "ph1", "y_current", "t2"])
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "proc_spincore_generalproc_v1")
+data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 # TODO ☐: most or all of the following can replaced with a simple call
