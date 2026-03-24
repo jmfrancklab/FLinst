@@ -23,12 +23,20 @@ my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
 
 # {{{ user settings
+# TODO ☐: I actually think you want a string like this in your active.ini:
+#         shim_addr: "{"Y1":(12,0), "Z2":(12,1)}".
+#         You can eval this into a dictionary -- where the
+#         first in the pair is the gpib address and the second is the channel
+#         index.  You should also have the voltage limit (same for all
+#         channels, simple float) set there as well.
 Y_channel = 1
-y_current_max = 1.5
+y_current_max = 1.5 # this is set only in this script, since it doesn't pertain
+#                     to anything else
 y_voltage_limit = 15.0
+# TODO ☐: the following should be one of your magnet settle settings from
+#         active.ini, or make a new one for shims
 settle_s = 2.0
-set_B_field = False
-auto_adc_offset = False
+set_B_field = False # this is also particular to this script
 # }}}
 
 # {{{ importing acquisition parameters
@@ -64,26 +72,6 @@ assert total_pts < 2**14, (
     "\nyou could try reducing the acq_time_ms to %f"
     % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
 )
-# }}}
-
-# {{{ optionally remeasure adc offset
-if auto_adc_offset:
-    print("adc was ", config_dict["adc_offset"], end=" and ")
-    counter = 0
-    first = True
-    result1 = result2 = result3 = None
-    while first or not (result1 == result2 == result3):
-        first = False
-        result1 = SpinCore_pp.adc_offset()
-        time.sleep(0.1)
-        result2 = SpinCore_pp.adc_offset()
-        time.sleep(0.1)
-        result3 = SpinCore_pp.adc_offset()
-        if counter > 20:
-            raise RuntimeError("after 20 tries, I can't stabilize ADC")
-        counter += 1
-    config_dict["adc_offset"] = result3
-    print("adc determined to be:", config_dict["adc_offset"])
 # }}}
 
 # {{{ set field
@@ -173,6 +161,8 @@ data.set_units("t2", "s")
 data.set_prop("postproc_type", "proc_spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
+# TODO ☐: most or all of the following can replaced with a simple call
+#         to the save_data function
 data.name(config_dict["type"] + "_" + str(config_dict["shim_y_counter"]))
 target_directory = getDATADIR(exp_type=my_exp_type)
 filename_out = filename + ".h5"
