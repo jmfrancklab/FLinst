@@ -6,21 +6,18 @@ Acquire a series of spin echoes while stepping the Y shim current.
 The saved dataset can then be processed to determine the best Y shim.
 """
 
-from pyspecdata import getDATADIR, figlist_var, nddata
+import pyspecdata as psd
 from numpy import r_
 import os
 import time
-import numpy as np
-import matplotlib.pyplot as plt
 import SpinCore_pp
-from SpinCore_pp import get_integer_sampling_intervals
+from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 from Instruments import HP6623A, prologix_connection, power_control
 from datetime import datetime
-import h5py
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
-assert os.path.exists(getDATADIR(exp_type=my_exp_type))
+assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 
 config_dict = SpinCore_pp.configuration("active.ini")
 
@@ -36,7 +33,6 @@ set_B_field = False  # this is also particular to this script
 # }}}
 
 # {{{ importing acquisition parameters
-config_dict = SpinCore_pp.configuration("active.ini")
 (
     nPoints,
     config_dict["SW_kHz"],
@@ -157,30 +153,6 @@ data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
-# TODO ☐: most or all of the following can replaced with a simple call
-#         to the save_data function
-data.name(config_dict["type"] + "_" + str(config_dict["shim_y_counter"]))
-target_directory = getDATADIR(exp_type=my_exp_type)
-filename_out = filename + ".h5"
-nodename = config_dict["type"]
-if os.path.exists(f"{target_directory}{filename_out}"):
-    print("this file already exists so we will add a node to it!")
-    with h5py.File(
-        os.path.normpath(os.path.join(target_directory, f"{filename_out}"))
-    ) as fp:
-        while nodename in fp.keys():
-            config_dict["shim_y_counter"] += 1
-            nodename = (
-                config_dict["type"] + "_" + str(config_dict["shim_y_counter"])
-            )
-        data.name(nodename)
-data.hdf5_write(f"{filename_out}", directory=target_directory)
-print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
-print(
-    "saved data to (node, file, exp_type):",
-    data.name(),
-    filename_out,
-    my_exp_type,
-)
+config_dict = save_data(data, my_exp_type, config_dict, "shim_y_counter")
 config_dict.write()
 # }}}
