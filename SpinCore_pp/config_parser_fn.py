@@ -1,6 +1,6 @@
 import configparser
 import importlib.resources as resources
-
+import ast
 import yaml
 
 
@@ -10,7 +10,12 @@ class configuration(object):
     # yaml file so wheels and zips can read the data reliably.
     yaml_path = resources.files(__package__).joinpath("config_params.yaml")
     with resources.as_file(yaml_path) as registered_params_source:
-        type_lookup = {"float": float, "int": int, "str": str, "dict": eval}
+        type_lookup = {
+            "float": float,
+            "int": int,
+            "str": str,
+            "dict": ast.literal_eval,
+        }
         with open(
             registered_params_source, "r", encoding="utf-8"
         ) as param_file:
