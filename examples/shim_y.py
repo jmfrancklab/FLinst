@@ -6,8 +6,6 @@ Acquire a series of spin echoes while stepping the Y shim current.
 The saved dataset can then be processed to determine the best Y shim.
 """
 
-# TODO ☐: this belongs in examples, not here
-
 from pyspecdata import getDATADIR, figlist_var, nddata
 from numpy import r_
 import os
