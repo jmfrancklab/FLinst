@@ -184,7 +184,7 @@ if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
 data.reorder(["nScans", "ph1", "y_current", "t2"])
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "spincore_SE_v2")
+data.set_prop("postproc_type", "proc_spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 data.name(config_dict["type"] + "_" + str(config_dict["shim_y_counter"]))
