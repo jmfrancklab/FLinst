@@ -22,6 +22,8 @@ import h5py
 my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
 
+config_dict = SpinCore_pp.configuration("active.ini")
+
 # {{{ user settings
 # TODO ☐: I actually think you want a string like this in your active.ini:
 #         shim_addr: "{"Y1":(12,0), "Z2":(12,1)}".
@@ -35,9 +37,7 @@ y_current_max = (
 )
 #                     to anything else
 y_voltage_limit = 15.0
-# TODO ☐: the following should be one of your magnet settle settings from
-#         active.ini, or make a new one for shims
-settle_s = 2.0
+settle_s = config_dict["magnet_settle_medium"]
 set_B_field = False  # this is also particular to this script
 # }}}
 
