@@ -21,6 +21,7 @@ shim_y_current_A:
   default: 0.60
   description: |-
     Current running through the Y shim coil in A to get the minimum linewidth.
+deblank_us:    
   type: float
   section: acq_params
   default: null
