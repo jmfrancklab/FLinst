@@ -1,21 +1,11 @@
+from pylab import *
 from .gpib_eth import gpib_eth
 from .log_inst import logger
-from .channel_property import channel_property
-import time
-import numpy as np
 
 
 class HP6623A(gpib_eth):
     def __init__(self, prologix_instance=None, address=None):
-        r"""Initialize a new `HP6623A` power supply instance.
-
-        Parameters
-        ==========
-        prologix_instance : prologix_connection
-            Active Prologix Ethernet-GPIB connection.
-        address : int
-            GPIB address of the HP6623A.
-        """
+        r"""initialize a new `HP6623A` power supply class"""
         super().__init__(prologix_instance, address)
         # {{{ track the set of actual observed values,
         # in case we need to adjust the allowed values, below
@@ -172,22 +162,12 @@ class HP6623A(gpib_eth):
         ch : int
             Channel 1, 2, or 3
         val : float
-            Voltage you want to set in Volts.
-            Channel 1:
-                0.006 V of resolution
-                0 to 7.07 V -- 0.08 to 5.15 A
-                0 to 20.2 V -- 0.08 to 2.06 A
-            Channel 2:
-                0.006 V of resolution
-                0 to 7.07 V -- 0.13 to 10.30 A
-                0 to 20.2 V -- 0.13 to 4.12 A
-            Channel 3:
-                0.015 V of resolution
-                0 to 20.2 V -- 0.05 to 2.06 A
-                0 to 50.5 V -- 0.05 to 0.824 A
+            Voltage you want to set in Volts; check manual for limits on each
+            channel.
         Returns
         =======
         None
+
         """
         self.write("VSET %s,%s" % (self._GPIB_index(ch), str(val)))
         if val != 0.0:
@@ -222,19 +202,7 @@ class HP6623A(gpib_eth):
         ch : int
             Channel 1, 2, or 3
         val : float
-            Current you want to set in Amps.
-            Channel 1:
-                0.025 A of resolution
-                0 to 7.07 V -- 0.08 to 5.15 A
-                0 to 20.2 V -- 0.08 to 2.06 A
-            Channel 2:
-                0.050 A of resolution
-                0 to 7.07 V -- 0.13 to 10.30 A
-                0 to 20.2 V -- 0.13 to 4.12 A
-            Channel 3:
-                0.010 A of resolution
-                0 to 20.2 V -- 0.05 to 2.06 A
-                0 to 50.5 V -- 0.05 to 0.824 A
+            Current you want to set in Amps; check manual for limits on each channel.
         Returns
         =======
         None

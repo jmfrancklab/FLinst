@@ -67,6 +67,7 @@ def main():
                 this_logobj.add(
                     Rx=b.rxpowerdbm_float(),
                     power=g.read_power(),
+                    field=h.field_in_G,
                     cmd=cmd,
                 )
             args = cmd.split(b" ")
@@ -276,4 +277,5 @@ def main():
                         this_logobj.add(
                             Rx=b.rxpowerdbm_float(),
                             power=g.read_power(),
+                            field=h.field_in_G,
                         )

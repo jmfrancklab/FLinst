@@ -31,6 +31,7 @@ from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import power_control
 from datetime import datetime
 
+
 def IR_measurement(
     vd_list_us,
     nPoints,
@@ -104,6 +105,7 @@ def IR_measurement(
     print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(("Name of saved data", vd_data.name()))
     return
+
 
 final_log = []
 
