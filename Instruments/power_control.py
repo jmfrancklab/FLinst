@@ -134,6 +134,15 @@ class power_control(object):
         self.send("SET_FREQ %f" % freq)
         return
 
+    def set_shim_current(self, shim_name, current_A):
+        """Sets the shim current of the specified shim channel.  The shim_name
+        should be one of the keys in the config_dict["shim_channels"] dict, and
+        the current_A should be a float specifying the current in Amps."""
+        self.send("SET_SHIM_CURRENT %s %f" % (shim_name, current_A))
+        retval = self.get()
+        retval = float(retval)
+        return retval
+
     def set_power(self, dBm):
         "Sets the power of the Bridge12"
         self.send("SET_POWER %0.2f" % dBm)
@@ -154,6 +163,12 @@ class power_control(object):
 
     def get_field(self):
         self.send("GET_FIELD")
+        retval = self.get()
+        retval = float(retval)
+        return retval
+
+    def get_shim_current(self, shim_name):
+        self.send("GET_SHIM_CURRENT %s" % shim_name)
         retval = self.get()
         retval = float(retval)
         return retval
