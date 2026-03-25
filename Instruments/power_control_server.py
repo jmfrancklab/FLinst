@@ -53,7 +53,8 @@ def main():
             address=config_dict["HP1_address"],
         ) as HP1,
     ):
-        HP1.V_limit[config_dict["Z0_channel"]] = 15.0
+        HP1.V_limit[config_dict["shim_address"]["Z0"][1]] = 15.0
+        HP1.V_limit[config_dict["shim_address"]["Y"][1]] = 15.0
         HP1.safe_current = 1.8
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))
@@ -72,23 +73,32 @@ def main():
             args = cmd.split(b" ")
             print("I split it to ", args)
             if len(args) == 3:
-                if args[0] == b"DIP_LOCK":
-                    freq1 = float(args[1])
-                    freq2 = float(args[2])
-                    _, _, min_f = b.lock_on_dip(
-                        ini_range=(
-                            freq1 * 1e9,
-                            freq2 * 1e9,
+                match args[0]:
+                    case b"DIP_LOCK":
+                        freq1 = float(args[1])
+                        freq2 = float(args[2])
+                        _, _, min_f = b.lock_on_dip(
+                            ini_range=(
+                                freq1 * 1e9,
+                                freq2 * 1e9,
+                            )
                         )
-                    )
-                    b.set_freq(min_f)
-                    min_f = float(b.freq_int()) * 1e3
-                    conn.send(("%0.6f" % min_f).encode("ASCII"))
-                    this_logobj.wg_has_been_flipped = True
-                else:
-                    raise ValueError(
-                        "I don't understand this 3 component command"
-                    )
+                        b.set_freq(min_f)
+                        min_f = float(b.freq_int()) * 1e3
+                        conn.send(("%0.6f" % min_f).encode("ASCII"))
+                        this_logobj.wg_has_been_flipped = True
+                    case b"SET_SHIM":
+                        shim_name = args[1].decode("ASCII")
+                        current_A = float(args[2])
+                        channel = config_dict["shim_channels"][shim_name][1]
+                        if not HP1.output[channel] and current_A != 0:
+                            HP1.I_limit[channel] = 0
+                            HP1.output[channel] = 1
+                        HP1.I_limit[channel] = HP1.round_to_allowed(current_A)
+                    case _:
+                        raise ValueError(
+                            "I don't understand this 3 component command"
+                        )
             if len(args) == 2:
                 match args[0]:
                     case b"SET_POWER":
