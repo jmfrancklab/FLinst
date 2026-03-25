@@ -28,10 +28,10 @@ def my_preproc(x):
 
 my_lookup = dict(prscr.lookup_table)
 
-this_expno = "shim_y_6"
+this_expno = "shim_y_0"
 d = find_file(
     f"260324_hydroxytempo_{this_expno}.*h5",
-    exp_type="B27/Echoes",
+    exp_type="ODNP_NMR_comp/Echoes",
     expno=this_expno,  # when I leave out expno, it gives me an error that
     # lists all the nodes
     lookup=my_lookup,

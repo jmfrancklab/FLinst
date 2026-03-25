@@ -1,6 +1,5 @@
 import configparser
 import importlib.resources as resources
-import ast
 import yaml
 
 
@@ -14,7 +13,7 @@ class configuration(object):
             "float": float,
             "int": int,
             "str": str,
-            "dict": ast.literal_eval,
+            "dict": eval,
         }
         with open(
             registered_params_source, "r", encoding="utf-8"
