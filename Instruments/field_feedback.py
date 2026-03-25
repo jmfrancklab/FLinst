@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 
-def adjust_field(B0_des_G, config_dict, h, gen):
+def adjust_main_field(B0_des_G, config_dict, h, gen):
     """Adjust the current setting to achieve the desired B0 field.
 
     Use the actual measured field to scale the current_v_field_A_G
@@ -38,7 +38,17 @@ def adjust_field(B0_des_G, config_dict, h, gen):
     gen.I_limit = I_setting
 
 
-def ramp_field(B0_des_G, config_dict, h, gen):
+def ramp_field(
+    B0_des_G,
+    config_dict,
+    h,
+    gen,
+    HP1,
+    settling_attempts=60,
+    main_field_threshold_G=2.0,
+    Z0_min_current_A=0,
+    Z0_max_current_A=1.5,
+):
     """Ramp the field from where we are to where we want to be.
 
     **If we start at 0**: Calibrate the zero-point of the hall sensor
@@ -57,6 +67,19 @@ def ramp_field(B0_des_G, config_dict, h, gen):
     gen : object
         Genesys power supply object with output, V_limit, I_limit, and I_meas
         properties.
+    settling_attempts: int (default 60)
+        How many times should we attempt to observe a stable field.
+    main_field_threshold_G: float (default 2.0)
+        If the field discrepancy is above this threshold, we consider it a
+        "main field" discrepancy and adjust the main field.  Otherwise, we
+        consider it a "Z0" discrepancy and adjust Z0.
+    Z0_min_current_A: float (default 0)
+        The minimum current we allow for the Z0 shim coil (right now limited by
+        unipolar source).  If the desired Z0 current is outside this range, we
+        adjust the main field instead.
+    Z0_max_current_A: float (default 1.5)
+        The maximum current we allow for the Z0 shim coil.  If the desired Z0
+        current is outside this range, we adjust the main field instead.
     """
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     # {{{ First, we ramp from whatever
@@ -82,9 +105,17 @@ def ramp_field(B0_des_G, config_dict, h, gen):
     temp_I_meas = gen.I_meas
     ramp_steps = int(abs(I_setting - temp_I_meas) * 2)
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
-    for I in np.linspace(temp_I_meas, I_setting, ramp_steps):
-        gen.I_limit = I
+    for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
+        gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
+    if B0_des_G == 0:
+        HP1.I_limit[config_dict["Z0_channel"]] = 0
+        HP1.output[config_dict["Z0_channel"]] = 0
+        logging.info("Z0 Shim is off")
+        gen.I_limit = 0
+        gen.output = False
+        logging.info("The PS is off.")
+        return h.field_in_G
     if ramp_steps > 4:
         time.sleep(config_dict["magnet_settle_long"])
     # }}}
@@ -95,7 +126,7 @@ def ramp_field(B0_des_G, config_dict, h, gen):
     #     within 0.8 G of our desired
     #     value
     num_field_matches = 0
-    for j in range(30):
+    for j in range(settling_attempts):
         time.sleep(config_dict["magnet_settle_short"])
         field_discrepancy = abs(h.field_in_G - B0_des_G)
         if field_discrepancy > 2.0:
@@ -115,10 +146,9 @@ def ramp_field(B0_des_G, config_dict, h, gen):
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            (B0_des_G < 20 and field_discrepancy > 5)
-            or (B0_des_G >= 20 and field_discrepancy > 0.8)
+            field_discrepancy > main_field_threshold_G
         ):
-            adjust_field(
+            adjust_main_field(
                 B0_des_G,
                 config_dict,
                 h,
@@ -126,28 +156,80 @@ def ramp_field(B0_des_G, config_dict, h, gen):
             )
             num_field_matches = 0
         else:
-            # if it's not within tolerance, and it's not asking for a big
-            # step, then it's asking for an intermediate step
-            logging.info(
-                "You are trying to adjust the field in an intermediate region."
-                "This will be handled by shimstack later. I am leaving field "
-                "as is."
+            # {{{ if it's not within tolerance, and it's not asking for a big
+            #     step, then it's asking for an intermediate step
+            #     so we need to adjust the Z0 field.
+            assert (
+                HP1.V_limit[config_dict["Z0_channel"]] > 14.0
+                and hasattr(HP1, "safe_current")
+                and HP1.safe_current < 1.81
+            ), (
+                "The Z0 channel wasn't properly set up!!."
+                "  This is the fault of the containing program"
             )
-            num_field_matches += 1
-            if num_field_matches > 2:
-                break
+            # {{{ the desired current is the combination of the change we want
+            #     to make and the current that's running through Z0 before the
+            #     change (and we want to save the latter)
+            desired_Z0_current_A = (B0_des_G - h.field_in_G) / config_dict[
+                "z0_field_v_current_G_A"
+            ]
+            Z0_initial_current_A = HP1.I_read[config_dict["Z0_channel"]]
+            desired_Z0_current_A += Z0_initial_current_A
+            # }}}
+            # {{{ we can only use Z0 to increase the current, and we don't want
+            #     to ask for an unreasonable current
+            if desired_Z0_current_A < Z0_min_current_A:
+                adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
+            elif desired_Z0_current_A > Z0_max_current_A:
+                adjust_main_field(B0_des_G, config_dict, h, gen)
+            # }}}
+            HP1.I_limit[config_dict["Z0_channel"]] = HP1.round_to_allowed(
+                "I", 0, desired_Z0_current_A
+            )
+            if (
+                HP1.I_read[config_dict["Z0_channel"]] - Z0_initial_current_A
+            ) != 0:
+                # {{{ Check if the field is stabilizing
+                num_field_matches = 0
+                B0_last_G = 0
+                for j in range(settling_attempts):
+                    time.sleep(config_dict["magnet_settle_short"])
+                    B0_now_G = h.field_in_G
+                    field_discrepancy = abs(B0_now_G - B0_last_G)
+                    if (
+                        field_discrepancy
+                        < config_dict["tolerance_Hz"]
+                        * 1e-6
+                        / config_dict["gamma_eff_mhz_g"]
+                    ):
+                        num_field_matches += 1
+                    else:
+                        B0_last_G = B0_now_G
+                        num_field_matches = 0
+                    if num_field_matches > 2:
+                        break
+                if not (num_field_matches > 2):
+                    print(
+                        " ".join(
+                            ["WARNING! "] * 3 + ["field is not stabilizing!"]
+                        )
+                    )
+                # }}}
+            # }}}
+            num_field_matches = 0
+
     if num_field_matches < 3:
+        temp = (
+            config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
+        )
+
         raise RuntimeError(
-            "I tried 30 times to get my"
-            " field to match within 0.8 G"
-            " three times in a row, and it"
-            " didn't work!"
+            f"I tried {settling_attempts} times to get my"
+            f" field to match within {temp} G"
+            f" or {config_dict['tolerance_Hz']} Hz three times"
+            "in a row, and it didn't work!"
         )
     # }}}
-    if B0_des_G < 20:
-        gen.I_limit = 0
-        gen.output = False
-        logging.info("The PS is off.")
     true_B0_G = h.field_in_G
     logging.debug(
         "Your field is"

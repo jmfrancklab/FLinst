@@ -28,7 +28,7 @@ SW_kHz:
 tolerance_Hz:
   type: float
   section: acq_params
-  default: 10.0
+  default: 440.0
   description: |
     How close to our target field is good enough, assuming we are able to
     adjust our field with arbitrary precision
@@ -59,7 +59,7 @@ current_v_field_A_G:
   type: float
   section: acq_params
   default: null
-  description: Ratio of the current to corresponding magnetic field in G.
+  description: Ratio of the current to corresponding magnetic field in G for the Genesy PS.
 carrierFreq_MHz:
   type: float
   section: acq_params
@@ -193,6 +193,29 @@ adc_offset:
   description: |-
     SpinCore-specific ADC offset correction
     we believe this is a DC offset, but are not positive
+z0_field_v_current_G_A:
+  type: float
+  section: acq_params
+  default: 1.57
+  description: |-
+    the ratio of the field to the current at the center of the Z0 shim, in G/A
+HP1_address:
+  type: int
+  section: network_params
+  default: 3
+  description: |
+    Connection address of the HP1 power supply.  This one must have the
+    Z0 coil.
+Z0_channel:
+  type: int
+  section: network_params
+  default: 0
+  description: The channel of the Z0 coil.
+HP2_address:
+  type: int
+  section: network_params
+  default: 5
+  description: Connection address of the HP2 power supply
 magnet_settle_long:
   type: float
   section: current_params
@@ -218,6 +241,16 @@ genesys_ip:
   section: network_params
   default: 192.168.0.199
   description: IP address of the genesys PS connection
+prologix_ip:
+  type: str
+  section: network_params
+  default: 192.168.0.162
+  description: IP address of the prologix connection
+prologix_port:
+  type: int
+  section: network_params
+  default: 1234
+  description: Port number of the prologix connection
 gigatronics_address:
   type: int
   section: network_params

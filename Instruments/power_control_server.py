@@ -7,6 +7,7 @@ from Instruments import (
     logobj,
     LakeShore475,
     genesys,
+    HP6623A,
 )
 from Instruments.field_feedback import ramp_field
 import SpinCore_pp
@@ -47,7 +48,13 @@ def main():
         ) as g,
         Bridge12() as b,
         LakeShore475(p) as h,
+        HP6623A(
+            prologix_instance=p,
+            address=config_dict["HP1_address"],
+        ) as HP1,
     ):
+        HP1.V_limit[config_dict["Z0_channel"]] = 15.0
+        HP1.safe_current = 1.8
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))
         this_logobj = logobj()
@@ -70,7 +77,10 @@ def main():
                     freq1 = float(args[1])
                     freq2 = float(args[2])
                     _, _, min_f = b.lock_on_dip(
-                        ini_range=(freq1 * 1e9, freq2 * 1e9)
+                        ini_range=(
+                            freq1 * 1e9,
+                            freq2 * 1e9,
+                        )
                     )
                     b.set_freq(min_f)
                     min_f = float(b.freq_int()) * 1e3
@@ -162,7 +172,13 @@ def main():
                         b.set_freq(float(args[1]))
                     case b"SET_FIELD":
                         B0_des_G = float(args[1])  # B in G
-                        true_B0_G = ramp_field(B0_des_G, config_dict, h, gen)
+                        true_B0_G = ramp_field(
+                            B0_des_G,
+                            config_dict,
+                            h,
+                            gen,
+                            HP1,
+                        )
                         conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case _:
                         raise ValueError(
