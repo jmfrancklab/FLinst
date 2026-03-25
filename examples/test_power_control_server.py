@@ -23,7 +23,9 @@ assert not os.path.exists("output.h5"), (
     " we're writing a fresh h5 file"
 )
 with power_control() as p:
-    p.set_field(1000)
+    p.set_field(
+        config_dict["carrierfreq_mhz"] / config_dict["gamma_eff_MHz_G"]
+    )
     p.set_power(10)
     p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
     # {{{ run a loop that should take about 50s + execution time.  Step through
@@ -37,11 +39,9 @@ with power_control() as p:
         elif j == 30:
             logger.info("set first power")
             p.set_power(10.5)
-            p.set_field(1200)
         elif j == 60:
             logger.info("set second power")
             p.set_power(12)
-            p.set_field(1500)
     this_log = p.stop_log()
     # }}}
     # p.arrange_quit()
