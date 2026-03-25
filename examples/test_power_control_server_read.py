@@ -1,10 +1,10 @@
 "Reads the output from test_power_control_server.py"
 
 import time, h5py
+from pathlib import Path
 import pylab as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.transforms as transforms
-from Instruments.logobj import logobj
 
 
 @FuncFormatter
@@ -13,10 +13,31 @@ def thetime(x, position):
     return time.strftime("%I:%M:%S %p", result)
 
 
-with h5py.File("output.h5", "r") as f:
-    thislog = logobj.from_group(f["log"])
-    read_array = thislog.total_log
-    read_dict = thislog.log_dict
+def _decode_list_node(h5group):
+    item_names = sorted(
+        (name for name in h5group.attrs if name.startswith("ITEM")),
+        key=lambda name: int(name[4:]),
+    )
+    values = []
+    for name in item_names:
+        value = h5group.attrs[name]
+        if isinstance(value, bytes):
+            value = value.decode("utf-8")
+        values.append(value)
+    return values
+
+
+output_path = Path(__file__).resolve().with_name("output.h5")
+
+with h5py.File(output_path, "r") as f:
+    log_group = f["log"]
+    read_array = log_group["array"][:]
+    read_dict = dict(
+        zip(
+            _decode_list_node(log_group["dictkeys"]),
+            _decode_list_node(log_group["dictvalues"]),
+        )
+    )
 print(read_array)
 for j in range(len(read_array)):
     thistime, thisrx, thispower, thisfield, thiscmd = read_array[j]
