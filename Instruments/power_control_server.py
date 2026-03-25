@@ -87,14 +87,19 @@ def main():
                         min_f = float(b.freq_int()) * 1e3
                         conn.send(("%0.6f" % min_f).encode("ASCII"))
                         this_logobj.wg_has_been_flipped = True
-                    case b"SET_SHIM":
+                    case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
                         current_A = float(args[2])
                         channel = config_dict["shim_channels"][shim_name][1]
                         if not HP1.output[channel] and current_A != 0:
                             HP1.I_limit[channel] = 0
                             HP1.output[channel] = 1
-                        HP1.I_limit[channel] = HP1.round_to_allowed(current_A)
+                        HP1.I_limit[channel] = HP1.round_to_allowed(
+                            "I", channel, current_A
+                        )
+                        conn.send(
+                            ("%0.2f" % HP1.I_limit[channel]).encode("ASCII")
+                        )
                     case _:
                         raise ValueError(
                             "I don't understand this 3 component command"
@@ -189,6 +194,11 @@ def main():
                             HP1,
                         )
                         conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
+                    case b"GET_SHIM_CURRENT":
+                        shim_name = args[1].decode("ASCII")
+                        channel = config_dict["shim_channels"][shim_name][1]
+                        current_A = HP1.I_read[channel]
+                        conn.send(("%0.3f" % current_A).encode("ASCII"))
                     case _:
                         raise ValueError(
                             "I don't understand this 2"
