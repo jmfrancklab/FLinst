@@ -26,9 +26,15 @@ shim_address:
 shim_y_current_A:
   type: float
   section: acq_params
-  default: 0.60
+  default: 0.22
   description: |-
     Current running through the Y shim coil in A to get the minimum linewidth.
+shim_voltage_limit_V:
+  type: float
+  section: acq_params
+  default: 15.0
+  description: |-
+    Voltage limit for the shims.
 deblank_us:    
   type: float
   section: acq_params

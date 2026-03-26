@@ -186,7 +186,11 @@ def ramp_field(
                 adjust_main_field(B0_des_G, config_dict, h, gen)
             # }}}
             HP1.I_limit[config_dict["shim_address"]["Z0"][1]] = (
-                HP1.round_to_allowed("I", 0, desired_Z0_current_A)
+                HP1.round_to_allowed(
+                    "I",
+                    config_dict["shim_address"]["Z0"][1],
+                    desired_Z0_current_A,
+                )
             )
             if (
                 HP1.I_read[config_dict["shim_address"]["Z0"][1]]

@@ -27,7 +27,6 @@ y_current_max = (
     1.5  # this is set only in this script, since it doesn't pertain
 )
 #                     to anything else
-y_voltage_limit = 15.0
 settle_s = config_dict["magnet_settle_medium"]
 set_B_field = False  # this is also particular to this script
 # }}}
@@ -104,7 +103,7 @@ with (
         "No allowed Y currents are less than or equal to y_current_max"
     )
     print("acquiring at Y currents:", y_current_list)
-    HP1.V_limit[Y_channel] = y_voltage_limit
+    HP1.V_limit[Y_channel] = config_dict["shim_voltage_limit_V"]
     HP1.I_limit[Y_channel] = 0
     HP1.output[Y_channel] = 1
     for idx, this_current in enumerate(y_current_list):
