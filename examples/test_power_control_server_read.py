@@ -25,6 +25,7 @@ for j in range(len(read_array)):
         time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(thistime)),
         thisrx,
         thispower,
+        thisfield,
         read_dict[thiscmd],
     )
 fig, (ax_Rx, ax_power, ax_field) = plt.subplots(3, 1, figsize=(10, 8))
