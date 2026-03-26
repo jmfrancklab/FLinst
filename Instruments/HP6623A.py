@@ -1,6 +1,8 @@
-from pylab import *
 from .gpib_eth import gpib_eth
 from .log_inst import logger
+from .channel_property import channel_property
+import time
+import numpy as np
 
 
 class HP6623A(gpib_eth):
