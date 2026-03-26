@@ -98,7 +98,20 @@ def main():
                             "I", channel, current_A
                         )
                         conn.send(
-                            ("%0.2f" % HP1.I_limit[channel]).encode("ASCII")
+                            ("%0.3f" % HP1.I_limit[channel]).encode("ASCII")
+                        )
+                    case b"SET_SHIM_VOLTAGE":
+                        shim_name = args[1].decode("ASCII")
+                        voltage_V = float(args[2])
+                        channel = config_dict["shim_channels"][shim_name][1]
+                        if not HP1.output[channel] and voltage_V != 0:
+                            HP1.V_limit[channel] = 0
+                            HP1.output[channel] = 1
+                        HP1.V_limit[channel] = HP1.round_to_allowed(
+                            "V", channel, voltage_V
+                        )
+                        conn.send(
+                            ("%0.3f" % HP1.V_limit[channel]).encode("ASCII")
                         )
                     case _:
                         raise ValueError(
@@ -199,6 +212,11 @@ def main():
                         channel = config_dict["shim_channels"][shim_name][1]
                         current_A = HP1.I_read[channel]
                         conn.send(("%0.3f" % current_A).encode("ASCII"))
+                    case b"GET_SHIM_VOLTAGE":
+                        shim_name = args[1].decode("ASCII")
+                        channel = config_dict["shim_channels"][shim_name][1]
+                        voltage_V = HP1.V_read[channel]
+                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case _:
                         raise ValueError(
                             "I don't understand this 2"
