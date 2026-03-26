@@ -36,12 +36,17 @@ with power_control() as p:
         if j == 0:
             logger.info("starting the log")
             p.start_log()
+            p.set_field(
+                config_dict["carrierfreq_mhz"] / config_dict["gamma_eff_MHz_G"]
+            )
         elif j == 30:
             logger.info("set first power")
             p.set_power(10.5)
+            p.set_field(3000)
         elif j == 60:
             logger.info("set second power")
             p.set_power(12)
+            p.set_field(2900)
     this_log = p.stop_log()
     # }}}
     # p.arrange_quit()
