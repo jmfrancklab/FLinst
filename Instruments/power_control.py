@@ -143,6 +143,15 @@ class power_control(object):
         retval = float(retval)
         return retval
 
+    def set_shim_voltage(self, shim_name, voltage_V):
+        """Sets the shim voltage of the specified shim channel.  The shim_name
+        should be one of the keys in the config_dict["shim_channels"] dict, and
+        the voltage_V should be a float specifying the voltage in Volts."""
+        self.send("SET_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
+        retval = self.get()
+        retval = float(retval)
+        return retval
+
     def set_power(self, dBm):
         "Sets the power of the Bridge12"
         self.send("SET_POWER %0.2f" % dBm)
@@ -169,6 +178,12 @@ class power_control(object):
 
     def get_shim_current(self, shim_name):
         self.send("GET_SHIM_CURRENT %s" % shim_name)
+        retval = self.get()
+        retval = float(retval)
+        return retval
+
+    def get_shim_voltage(self, shim_name):
+        self.send("GET_SHIM_VOLTAGE %s" % shim_name)
         retval = self.get()
         retval = float(retval)
         return retval
