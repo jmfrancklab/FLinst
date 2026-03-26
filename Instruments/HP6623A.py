@@ -122,6 +122,11 @@ class HP6623A(gpib_eth):
             ],
             np.r_[0],
         ]
+        self.allowed_V = [
+            np.r_[0],
+            np.r_[0],
+            np.r_[0],
+        ]
         # }}}
         self.min_V = [0.000, 0.002, 0.018]
         self.res_V = [0.0055, 0.0055, 0.0125]
