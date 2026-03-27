@@ -139,7 +139,6 @@ config_dict = sc.configuration("active.ini")
 config_dict["adc_offset"] = sc.adc_offset()
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "noise_200kHz"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
 # }}}
 # }}}
 print("Starting collection...")

@@ -45,7 +45,6 @@ nPhaseSteps = len(ph1_cyc)
 
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "shim_y"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
 # }}}
 
 # {{{ check total points

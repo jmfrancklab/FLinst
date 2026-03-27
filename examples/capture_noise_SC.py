@@ -133,7 +133,6 @@ assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "noise" + "_" + str(round(config_dict["SW_kHz"])) + "kHz"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
 # }}}
 # }}}
 print("Starting collection...")

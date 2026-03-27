@@ -42,7 +42,6 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "echo"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
 # }}}
 # {{{ command-line option to leave the field untouched (if you set it once, why set it again)
 adjust_field = True

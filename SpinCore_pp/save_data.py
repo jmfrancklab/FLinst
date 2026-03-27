@@ -30,10 +30,18 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
         The updated config dict after appropriately incrementing the
         counter.
     """
-    # {{{ if we didn't explicitly pass a counter type, go ahead and use the
-    #     "type" of the experiment
+    # {{{ counter and date maintenance
+    #
+    # if we didn't explicitly pass a counter type, go ahead and use the "type"
+    # of the experiment
     if counter_type is None:
         counter_type = config_dict["type"]
+    # reset ALL counters if the date has changed
+    date_now = datetime.now().strftime("%y%m%d")
+    if config_dict["date"] != date_now:
+        for k in config_dict.keys():
+            if k.endswith("_counter"):
+                config_dict[k] = 0
     # auto-increment the counter
     config_dict["%s_counter" % counter_type] += 1
     # }}}
