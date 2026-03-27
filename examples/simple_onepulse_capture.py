@@ -24,7 +24,6 @@ config_dict = spc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_capture"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["misc_counter"] += 1
 # }}}
 # just sending a pulse of specific time - note this is not converted to
 # a pulse length based on the desired beta but rather a raw bones capture

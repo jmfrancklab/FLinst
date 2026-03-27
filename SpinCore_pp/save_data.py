@@ -34,6 +34,8 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
     #     "type" of the experiment
     if counter_type is None:
         counter_type = config_dict["type"]
+    # auto-increment the counter
+    config_dict["%s_counter" % counter_type] += 1
     # }}}
     target_directory = psd.getDATADIR(exp_type=my_exp_type)
     # {{{ create filename

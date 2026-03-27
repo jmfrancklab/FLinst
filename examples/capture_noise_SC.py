@@ -134,7 +134,6 @@ config_dict = sc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "noise" + "_" + str(round(config_dict["SW_kHz"])) + "kHz"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["noise_counter"] += 1
 # }}}
 # }}}
 print("Starting collection...")

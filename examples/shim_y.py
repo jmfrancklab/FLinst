@@ -46,13 +46,6 @@ nPhaseSteps = len(ph1_cyc)
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "shim_y"
 config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["shim_y_counter"] += 1
-filename = (
-    f"{config_dict['date']}_"
-    f"{config_dict['chemical']}_"
-    f"{config_dict['type']}_"
-    f"{config_dict['shim_y_counter']}"
-)
 # }}}
 
 # {{{ check total points
@@ -152,6 +145,6 @@ data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = save_data(data, my_exp_type, config_dict, "shim_y_counter")
+config_dict = save_data(data, my_exp_type, config_dict, "shim_y")
 config_dict.write()
 # }}}
