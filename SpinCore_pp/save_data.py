@@ -43,6 +43,7 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
         for k in config_dict.keys():
             if k.endswith("_counter"):
                 config_dict[k] = 0
+        config_dict["date"] = date_now
     # auto-increment the counter
     config_dict["%s_counter" % counter_type] += 1
     # }}}
