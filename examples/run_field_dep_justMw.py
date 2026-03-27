@@ -48,13 +48,7 @@ if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
 # {{{create filename and save to config file
-date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "field"
-config_dict["date"] = date
-config_dict["field_counter"] += 1
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
-)
 # }}}
 # {{{set phase cycling
 phase_cycling = True

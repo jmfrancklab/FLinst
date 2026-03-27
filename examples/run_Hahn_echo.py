@@ -33,8 +33,6 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "echo"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["echo_counter"] += 1
 # }}}
 # {{{set phase cycling
 # default phase cycling of run_spin_echo is to use a 4 step on the 90 pulse

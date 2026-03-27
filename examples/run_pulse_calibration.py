@@ -47,7 +47,6 @@ config_dict = spc.configuration("active.ini")
 # }}}
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_calib"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
 # }}}
 # {{{ Define pulse lengths in μs
 if calibrating:

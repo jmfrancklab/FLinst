@@ -38,8 +38,6 @@ prog_p90_us = prog_plen(beta_range_s_sqrtW, config_dict)
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "nutation"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["echo_counter"] += 1
 # }}}
 # {{{set phase cycling
 ph1_cyc = r_[0, 2]
