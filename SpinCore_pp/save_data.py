@@ -3,6 +3,7 @@ import os
 import pyspecdata as psd
 import pyspecProcScripts
 import subprocess
+from datetime import datetime
 
 
 def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
