@@ -109,6 +109,7 @@ def ramp_field(
         gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
     if B0_des_G == 0:
+        # The second element is the channel -- the first is the GPIB addr
         HP1.I_limit[config_dict["shim_address"]["Z0"][1]] = 0
         HP1.output[config_dict["shim_address"]["Z0"][1]] = 0
         logging.info("Z0 Shim is off")

@@ -50,6 +50,7 @@ def main():
         LakeShore475(p) as h,
         HP6623A(
             prologix_instance=p,
+            # the first element is the GPIB address -- the second is the channel
             address=config_dict["shim_address"]["Z0"][0],
         ) as HP1,
     ):
