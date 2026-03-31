@@ -59,6 +59,18 @@ def main():
         sock.bind((IP, PORT))
         this_logobj = logobj()
 
+        def set_shim_limit(limit_type, shim_name, requested_value):
+            channel = config_dict["shim_channels"][shim_name][1]
+            limit_attr = "I_limit" if limit_type == "I" else "V_limit"
+            rounded_value = HP1.round_to_allowed(
+                limit_type, channel, requested_value
+            )
+            if not HP1.output[channel] and requested_value != 0:
+                getattr(HP1, limit_attr)[channel] = 0
+                HP1.output[channel] = 1
+            getattr(HP1, limit_attr)[channel] = rounded_value
+            return rounded_value
+
         def process_cmd(cmd, this_logobj):
             leave_open = True
             cmd = cmd.strip()
@@ -88,30 +100,16 @@ def main():
                         this_logobj.wg_has_been_flipped = True
                     case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
-                        current_A = float(args[2])
-                        channel = config_dict["shim_channels"][shim_name][1]
-                        if not HP1.output[channel] and current_A != 0:
-                            HP1.I_limit[channel] = 0
-                            HP1.output[channel] = 1
-                        HP1.I_limit[channel] = HP1.round_to_allowed(
-                            "I", channel, current_A
+                        current_A = set_shim_limit(
+                            "I", shim_name, float(args[2])
                         )
-                        conn.send(
-                            ("%0.3f" % HP1.I_limit[channel]).encode("ASCII")
-                        )
+                        conn.send(("%0.3f" % current_A).encode("ASCII"))
                     case b"SET_SHIM_VOLTAGE":
                         shim_name = args[1].decode("ASCII")
-                        voltage_V = float(args[2])
-                        channel = config_dict["shim_channels"][shim_name][1]
-                        if not HP1.output[channel] and voltage_V != 0:
-                            HP1.V_limit[channel] = 0
-                            HP1.output[channel] = 1
-                        HP1.V_limit[channel] = HP1.round_to_allowed(
-                            "V", channel, voltage_V
+                        voltage_V = set_shim_limit(
+                            "V", shim_name, float(args[2])
                         )
-                        conn.send(
-                            ("%0.3f" % HP1.V_limit[channel]).encode("ASCII")
-                        )
+                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case _:
                         raise ValueError(
                             "I don't understand this 3 component command"
