@@ -17,7 +17,6 @@ from numpy import r_, pi
 import SpinCore_pp
 from SpinCore_pp import prog_plen, get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import generic
-from datetime import datetime
 from Instruments.XEPR_eth import xepr
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
@@ -45,16 +44,14 @@ if len(sys.argv) == 2 and sys.argv[1] == "stayput":
 input(
     "I'm assuming that you've tuned your probe to %f "
     + "since that's what's in your .ini file."
-    + " Hit enter if this is true"
-    % config_dict["carrierFreq_MHz"]
+    + " Hit enter if this is true" % config_dict["carrierFreq_MHz"]
 )
 # {{{ let computer set field
 if adjust_field:
     field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
     print(
         "Based on that, and the gamma_eff_MHz_G you have in your"
-        + " .ini file, I'm setting the field to %f"
-        % field_G
+        + " .ini file, I'm setting the field to %f" % field_G
     )
     with xepr() as x:
         assert field_G < 3700, "are you crazy??? field is too high!"
@@ -90,8 +87,7 @@ total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
     "You are trying to acquire %d points (too many points)"
     + " -- either change SW or acq time so nPoints x"
-    + " nPhaseSteps is less than 16384"
-    % total_pts
+    + " nPhaseSteps is less than 16384" % total_pts
 )
 # }}}
 # {{{ acquire echo

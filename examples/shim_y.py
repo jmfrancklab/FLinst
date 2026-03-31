@@ -14,7 +14,6 @@ import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 from Instruments import HP6623A, prologix_connection, power_control
-from datetime import datetime
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
