@@ -50,8 +50,8 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
     target_directory = psd.getDATADIR(exp_type=my_exp_type)
     # {{{ create filename
     filename_out = (
-        f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}"
-        + ".h5"
+        f"{config_dict['date']}_{config_dict['chemical']}"
+        + f"_{config_dict['type']}.h5"
     )
     # }}}
     nodename = (
