@@ -3,15 +3,15 @@ SpinCore Noise Acquisition
 ==========================
 
 This script acquires a set number of captures of the noise
-as seen by the SpinCore. Remember to add a terminated attenuator 
+as seen by the SpinCore. Remember to add a terminated attenuator
 to the output of the SpinCore prior to measurement!
 """
+
 import pyspecdata as ps
 import numpy as np
 import os
 from numpy import r_
 import SpinCore_pp as sc
-from datetime import datetime
 import time
 
 my_exp_type = "ODNP_NMR_comp/noise_tests"
@@ -133,8 +133,6 @@ assert os.path.exists(ps.getDATADIR(exp_type=my_exp_type))
 config_dict = sc.configuration("active.ini")
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "noise" + "_" + str(round(config_dict["SW_kHz"])) + "kHz"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["noise_counter"] += 1
 # }}}
 # }}}
 print("Starting collection...")

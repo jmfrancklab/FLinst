@@ -3,7 +3,7 @@ One Pulse Experiment
 ====================
 
 Not an echo detection but rather just capturing
-the FID with a 4-step phase cycle. 
+the FID with a 4-step phase cycle.
 """
 
 from pyspecdata import getDATADIR
@@ -13,7 +13,6 @@ import os
 import SpinCore_pp
 import SpinCore_pp as spc
 from SpinCore_pp.ppg import generic
-from datetime import datetime
 
 my_exp_type = "ODNP_NMR_comp/nutation"
 assert os.path.exists(getDATADIR(exp_type=my_exp_type))
@@ -31,12 +30,12 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "FID_nutation"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["FID_nutation_counter"] += 1
 # }}}
-# {{{ command-line option to leave the field untouched (if you set it once, why set it again)
+# {{{ command-line option to leave the field untouched (if you set it once,
+# why set it again)
 input(
-    "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
+    "I'm assuming that you've tuned your probe to %f since that's what's in "
+    "your .ini file. Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
 if len(sys.argv) == 2 and sys.argv[1] == "stayput":
@@ -52,8 +51,8 @@ p90_us_array = spc.prog_plen(beta_s_sqrtW_array, config_dict)
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
-    "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384"
-    % total_pts
+    "You are trying to acquire %d points (too many points) -- either change "
+    "SW or acq time so nPoints x nPhaseSteps is less than 16384" % total_pts
 )
 # }}}
 # {{{ acquire FID nutation

@@ -109,8 +109,9 @@ def ramp_field(
         gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
     if B0_des_G == 0:
-        HP1.I_limit[config_dict["Z0_channel"]] = 0
-        HP1.output[config_dict["Z0_channel"]] = 0
+        # The second element is the channel -- the first is the GPIB addr
+        HP1.I_limit[config_dict["shim_address"]["Z0"][1]] = 0
+        HP1.output[config_dict["shim_address"]["Z0"][1]] = 0
         logging.info("Z0 Shim is off")
         gen.I_limit = 0
         gen.output = False
@@ -160,7 +161,7 @@ def ramp_field(
             #     step, then it's asking for an intermediate step
             #     so we need to adjust the Z0 field.
             assert (
-                HP1.V_limit[config_dict["Z0_channel"]] > 14.0
+                HP1.V_limit[config_dict["shim_address"]["Z0"][1]] > 14.0
                 and hasattr(HP1, "safe_current")
                 and HP1.safe_current < 1.81
             ), (
@@ -173,7 +174,9 @@ def ramp_field(
             desired_Z0_current_A = (B0_des_G - h.field_in_G) / config_dict[
                 "z0_field_v_current_G_A"
             ]
-            Z0_initial_current_A = HP1.I_read[config_dict["Z0_channel"]]
+            Z0_initial_current_A = HP1.I_read[
+                config_dict["shim_address"]["Z0"][1]
+            ]
             desired_Z0_current_A += Z0_initial_current_A
             # }}}
             # {{{ we can only use Z0 to increase the current, and we don't want
@@ -183,11 +186,16 @@ def ramp_field(
             elif desired_Z0_current_A > Z0_max_current_A:
                 adjust_main_field(B0_des_G, config_dict, h, gen)
             # }}}
-            HP1.I_limit[config_dict["Z0_channel"]] = HP1.round_to_allowed(
-                "I", 0, desired_Z0_current_A
+            HP1.I_limit[config_dict["shim_address"]["Z0"][1]] = (
+                HP1.round_to_allowed(
+                    "I",
+                    config_dict["shim_address"]["Z0"][1],
+                    desired_Z0_current_A,
+                )
             )
             if (
-                HP1.I_read[config_dict["Z0_channel"]] - Z0_initial_current_A
+                HP1.I_read[config_dict["shim_address"]["Z0"][1]]
+                - Z0_initial_current_A
             ) != 0:
                 # {{{ Check if the field is stabilizing
                 num_field_matches = 0

@@ -2,8 +2,8 @@
 Nutation
 ========
 
-A standard echo where the 90 time is varied so 
-that we are able to see when the signal rotates through 90 to 
+A standard echo where the 90 time is varied so
+that we are able to see when the signal rotates through 90 to
 180 degrees.
 """
 
@@ -13,7 +13,6 @@ import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals, save_data, prog_plen
 from Instruments.XEPR_eth import xepr
 from SpinCore_pp.ppg import run_spin_echo
-from datetime import datetime
 from numpy import r_
 
 my_exp_type = "ODNP_NMR_comp/nutation"
@@ -38,8 +37,6 @@ prog_p90_us = prog_plen(beta_range_s_sqrtW, config_dict)
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "nutation"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["echo_counter"] += 1
 # }}}
 # {{{set phase cycling
 ph1_cyc = r_[0, 2]

@@ -17,7 +17,7 @@ we will just name l m and n these by the coherence pathways that they label:
 
 (diff this against `run_CPMG.py`)
 
-In order to form a symmetric echo, a padding time is added before 
+In order to form a symmetric echo, a padding time is added before
 and after your tau through a series of delays.
 If you wish to keep the field as is without adjustment, follow
 the 'py run_CPMG.py' command with 'stayput' (e.g. 'py run_CPMG.py stayput')
@@ -31,7 +31,6 @@ from numpy import pi, r_
 import SpinCore_pp
 from SpinCore_pp import prog_plen, get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import generic
-from datetime import datetime
 from Instruments.XEPR_eth import xepr
 
 my_exp_type = "ODNP_NMR_comp/CPMG"
@@ -49,24 +48,24 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "CPMG"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["cpmg_counter"] += 1
 # }}}
-# {{{ command-line option to leave the field untouched (if you set it once, why set it again)
+# {{{ command-line option to leave the field untouched (if you set it once
+# , why set it again)
 adjust_field = True
 if len(sys.argv) == 2 and sys.argv[1] == "stayput":
     adjust_field = False
 # }}}
 input(
-    "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
+    "I'm assuming that you've tuned your probe to %f since "
+    "that's what's in your .ini file. Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
 # {{{ let computer set field
 if adjust_field:
     field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
     print(
-        "Based on that, and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
-        % field_G
+        "Based on that, and the gamma_eff_MHz_G you have in your .ini file,"
+        " I'm setting the field to %f" % field_G
     )
     with xepr() as x:
         assert field_G < 3700, "are you crazy??? field is too high!"
@@ -106,7 +105,8 @@ assert (
 )
 assert config_dict["deadtime_us"] > config_dict["deblank_us"] + 2 * marker_us
 print(
-    "If you are measuring on a scope, the time from the start (or end) of one 180 pulse to the next should be %0.1f us"
+    "If you are measuring on a scope, the time from the start (or end) of one "
+    "180 pulse to the next should be %0.1f us"
     % (
         2 * config_dict["deadtime_us"]
         + 1e3 * config_dict["echo_acq_ms"]
@@ -117,7 +117,8 @@ print(
 # {{{check total points
 total_pts = nPoints * nPhaseSteps * config_dict["nEchoes"]
 assert total_pts < 2**14, (
-    "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384"
+    "You are trying to acquire %d points (too many points) -- either "
+    "change SW or acq time so nPoints x nPhaseSteps is less than 16384"
     % total_pts
 )
 # }}}

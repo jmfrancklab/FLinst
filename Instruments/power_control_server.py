@@ -50,10 +50,12 @@ def main():
         LakeShore475(p) as h,
         HP6623A(
             prologix_instance=p,
-            address=config_dict["HP1_address"],
+            # the first element is the GPIB address
+            # -- the second is the channel
+            address=config_dict["shim_address"]["Z0"][0],
         ) as HP1,
     ):
-        HP1.V_limit[config_dict["Z0_channel"]] = 15.0
+        HP1.V_limit[config_dict["shim_address"]["Z0"][1]] = 15.0
         HP1.safe_current = 1.8
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))

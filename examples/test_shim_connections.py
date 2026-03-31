@@ -18,6 +18,14 @@ class ShimCurrentMapping:
     """Dictionary-like shim controller with ordered, vector-style access."""
 
     def __init__(self, shim_dict, default_v_limit=15.0, overvoltage=15.0):
+        # NOTE: currently this expects the shim_dict to contain objects.
+        #       Moving forward, we will want the shim_dict to instead contain
+        #       GPIB addresses.  It will be the job of the __enter__
+        #       method of this class to spin up instances for the power
+        #       supplies, and the job of its __exit__ method to close
+        #       them down.  (It will probably be easiest to replace the
+        #       address numbers with the actual instances as part of the
+        #       __enter__ method.)
         assert isinstance(shim_dict, OrderedDict), (
             "shim_dict must be an OrderedDict"
         )
