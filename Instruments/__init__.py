@@ -18,6 +18,7 @@ from .logobj import logobj
 from .hall_probe import LakeShore475
 from .field_feedback import adjust_main_field, ramp_field
 from .genesys import genesys
+from .shim_current_mapping import ShimCurrentMapping
 
 __all__ += [
     "HP6623A",
@@ -29,5 +30,6 @@ __all__ += [
     "logobj",
     "prologix_connection",
     "ramp_field",
+    "ShimCurrentMapping",
     "channel_property",
 ]

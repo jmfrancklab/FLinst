@@ -1,5 +1,6 @@
 # To be run from the computer connected to the EPR spectrometer
 import time, socket, pickle, os, logging, sys
+from collections import OrderedDict
 from Instruments import (
     Bridge12,
     prologix_connection,
@@ -7,7 +8,7 @@ from Instruments import (
     logobj,
     LakeShore475,
     genesys,
-    HP6623A,
+    ShimCurrentMapping,
 )
 from Instruments.field_feedback import ramp_field
 import SpinCore_pp
@@ -48,27 +49,27 @@ def main():
         ) as g,
         Bridge12() as b,
         LakeShore475(p) as h,
-        HP6623A(
+        ShimCurrentMapping(
+            OrderedDict(config_dict["shim_channels"]),
             prologix_instance=p,
-            address=config_dict["HP1_address"],
-        ) as HP1,
+            safe_current=1.8,
+            overvoltage=16.0,
+        ) as sh_map,
     ):
-        HP1.V_limit[config_dict["shim_address"]["Z0"][1]] = 15.0
-        HP1.safe_current = 1.8
+        sh_map.I_limit["Z0"] = 1.5
+        sh_map.I_limit["Y"] = 1.5
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))
         this_logobj = logobj()
 
-        def set_shim_limit(limit_type, shim_name, requested_value):
-            channel = config_dict["shim_channels"][shim_name][1]
-            limit_attr = "I_limit" if limit_type == "I" else "V_limit"
-            rounded_value = HP1.round_to_allowed(
-                limit_type, channel, requested_value
+        def set_shim_limit(limit_proxy, limit_type, shim_name, requested_value):
+            rounded_value = sh_map.round_to_allowed(
+                limit_type, shim_name, requested_value
             )
-            if not HP1.output[channel] and requested_value != 0:
-                getattr(HP1, limit_attr)[channel] = 0
-                HP1.output[channel] = 1
-            getattr(HP1, limit_attr)[channel] = rounded_value
+            if not sh_map.output[shim_name] and requested_value != 0:
+                limit_proxy[shim_name] = 0
+                sh_map.output[shim_name] = 1
+            limit_proxy[shim_name] = rounded_value
             return rounded_value
 
         def process_cmd(cmd, this_logobj):
@@ -101,13 +102,13 @@ def main():
                     case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
                         current_A = set_shim_limit(
-                            "I", shim_name, float(args[2])
+                            sh_map.I_limit, "I", shim_name, float(args[2])
                         )
                         conn.send(("%0.3f" % current_A).encode("ASCII"))
                     case b"SET_SHIM_VOLTAGE":
                         shim_name = args[1].decode("ASCII")
                         voltage_V = set_shim_limit(
-                            "V", shim_name, float(args[2])
+                            sh_map.V_limit, "V", shim_name, float(args[2])
                         )
                         conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case _:
@@ -201,18 +202,16 @@ def main():
                             config_dict,
                             h,
                             gen,
-                            HP1,
+                            sh_map.instrument("Z0"),
                         )
                         conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case b"GET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
-                        channel = config_dict["shim_channels"][shim_name][1]
-                        current_A = HP1.I_read[channel]
+                        current_A = sh_map.I_read[shim_name]
                         conn.send(("%0.3f" % current_A).encode("ASCII"))
                     case b"GET_SHIM_VOLTAGE":
                         shim_name = args[1].decode("ASCII")
-                        channel = config_dict["shim_channels"][shim_name][1]
-                        voltage_V = HP1.V_read[channel]
+                        voltage_V = sh_map.V_read[shim_name]
                         conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case _:
                         raise ValueError(
