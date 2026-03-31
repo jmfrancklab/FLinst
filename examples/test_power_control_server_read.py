@@ -1,10 +1,12 @@
 "Reads the output from test_power_control_server.py"
+
 import os, time, h5py
 import pylab as plt
 from numpy import empty
 from matplotlib.ticker import FuncFormatter
 import matplotlib.transforms as transforms
 from Instruments.logobj import logobj
+import pyspecdata as psd
 
 
 @FuncFormatter
@@ -13,7 +15,14 @@ def thetime(x, position):
     return time.strftime("%I:%M:%S %p", result)
 
 
-with h5py.File("output.h5", "r") as f:
+pull_old_data = False
+if pull_old_data:
+    fname = psd.search_filename(
+        "output.h5", exp_type="ODNP_NMR_comp/test_equipment", unique=True
+    )
+else:
+    fname = "output.h5"
+with h5py.File(fname, "r") as f:
     thislog = logobj.from_group(f["log"])
     read_array = thislog.total_log
     read_dict = thislog.log_dict
