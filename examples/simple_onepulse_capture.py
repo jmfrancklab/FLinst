@@ -2,7 +2,6 @@ import time
 import os
 import pyspecdata as psd
 import SpinCore_pp as spc
-from datetime import datetime
 from Instruments import GDS_scope
 import numpy as np
 
@@ -23,8 +22,6 @@ config_dict = spc.configuration("active.ini")
 # }}}
 # {{{ add file saving parameters to config dict
 config_dict["type"] = "pulse_capture"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["misc_counter"] += 1
 # }}}
 # just sending a pulse of specific time - note this is not converted to
 # a pulse length based on the desired beta but rather a raw bones capture
@@ -34,8 +31,8 @@ with GDS_scope() as gds:
     # {{{ set up settings for GDS
     gds.reset()
     gds.CH1.disp = True  # Even though we turn the display off 2 lines below,
-    #                     the oscilloscope seems to require this command initially.
-    #                     Debugging is needed in future PR.
+    #                     the oscilloscope seems to require this command
+    #                     initially. Debugging is needed in future PR.
     gds.CH2.disp = True
     gds.write(":CHAN1:DISP OFF")
     gds.write(":CHAN2:DISP ON")
@@ -51,11 +48,7 @@ with GDS_scope() as gds:
         the appropriate volt/time scale on the oscilloscope
         """
         val_oom = np.floor(np.log10(val))
-        val = (
-            np.ceil(val / 10**val_oom / multiples)
-            * 10**val_oom
-            * multiples
-        )
+        val = np.ceil(val / 10**val_oom / multiples) * 10**val_oom * multiples
         return val
 
     gds.CH2.voltscal = round_for_scope(
@@ -105,15 +98,15 @@ with GDS_scope() as gds:
     # }}}
     time.sleep(1.0)
     thiscapture = gds.waveform(ch=2)
-    assert (
-        np.diff(thiscapture["t"][np.r_[0:2]]).item() < 0.5 / 24e6
-    ), "what are you trying to do, your dwell time is too long!!"
+    assert np.diff(thiscapture["t"][np.r_[0:2]]).item() < 0.5 / 24e6, (
+        "what are you trying to do, your dwell time is too long!!"
+    )
     # {{{ just convert to analytic here, and also downsample
     #     this is a rare case where we care more about not keeping
     #     ridiculous quantities of garbage on disk, so we are going to
     #     throw some stuff out beforehand
     thiscapture.ft("t", shift=True)
-    thiscapture = thiscapture["t":(0, 24e6)]
+    thiscapture = thiscapture["t" : (0, 24e6)]
     thiscapture *= 2
     thiscapture["t", 0] *= 0.5
     thiscapture.ift("t")

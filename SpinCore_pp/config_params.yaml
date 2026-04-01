@@ -14,8 +14,28 @@ tau_us:
   default: null
   description: |-
     extra delay added between 90° and 180° pulse -- note this is not the same as τ_echo!
-    see eq 6 of coherence paper
-deblank_us:
+    see eq 6 of coherence paper.
+shim_address:
+  type: dict
+  section: network_params
+  default: |-
+    {"Z0":(3,0), "Y":(3,1), "Z1":(5,0), "Z2":(5,1), "X":(5,2)}
+  description: |-
+    Dictionary of shim names to their connection addresses.  The connection address is a tuple of the form 
+    (HP address, channel number).  
+shim_y_current_A:
+  type: float
+  section: acq_params
+  default: 0.22
+  description: |-
+    Current running through the Y shim coil in A to get the minimum linewidth.
+shim_voltage_limit_V:
+  type: float
+  section: acq_params
+  default: 15.0
+  description: |-
+    Voltage limit for the shims.
+deblank_us:    
   type: float
   section: acq_params
   default: null
@@ -199,23 +219,6 @@ z0_field_v_current_G_A:
   default: 1.57
   description: |-
     the ratio of the field to the current at the center of the Z0 shim, in G/A
-HP1_address:
-  type: int
-  section: network_params
-  default: 3
-  description: |
-    Connection address of the HP1 power supply.  This one must have the
-    Z0 coil.
-Z0_channel:
-  type: int
-  section: network_params
-  default: 0
-  description: The channel of the Z0 coil.
-HP2_address:
-  type: int
-  section: network_params
-  default: 5
-  description: Connection address of the HP2 power supply
 magnet_settle_long:
   type: float
   section: current_params

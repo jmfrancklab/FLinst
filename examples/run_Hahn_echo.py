@@ -6,7 +6,7 @@ To run this experiment, please open Xepr on the EPR computer, connect to
 spectrometer, load the experiment 'set_field' and enable XEPR API. Then, in a
 separate terminal, run the program XEPR_API_server.py, and wait for it to
 tell you 'I am listening' - then, you should be able to run this program from
-the NMR computer to set the field etc. 
+the NMR computer to set the field etc.
 """
 
 from pyspecdata import getDATADIR
@@ -15,7 +15,6 @@ import os
 import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
-from datetime import datetime
 from Instruments.XEPR_eth import xepr
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
@@ -33,8 +32,6 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # }}}
 # {{{add file saving parameters to config dict
 config_dict["type"] = "echo"
-config_dict["date"] = datetime.now().strftime("%y%m%d")
-config_dict["echo_counter"] += 1
 # }}}
 # {{{set phase cycling
 # default phase cycling of run_spin_echo is to use a 4 step on the 90 pulse
@@ -44,14 +41,15 @@ ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = 4
 # }}}
 input(
-    "I'm assuming that you've tuned your probe to %f since that's what's in your .ini file. Hit enter if this is true"
+    "I'm assuming that you've tuned your probe to %f since that's what's in "
+    "your .ini file. Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
 # {{{ let computer set field
 field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
 print(
-    "Based on that and the gamma_eff_MHz_G you have in your .ini file, I'm setting the field to %f"
-    % field_G
+    "Based on that and the gamma_eff_MHz_G you have in your .ini file, I'm "
+    "setting the field to %f" % field_G
 )
 with xepr() as x:
     assert field_G < 3700, "are you crazy??? field is too high!"
@@ -62,7 +60,9 @@ with xepr() as x:
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
-    "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try reducing the acq_time_ms to %f"
+    "You are trying to acquire %d points (too many points) -- either change SW"
+    " or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try "
+    "reducing the acq_time_ms to %f"
     % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
 )
 # }}}
