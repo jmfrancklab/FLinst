@@ -20,8 +20,6 @@ class inst_dict_proxy:
         self._keys = list(owner._shim_dict)
 
     def _normalize_scalar(self, idx):
-        if isinstance(idx, int):
-            return self._keys[idx]
         if isinstance(idx, str):
             if idx not in self._owner._shim_dict:
                 raise KeyError(idx)
@@ -29,7 +27,7 @@ class inst_dict_proxy:
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
 
     def _indices(self, idx):
-        if isinstance(idx, (int, str)):
+        if isinstance(idx, str):
             return [self._normalize_scalar(idx)], True
         if isinstance(idx, slice):
             return self._keys[idx], False

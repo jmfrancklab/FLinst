@@ -88,13 +88,19 @@ class TestInstDictProperty(unittest.TestCase):
         self.assertEqual(shims.V_limit["Y"], 7.5)
 
     def test_slice_get_returns_vector_in_sorted_key_order(self):
-        # TODO: We don't want this capability. We don't want to
-        # refer them as an index number. Always a string key of a dict
         hp = FakeHP()
         hp.V_limit[0] = 4.0
         hp.V_limit[1] = 8.0
         shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
         self.assertEqual(shims.V_limit[:], [8.0, 4.0])
+
+    def test_integer_indexing_is_not_supported(self):
+        hp = FakeHP()
+        shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
+        with self.assertRaises(TypeError):
+            _ = shims.V_limit[0]
+        with self.assertRaises(TypeError):
+            shims.V_limit[0] = 3.25
 
     def test_slice_set_broadcasts_scalar(self):
         hp = FakeHP()
@@ -107,12 +113,8 @@ class TestInstDictProperty(unittest.TestCase):
         shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
         shims.V_limit = np.array([5.0, 6.0])
         self.assertEqual(shims.V_limit[:], [5.0, 6.0])
-
-        # Also here, test that Y is 5 and Z0 is 6 (sorted key order).
         self.assertEqual(shims.V_limit["Y"], 5.0)
         self.assertEqual(shims.V_limit["Z0"], 6.0)
-        # TODO: The previous should work but the codex may need to change the
-        # project code to make it work.
 
 
 if __name__ == "__main__":
