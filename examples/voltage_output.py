@@ -13,9 +13,12 @@ with (
         HP1.V_limit[ch] = 0.0
         step = 0.006
         n_steps = int(test_max_V / step) + 1
-        for thisV in np.arange(0, test_max_V + step / 2, step /2):
+        for thisV in np.arange(0, test_max_V + step / 2, step / 2):
             HP1.V_limit[ch] = thisV
-            print(f"channel {ch} set to {thisV} V and it is actually set to {HP1.V_limit[ch]}.")
+            print(
+                f"channel {ch} is set to {thisV} V and it is actually"
+                f" set to {HP1.V_limit[ch]}."
+            )
         HP1.V_limit[ch] = 0.0
         result = np.array(sorted(list(HP1.observed_V[ch])))
         print(
