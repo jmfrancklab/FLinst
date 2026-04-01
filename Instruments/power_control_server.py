@@ -8,7 +8,7 @@ from Instruments import (
     logobj,
     LakeShore475,
     genesys,
-    ShimCurrentMapping,
+    ShimDictMapping,
 )
 from Instruments.field_feedback import ramp_field
 import SpinCore_pp
@@ -49,20 +49,21 @@ def main():
         ) as g,
         Bridge12() as b,
         LakeShore475(p) as h,
-        ShimCurrentMapping(
-            OrderedDict(config_dict["shim_channels"]),
+        ShimDictMapping(
+            config_dict["shim_channels"],
             prologix_instance=p,
             safe_current=1.8,
             overvoltage=16.0,
         ) as sh_map,
     ):
-        sh_map.I_limit["Z0"] = 1.5
-        sh_map.I_limit["Y"] = 1.5
+        sh_map.I_limit[:] = 1.5
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))
         this_logobj = logobj()
 
-        def set_shim_limit(limit_proxy, limit_type, shim_name, requested_value):
+        def set_shim_limit(
+            limit_proxy, limit_type, shim_name, requested_value
+        ):
             rounded_value = sh_map.round_to_allowed(
                 limit_type, shim_name, requested_value
             )
