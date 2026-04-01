@@ -115,8 +115,8 @@ class inst_dict_property:
         )
         if not is_iterable:
             raise AttributeError(
-                "can't set attribute directly; use indexing: owner.attr[key] = "
-                "value"
+                "can't set attribute directly; use indexing: owner.attr[key] ="
+                " value"
             )
         proxy = inst_dict_proxy(owner, self)
         proxy[:] = value

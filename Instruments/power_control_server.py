@@ -1,6 +1,5 @@
 # To be run from the computer connected to the EPR spectrometer
 import time, socket, pickle, os, logging, sys
-from collections import OrderedDict
 from Instruments import (
     Bridge12,
     prologix_connection,
@@ -243,15 +242,18 @@ def main():
                         result = h.field_in_G
                         conn.send(("%0.2f" % result).encode("ASCII"))
                     case b"GET_SHIM":
-                        retval = pickle.dumps(
-                            {
-                                shim_name: (
-                                    sh_map.V_read[shim_name],
-                                    sh_map.I_read[shim_name],
-                                )
-                                for shim_name in sh_map
-                            }
-                        ) + b"ENDTCPIPBLOCK"
+                        retval = (
+                            pickle.dumps(
+                                {
+                                    shim_name: (
+                                        sh_map.V_read[shim_name],
+                                        sh_map.I_read[shim_name],
+                                    )
+                                    for shim_name in sh_map
+                                }
+                            )
+                            + b"ENDTCPIPBLOCK"
+                        )
                         conn.send(retval)
                     case _:
                         raise ValueError(
