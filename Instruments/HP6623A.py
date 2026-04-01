@@ -140,7 +140,7 @@ class HP6623A(gpib_eth):
             )
         else:
             raise ValueError(
-                "Not detecting identity as HP power supply. "x
+                "Not detecting identity as HP power supply. "
                 "Expected ID string to start with 'HP'. Check your "
                 "connections and address settings, and make sure the "
                 f"instrument is powered on. (Returned ID string: {idstring})"
