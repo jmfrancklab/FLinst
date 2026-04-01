@@ -31,9 +31,9 @@ with prologix_connection() as p:
         # them currently. We will use them when we implement
         # Z1 and Z2 correction.
         shims.I_limit["Z0"] = 1.5
-        shims.V_limit["Z0"] = 1.0
+        shims.V_limit["Z0"] = 2.0
         shims.I_limit["Y"] = 1.5
-        shims.V_limit["Y"] = 1.0
+        shims.V_limit["Y"] = 2.0
         # shims.I_limit["Z1"] = 0.0
         # shims.V_limit["Z1"] = 0.0
         # shims.I_limit["Z2"] = 0.0
