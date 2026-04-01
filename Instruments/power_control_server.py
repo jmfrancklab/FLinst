@@ -206,14 +206,6 @@ def main():
                             sh_map.instrument("Z0"),
                         )
                         conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
-                    case b"GET_SHIM_CURRENT":
-                        shim_name = args[1].decode("ASCII")
-                        current_A = sh_map.I_read[shim_name]
-                        conn.send(("%0.3f" % current_A).encode("ASCII"))
-                    case b"GET_SHIM_VOLTAGE":
-                        shim_name = args[1].decode("ASCII")
-                        voltage_V = sh_map.V_read[shim_name]
-                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case _:
                         raise ValueError(
                             "I don't understand this 2"
@@ -250,6 +242,17 @@ def main():
                     case b"GET_FIELD":
                         result = h.field_in_G
                         conn.send(("%0.2f" % result).encode("ASCII"))
+                    case b"GET_SHIM":
+                        retval = pickle.dumps(
+                            {
+                                shim_name: (
+                                    sh_map.V_read[shim_name],
+                                    sh_map.I_read[shim_name],
+                                )
+                                for shim_name in sh_map
+                            }
+                        ) + b"ENDTCPIPBLOCK"
+                        conn.send(retval)
                     case _:
                         raise ValueError(
                             "I don't understand this 1"

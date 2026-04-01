@@ -176,17 +176,10 @@ class power_control(object):
         retval = float(retval)
         return retval
 
-    def get_shim_current(self, shim_name):
-        self.send("GET_SHIM_CURRENT %s" % shim_name)
-        retval = self.get()
-        retval = float(retval)
-        return retval
-
-    def get_shim_voltage(self, shim_name):
-        self.send("GET_SHIM_VOLTAGE %s" % shim_name)
-        retval = self.get()
-        retval = float(retval)
-        return retval
+    def get_shim(self):
+        self.send("GET_SHIM")
+        retval = self.get_bytes(b"ENDTCPIPBLOCK")
+        return pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
 
     def get_power_setting(self):
         self.send("GET_POWER")
