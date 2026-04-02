@@ -111,6 +111,12 @@ def main():
                             sh_map.V_limit, "V", shim_name, float(args[2])
                         )
                         conn.send(("%0.3f" % voltage_V).encode("ASCII"))
+                    case b"ROUND_SHIM_VOLTAGE":
+                        shim_name = args[1].decode("ASCII")
+                        voltage_V = sh_map.round_to_allowed(
+                            "V", shim_name, float(args[2])
+                        )
+                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case _:
                         raise ValueError(
                             "I don't understand this 3 component command"

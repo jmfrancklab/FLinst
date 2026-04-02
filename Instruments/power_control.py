@@ -13,6 +13,7 @@ and it provides the capability to start and stop the log.
 import socket
 import time
 import pickle
+from collections.abc import Iterable
 
 IP = "127.0.0.1"
 # IP = "jmfrancklab-bruker.syr.edu"
@@ -148,6 +149,21 @@ class power_control(object):
         should be one of the keys in the config_dict["shim_channels"] dict, and
         the voltage_V should be a float specifying the voltage in Volts."""
         self.send("SET_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
+        retval = self.get()
+        retval = float(retval)
+        return retval
+
+    def round_shim_voltage(self, shim_name, voltage_V):
+        """Round a requested shim voltage or a list of shim voltages
+        to the nearest allowed value."""
+        if isinstance(voltage_V, Iterable) and not isinstance(
+            voltage_V, (str, bytes)
+        ):
+            return [
+                self.round_shim_voltage(shim_name, this_voltage)
+                for this_voltage in voltage_V
+            ]
+        self.send("ROUND_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
         retval = self.get()
         retval = float(retval)
         return retval
