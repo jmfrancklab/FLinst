@@ -208,7 +208,7 @@ def main():
                             config_dict,
                             h,
                             gen,
-                            sh_map.instrument("Z0"),
+                            sh_map,
                         )
                         conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case _:
