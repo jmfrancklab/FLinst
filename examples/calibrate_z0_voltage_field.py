@@ -16,7 +16,11 @@ settle_s = 1.0
 with power_control() as p:
     initial_voltage_V = p.get_shim()[shim_name][0]
     voltages_V = np.array(
-        list(dict.fromkeys(p.round_shim_voltage(shim_name, requested_voltages_V)))
+        list(
+            dict.fromkeys(
+                p.round_shim_voltage(shim_name, requested_voltages_V)
+            )
+        )
     )
     fields_G = np.zeros_like(voltages_V)
     print("requested voltages:", requested_voltages_V)
