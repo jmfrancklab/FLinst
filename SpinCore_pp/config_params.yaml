@@ -23,12 +23,12 @@ shim_address:
   description: |-
     Dictionary of shim names to their connection addresses.  The connection address is a tuple of the form 
     (HP address, channel number).  
-shim_y_current_A:
+shim_y_voltage_V:
   type: float
   section: acq_params
-  default: 0.22
+  default: 0.04066
   description: |-
-    Current running through the Y shim coil in A to get the minimum linewidth.
+    Voltage of the Y shim coil in V to get the minimum linewidth.
 shim_voltage_limit_V:
   type: float
   section: acq_params
@@ -213,10 +213,10 @@ adc_offset:
   description: |-
     SpinCore-specific ADC offset correction
     we believe this is a DC offset, but are not positive
-z0_field_v_current_G_A:
+z0_field_v_voltage_G_V:
   type: float
   section: acq_params
-  default: 1.57
+  default: 0.22466124661246611
   description: |-
     the ratio of the field to the current at the center of the Z0 shim, in G/A
 magnet_settle_long:
