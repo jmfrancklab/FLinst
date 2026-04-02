@@ -24,8 +24,9 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # {{{ user settings
 settle_s = config_dict["magnet_settle_medium"]
 set_B_field = False  # this is also particular to this script
-V_min = 0.1 / 6.64
-V_max = 0.6 / 6.64
+V_min = 1.32
+V_max = 2.63
+step = 0.1
 # }}}
 
 # {{{ importing acquisition parameters
@@ -75,7 +76,7 @@ if set_B_field:
 
 data = None
 
-requested_y_voltage_list = np.arange(V_min, V_max, 0.005)
+requested_y_voltage_list = np.arange(V_min, V_max, step)
 with power_control() as p:
     y_voltage_list = np.array(
         list(
