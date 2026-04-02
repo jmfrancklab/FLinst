@@ -124,11 +124,6 @@ class HP6623A(gpib_eth):
         ]
         self._voltage_rounding_offset = [-7.8e-05, 0.001922, None]
         self._voltage_rounding_interval = [0.00545861, 0.00545861, None]
-        self.allowed_V = [
-            np.r_[0],
-            np.r_[0],
-            np.r_[0],
-        ]
         # }}}
         self.min_V = [0.000, 0.002, 0.018]
         self.max_V = [6, 10.5, 50.5]
@@ -167,8 +162,9 @@ class HP6623A(gpib_eth):
         offset = self._voltage_rounding_offset[channel]
         interval = self._voltage_rounding_interval[channel]
         if offset is None or interval is None:
-            the_values = self.allowed_V[channel]
-            return the_values[np.argmin(abs(value - the_values))]
+            raise ValueError(
+                "Voltage rounding parameters not set for channel %d" % channel
+            )
         return np.round(
             np.round((value - offset) / interval) * interval + offset,
             3,
