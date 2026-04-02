@@ -49,7 +49,7 @@ def main():
         Bridge12() as b,
         LakeShore475(p) as h,
         ShimDictMapping(
-            config_dict["shim_channels"],
+            config_dict["shim_address"],
             prologix_instance=p,
             safe_current=1.8,
             overvoltage=16.0,
