@@ -216,7 +216,7 @@ adc_offset:
 z0_field_v_voltage_G_V:
   type: float
   section: acq_params
-  default: 0.22466124661246611
+  default: 0.434244
   description: |-
     the ratio of the field to the current at the center of the Z0 shim, in G/A
 magnet_settle_long:

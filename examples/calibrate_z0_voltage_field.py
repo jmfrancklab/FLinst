@@ -38,6 +38,7 @@ with power_control() as p:
         p.set_shim_voltage(shim_name, initial_voltage_V)
         print(f"Restored {shim_name} to {initial_voltage_V:0.3f} V")
 
+fields_G = fields_G - fields_G[0]
 slope_G_per_V, intercept_G = np.polyfit(voltages_V, fields_G, 1)
 fit_G = slope_G_per_V * voltages_V + intercept_G
 
