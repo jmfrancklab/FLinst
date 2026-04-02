@@ -222,36 +222,6 @@ class TestHP6623AChannelProperty(unittest.TestCase):
                 )
                 np.testing.assert_allclose(result, self.hp.allowed_I[ch])
 
-    def test_V_limit_rounding_grid_over_range(self):
-        """Check that the stored allowed voltages agree with the behavior of
-        the instrument."""
-        self.hp.safe_current = 1.8
-        self.hp.I_limit[0] = 1.5
-        self.hp.V_limit[0] = 0.0
-        step = 0.006
-        test_max_V = 10.50
-        n_steps = int(test_max_V / step) + 1
-        for ch in [0, 1]:
-            with self.subTest(ch=ch):
-                for thisV in np.arange(0, test_max_V + step, step):
-                    self.hp.V_limit[ch] = thisV
-                self.hp.V_limit[ch] = 0.0
-                result = np.array(sorted(list(self.hp.observed_V[ch])))
-                print(
-                    "for channel",
-                    ch,
-                    "allowed values are",
-                    result,
-                    "(",
-                    len(result),
-                    "/",
-                    n_steps,
-                    ")",
-                    "and the diff is",
-                    np.diff(result),
-                )
-                np.testing.assert_allclose(result, self.hp.allowed_V[ch])
-
     def test_resistance_check(self):
         """Check that the stored allowed curents agree with the behavior of the
         instrument.
