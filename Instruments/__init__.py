@@ -18,6 +18,8 @@ from .logobj import logobj
 from .hall_probe import LakeShore475
 from .field_feedback import adjust_main_field, ramp_field
 from .genesys import genesys
+from .inst_dict_property import inst_dict_property
+from .shim_current_mapping import ShimDictMapping
 
 __all__ += [
     "HP6623A",
@@ -26,8 +28,10 @@ __all__ += [
     "adjust_main_field",
     "genesys",
     "gigatronics",
+    "inst_dict_property",
     "logobj",
     "prologix_connection",
     "ramp_field",
+    "ShimDictMapping",
     "channel_property",
 ]
