@@ -122,8 +122,8 @@ class HP6623A(gpib_eth):
             ],
             np.r_[0],
         ]
-        self._voltage_rounding_offset = [-7.8e-05, 0.001922, None]
-        self._voltage_rounding_interval = [0.00545861, 0.00545861, None]
+        self._voltage_rounding_offset = [-7.8e-05, 7451 / 1365000, None]
+        self._voltage_rounding_interval = [0.00545861, 101 / 52500, None]
         # }}}
         self.min_V = [0.000, 0.002, 0.018]
         self.max_V = [6, 10.5, 50.5]
