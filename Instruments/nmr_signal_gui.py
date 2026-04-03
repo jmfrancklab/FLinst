@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QLineEdit,
     QComboBox,
+    QDoubleSpinBox,
     QPushButton,
     QCheckBox,
     QSlider,
@@ -152,7 +153,9 @@ class NMRWindow(QMainWindow):
                 "Enter a numeric voltage for the Y shim.",
             )
             return None
-        requested_voltage = float(self.format_y_shim_voltage(requested_voltage))
+        requested_voltage = float(
+            self.format_y_shim_voltage(requested_voltage)
+        )
         rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
         self.textbox_y_shim_voltage.setText(
             self.format_y_shim_voltage(rounded_voltage)
@@ -201,6 +204,31 @@ class NMRWindow(QMainWindow):
         self.y_shim_checkbox.setChecked(False)
         self._updating_y_shim = False
         self.p.set_shim_output("Y", False)
+        return
+
+    def on_mw_power_edit(self):
+        req_power_dBm = self.mw_power_spinbox.value()
+        print(f"you changed MW power to {req_power_dBm} dBm")
+        if not self.mw_checkbox.isChecked():
+            return
+        self.p.set_power(req_power_dBm)
+        return
+
+    def on_mw_checkbox_changed(self, state):
+        enabled = state == Qt.Checked
+        self.mw_power_spinbox.setEnabled(enabled)
+        if enabled:
+            self.p.set_freq(self.myconfig["carrierFreq_MHz"] * 1e6)
+            self.p.set_power(self.mw_power_spinbox.value())
+        else:
+            self.p.mw_off()
+        return
+
+    def initialize_mw_controls(self):
+        self.mw_power_spinbox.setValue(10.0)
+        self.mw_checkbox.setChecked(False)
+        self.mw_power_spinbox.setEnabled(False)
+        self.p.mw_off()
         return
 
     def on_center_press(self, event):
@@ -507,6 +535,7 @@ class NMRWindow(QMainWindow):
         self.textbox_plen = QLineEdit()
         self.textbox_gamma = QLineEdit()
         self.textbox_y_shim_voltage = QLineEdit()
+        self.mw_power_spinbox = QDoubleSpinBox()
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
@@ -519,11 +548,18 @@ class NMRWindow(QMainWindow):
         self.textbox_y_shim_voltage.editingFinished.connect(
             self.on_y_shim_voltage_edit
         )
+        self.mw_power_spinbox.setDecimals(1)
+        self.mw_power_spinbox.setRange(0, 40.0)
+        self.mw_power_spinbox.setSingleStep(1.0)
+        self.mw_power_spinbox.setValue(10.0)
+        self.mw_power_spinbox.editingFinished.connect(self.on_mw_power_edit)
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
         self.bottomleft_vbox.addWidget(self.textbox_gamma)
         self.bottomleft_vbox.addWidget(QLabel("Y Shim Voltage (V):"))
         self.bottomleft_vbox.addWidget(self.textbox_y_shim_voltage)
+        self.bottomleft_vbox.addWidget(QLabel("MW Power (dBm):"))
+        self.bottomleft_vbox.addWidget(self.mw_power_spinbox)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -542,7 +578,11 @@ class NMRWindow(QMainWindow):
         self.constant_field_checkbox = QCheckBox("Constant Field")
         self.constant_field_checkbox.setChecked(False)
         self.boxes_vbox.addWidget(self.constant_field_checkbox)
+        self.mw_checkbox = QCheckBox("MW Output")
+        self.mw_checkbox.stateChanged.connect(self.on_mw_checkbox_changed)
+        self.boxes_vbox.addWidget(self.mw_checkbox)
         self.initialize_y_shim_controls()
+        self.initialize_mw_controls()
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders

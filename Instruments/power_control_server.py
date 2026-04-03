@@ -121,7 +121,9 @@ def main():
                         shim_name = args[1].decode("ASCII")
                         output_state = int(float(args[2]))
                         sh_map.output[shim_name] = output_state
-                        conn.send(str(int(sh_map.output[shim_name])).encode("ASCII"))
+                        conn.send(
+                            str(int(sh_map.output[shim_name])).encode("ASCII")
+                        )
                     case _:
                         raise ValueError(
                             "I don't understand this 3 component command"
@@ -254,7 +256,9 @@ def main():
                         conn.send(("%0.2f" % result).encode("ASCII"))
                     case b"GET_SHIM_OUTPUT":
                         shim_name = args[1].decode("ASCII")
-                        conn.send(str(int(sh_map.output[shim_name])).encode("ASCII"))
+                        conn.send(
+                            str(int(sh_map.output[shim_name])).encode("ASCII")
+                        )
                     case _:
                         raise ValueError(
                             "I don't understand this 2"
