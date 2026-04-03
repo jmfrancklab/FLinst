@@ -168,6 +168,20 @@ class power_control(object):
         retval = float(retval)
         return retval
 
+    def set_shim_output(self, shim_name, onoff):
+        """Turns the specified shim output on or off."""
+        self.send("SET_SHIM_OUTPUT %s %d" % (shim_name, int(bool(onoff))))
+        retval = self.get()
+        retval = bool(int(retval))
+        return retval
+
+    def get_shim_output(self, shim_name):
+        """Returns whether the specified shim output is enabled."""
+        self.send("GET_SHIM_OUTPUT %s" % shim_name)
+        retval = self.get()
+        retval = bool(int(retval))
+        return retval
+
     def set_power(self, dBm):
         "Sets the power of the Bridge12"
         self.send("SET_POWER %0.2f" % dBm)

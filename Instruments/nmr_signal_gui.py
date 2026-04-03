@@ -69,6 +69,7 @@ class NMRWindow(QMainWindow):
         # The axvline marks the expected zero-offset position based on gamma.
         self._dragging_center = False
         self._updating_gamma = False
+        self._updating_y_shim = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -136,6 +137,70 @@ class NMRWindow(QMainWindow):
         thetext = self.textbox_gamma.text()
         print("you changed gamma_eff_MHz_G to", thetext)
         self.set_gamma_value(float(thetext), update_centerline=True)
+        return
+
+    def format_y_shim_voltage(self, voltage_V):
+        return f"{voltage_V:.3g}"
+
+    def apply_y_shim_voltage(self):
+        try:
+            requested_voltage = float(self.textbox_y_shim_voltage.text())
+        except ValueError:
+            QMessageBox.warning(
+                self,
+                "Invalid Y Shim Voltage",
+                "Enter a numeric voltage for the Y shim.",
+            )
+            return None
+        requested_voltage = float(self.format_y_shim_voltage(requested_voltage))
+        rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
+        self.textbox_y_shim_voltage.setText(
+            self.format_y_shim_voltage(rounded_voltage)
+        )
+        applied_voltage = self.p.set_shim_voltage("Y", rounded_voltage)
+        print(f"Y shim is set to {applied_voltage} V.")
+        self.textbox_y_shim_voltage.setText(
+            self.format_y_shim_voltage(applied_voltage)
+        )
+        self.myconfig["shim_y_voltage_V"] = applied_voltage
+        self.myconfig.write()
+        return applied_voltage
+
+    def on_y_shim_voltage_edit(self):
+        if self._updating_y_shim:
+            return
+        applied_voltage = self.apply_y_shim_voltage()
+        if applied_voltage is None:
+            return
+        if not self.y_shim_checkbox.isChecked():
+            self._updating_y_shim = True
+            self.y_shim_checkbox.setChecked(True)
+            self._updating_y_shim = False
+        return
+
+    def on_y_shim_checkbox_changed(self, state):
+        if self._updating_y_shim:
+            return
+        enabled = state == Qt.Checked
+        if enabled:
+            applied_voltage = self.apply_y_shim_voltage()
+            if applied_voltage is None:
+                self._updating_y_shim = True
+                self.y_shim_checkbox.setChecked(False)
+                self._updating_y_shim = False
+                return
+        self.p.set_shim_output("Y", enabled)
+        return
+
+    def initialize_y_shim_controls(self):
+        y_voltage = self.myconfig["shim_y_voltage_V"]
+        self._updating_y_shim = True
+        self.textbox_y_shim_voltage.setText(
+            self.format_y_shim_voltage(y_voltage)
+        )
+        self.y_shim_checkbox.setChecked(False)
+        self._updating_y_shim = False
+        self.p.set_shim_output("Y", False)
         return
 
     def on_center_press(self, event):
@@ -236,6 +301,8 @@ class NMRWindow(QMainWindow):
         else:
             drag_final_x = event.xdata
         self.centerfrq_Hz = drag_final_x
+        if self.constant_field_checkbox.isChecked():
+            return
         new_gamma = self.update_gamma_from_center_offset()
         if new_gamma is not None:
             self.textbox_gamma.setText("%g" % new_gamma)
@@ -256,8 +323,11 @@ class NMRWindow(QMainWindow):
         )
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
-        self.p.set_field(Field)
-        print("Field is adjusted (using server) to", Field, "G")
+        if self.constant_field_checkbox.isChecked():
+            print("Constant Field is checked, so I am not changing the field.")
+        else:
+            self.p.set_field(Field)
+            print("Field is adjusted (using server) to", Field, "G")
         # }}}
         # {{{acquire echo
         print("about to run_spin_echo")
@@ -343,7 +413,8 @@ class NMRWindow(QMainWindow):
         self.centerline.set_picker(5)
         # }}}
         self.regen_plots()
-        self.update_gamma_from_center_offset()
+        if not self.constant_field_checkbox.isChecked():
+            self.update_gamma_from_center_offset()
         return
 
     def regen_plots(self):
@@ -435,6 +506,7 @@ class NMRWindow(QMainWindow):
         self.textbox_apo = QLineEdit()
         self.textbox_plen = QLineEdit()
         self.textbox_gamma = QLineEdit()
+        self.textbox_y_shim_voltage = QLineEdit()
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
@@ -444,9 +516,14 @@ class NMRWindow(QMainWindow):
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
         self.textbox_plen.editingFinished.connect(self.on_plen_edit)
         self.textbox_gamma.editingFinished.connect(self.on_gamma_edit)
+        self.textbox_y_shim_voltage.editingFinished.connect(
+            self.on_y_shim_voltage_edit
+        )
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
         self.bottomleft_vbox.addWidget(self.textbox_gamma)
+        self.bottomleft_vbox.addWidget(QLabel("Y Shim Voltage (V):"))
+        self.bottomleft_vbox.addWidget(self.textbox_y_shim_voltage)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -457,6 +534,15 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
+        self.y_shim_checkbox = QCheckBox("Y Shim Output")
+        self.y_shim_checkbox.stateChanged.connect(
+            self.on_y_shim_checkbox_changed
+        )
+        self.boxes_vbox.addWidget(self.y_shim_checkbox)
+        self.constant_field_checkbox = QCheckBox("Constant Field")
+        self.constant_field_checkbox.setChecked(False)
+        self.boxes_vbox.addWidget(self.constant_field_checkbox)
+        self.initialize_y_shim_controls()
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
