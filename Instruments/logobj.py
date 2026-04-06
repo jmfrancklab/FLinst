@@ -7,7 +7,13 @@ class logobj(object):
         self.log_list = []
         # {{{ this is a structured array
         self.log_dtype = dtype(
-            [("time", "f8"), ("Rx", "f8"), ("power", "f8"), ("cmd", "i8")]
+            [
+                ("time", "f8"),
+                ("Rx", "f8"),
+                ("power", "f8"),
+                ("field", "f8"),
+                ("cmd", "i8"),
+            ]
         )
         self.log_array = empty(array_len, dtype=self.log_dtype)
         self.log_dict = {
@@ -43,7 +49,7 @@ class logobj(object):
             del self._totallog
         return
 
-    def add(self, time=None, Rx=None, power=None, cmd=None):
+    def add(self, time=None, Rx=None, power=None, field=None, cmd=None):
         if time is None:
             time = timemodule.time()
         self.log_array[self.log_pos]["time"] = time
@@ -57,6 +63,8 @@ class logobj(object):
         self.log_array[self.log_pos]["Rx"] = Rx
         assert power is not None
         self.log_array[self.log_pos]["power"] = power
+        assert field is not None
+        self.log_array[self.log_pos]["field"] = field
         # {{{ done for all additions
         self.log_pos += 1
         if self.log_pos == self.array_len:
