@@ -1,19 +1,21 @@
 """
-Y shim sweep
-============
+Z0 shim sweep
+=============
 
-Acquire a series of spin echoes while stepping the Y shim voltage.
-The saved dataset can then be processed to determine the best Y shim.
+Acquire a series of spin echoes while stepping the Z0 shim voltage.
+The saved dataset can then be processed to determine the best Z0 shim.
 """
 
-import pyspecdata as psd
-import numpy as np
-from numpy import r_
 import os
 import time
+
+import numpy as np
+import pyspecdata as psd
 import SpinCore_pp
+from numpy import r_
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
+
 from Instruments import power_control
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
@@ -24,9 +26,8 @@ config_dict = SpinCore_pp.configuration("active.ini")
 # {{{ user settings
 settle_s = config_dict["magnet_settle_medium"]
 set_B_field = False  # this is also particular to this script
-V_min = 1.32
-V_max = 2.63
-step = 0.1
+stepsize = 0.005
+max_V = 1 / 3.69
 # }}}
 
 # {{{ importing acquisition parameters
@@ -42,7 +43,7 @@ nPhaseSteps = len(ph1_cyc)
 # }}}
 
 # {{{ add file saving parameters to config dict
-config_dict["type"] = "shim_y"
+config_dict["type"] = "shim_z0"
 # }}}
 
 # {{{ check total points
@@ -76,19 +77,23 @@ if set_B_field:
 
 data = None
 
-requested_y_voltage_list = np.arange(V_min, V_max, step)
 with power_control() as p:
-    y_voltage_list = np.array(
+    curr_voltage_V = p.get_shim()["Z0"][0]
+    requested_z0_voltage_list = curr_voltage_V + np.arange(0, max_V, stepsize)
+    z0_voltage_list = np.array(
         list(
-            dict.fromkeys(p.round_shim_voltage("Y", requested_y_voltage_list))
+            dict.fromkeys(
+                p.round_shim_voltage("Z0", requested_z0_voltage_list)
+            )
         )
     )
-    print("requested Y voltages:", requested_y_voltage_list)
-    print("allowed Y voltages:", y_voltage_list)
-    for idx, requested_voltage in enumerate(y_voltage_list):
-        applied_voltage = p.set_shim_voltage("Y", requested_voltage)
+    print("current Z0 voltage:", curr_voltage_V)
+    print("requested Z0 voltages:", requested_z0_voltage_list)
+    print("allowed Z0 voltages:", z0_voltage_list)
+    for idx, requested_voltage in enumerate(z0_voltage_list):
+        applied_voltage = p.set_shim_voltage("Z0", requested_voltage)
         print(
-            "set Y shim to",
+            "set Z0 shim to",
             applied_voltage,
             "V and waiting",
             settle_s,
@@ -100,7 +105,7 @@ with power_control() as p:
             deblank_us=config_dict["deblank_us"],
             nScans=config_dict["nScans"],
             indirect_idx=idx,
-            indirect_len=len(y_voltage_list),
+            indirect_len=len(z0_voltage_list),
             ph1_cyc=ph1_cyc,
             amplitude=config_dict["amplitude"],
             adcOffset=config_dict["adc_offset"],
@@ -113,22 +118,22 @@ with power_control() as p:
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    p.set_shim_voltage("Y", 0.0)
-    print("Y shim is turned off")
+    p.set_shim_voltage("Z0", curr_voltage_V)
+    print("restored Z0 shim to", curr_voltage_V, "V")
 
-data.rename("indirect", "y_voltage")
-data.setaxis("y_voltage", y_voltage_list).set_units("y_voltage", "V")
+data.rename("indirect", "z0_voltage")
+data.setaxis("z0_voltage", z0_voltage_list).set_units("z0_voltage", "V")
 
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
 if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-data.reorder(["nScans", "ph1", "y_voltage", "t2"])
+data.reorder(["nScans", "ph1", "z0_voltage", "t2"])
 data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = save_data(data, my_exp_type, config_dict, "shim_y")
+config_dict = save_data(data, my_exp_type, config_dict, "shim_z0")
 config_dict.write()
 # }}}
