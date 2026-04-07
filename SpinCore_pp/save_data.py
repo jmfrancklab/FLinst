@@ -1,7 +1,6 @@
 import h5py
 import os
 import pyspecdata as psd
-import pyspecProcScripts
 import subprocess
 import sys
 import tempfile
