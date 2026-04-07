@@ -14,6 +14,7 @@ from numpy import r_
 import numpy as np
 import time
 import sys
+import re
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -29,6 +30,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QLineEdit,
     QComboBox,
+    QDoubleSpinBox,
     QPushButton,
     QCheckBox,
     QSlider,
@@ -69,6 +71,7 @@ class NMRWindow(QMainWindow):
         # The axvline marks the expected zero-offset position based on gamma.
         self._dragging_center = False
         self._updating_gamma = False
+        self._mw_output_enabled = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -136,6 +139,86 @@ class NMRWindow(QMainWindow):
         thetext = self.textbox_gamma.text()
         print("you changed gamma_eff_MHz_G to", thetext)
         self.set_gamma_value(float(thetext), update_centerline=True)
+        return
+
+    def format_y_shim_voltage(self, voltage_V):
+        return f"{voltage_V:.3g}"
+
+    def text_is_float(self, value):
+        return (
+            re.fullmatch(
+                r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?",
+                value.strip(),
+            )
+            is not None
+        )
+
+    def apply_y_shim_voltage(self):
+        if not self.text_is_float(self.textbox_y_shim_voltage.text()):
+            QMessageBox.warning(
+                self,
+                "Invalid Y Shim Voltage",
+                "Enter a numeric voltage for the Y shim.",
+            )
+            return None
+        requested_voltage = float(self.textbox_y_shim_voltage.text())
+        requested_voltage = float(
+            self.format_y_shim_voltage(requested_voltage)
+        )
+        rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
+        self.textbox_y_shim_voltage.setText(
+            self.format_y_shim_voltage(rounded_voltage)
+        )
+        applied_voltage = self.p.set_shim_voltage("Y", rounded_voltage)
+        print(f"Y shim is set to {applied_voltage} V.")
+        self.textbox_y_shim_voltage.setText(
+            self.format_y_shim_voltage(applied_voltage)
+        )
+        self.myconfig["shim_y_voltage_V"] = applied_voltage
+        self.myconfig.write()
+        return applied_voltage
+
+    def on_y_shim_voltage_edit(self):
+        self.apply_y_shim_voltage()
+        return
+
+    def initialize_y_shim_controls(self):
+        y_voltage = self.myconfig["shim_y_voltage_V"]
+        self.textbox_y_shim_voltage.setText(
+            self.format_y_shim_voltage(y_voltage)
+        )
+        return
+
+    def on_mw_power_edit(self):
+        req_power_dBm = self.mw_power_spinbox.value()
+        print(f"you changed MW power to {req_power_dBm} dBm")
+        if self._mw_output_enabled:
+            self.p.set_power(req_power_dBm)
+        return
+
+    def on_mw_checkbox_changed(self, state):
+        enabled = self.mw_checkbox.isChecked()
+        self.mw_power_spinbox.lineEdit().setReadOnly(not enabled)
+        if enabled and not self._mw_output_enabled:
+            req_power_dBm = self.mw_power_spinbox.value()
+            self.p.set_power(min(req_power_dBm, 10.0))
+            self.p.set_freq(self.myconfig["uw_dip_center_GHz"] * 1e9)
+            if req_power_dBm > 10.0:
+                self.p.set_power(req_power_dBm)
+            self._mw_output_enabled = True
+            print(f"MW is turned on with power {req_power_dBm} dBm")
+        elif not enabled and self._mw_output_enabled:
+            self.p.mw_off()
+            self._mw_output_enabled = False
+            print("MW is turned off")
+        return
+
+    def initialize_mw_controls(self):
+        self.mw_power_spinbox.setValue(10.0)
+        self.mw_power_spinbox.lineEdit().setReadOnly(True)
+        self.mw_checkbox.setChecked(False)
+        self._mw_output_enabled = False
+        self.p.mw_off()
         return
 
     def on_center_press(self, event):
@@ -236,6 +319,8 @@ class NMRWindow(QMainWindow):
         else:
             drag_final_x = event.xdata
         self.centerfrq_Hz = drag_final_x
+        if self.constant_field_checkbox.isChecked():
+            return
         new_gamma = self.update_gamma_from_center_offset()
         if new_gamma is not None:
             self.textbox_gamma.setText("%g" % new_gamma)
@@ -256,8 +341,11 @@ class NMRWindow(QMainWindow):
         )
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
-        self.p.set_field(Field)
-        print("Field is adjusted (using server) to", Field, "G")
+        if self.constant_field_checkbox.isChecked():
+            print("Constant Field is checked, so I am not changing the field.")
+        else:
+            self.p.set_field(Field)
+            print("Field is adjusted (using server) to", Field, "G")
         # }}}
         # {{{acquire echo
         print("about to run_spin_echo")
@@ -343,7 +431,8 @@ class NMRWindow(QMainWindow):
         self.centerline.set_picker(5)
         # }}}
         self.regen_plots()
-        self.update_gamma_from_center_offset()
+        if not self.constant_field_checkbox.isChecked():
+            self.update_gamma_from_center_offset()
         return
 
     def regen_plots(self):
@@ -435,6 +524,8 @@ class NMRWindow(QMainWindow):
         self.textbox_apo = QLineEdit()
         self.textbox_plen = QLineEdit()
         self.textbox_gamma = QLineEdit()
+        self.textbox_y_shim_voltage = QLineEdit()
+        self.mw_power_spinbox = QDoubleSpinBox()
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
@@ -444,9 +535,21 @@ class NMRWindow(QMainWindow):
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
         self.textbox_plen.editingFinished.connect(self.on_plen_edit)
         self.textbox_gamma.editingFinished.connect(self.on_gamma_edit)
+        self.textbox_y_shim_voltage.editingFinished.connect(
+            self.on_y_shim_voltage_edit
+        )
+        self.mw_power_spinbox.setDecimals(1)
+        self.mw_power_spinbox.setRange(0, 35.0)
+        self.mw_power_spinbox.setSingleStep(1.0)
+        self.mw_power_spinbox.setValue(10.0)
+        self.mw_power_spinbox.editingFinished.connect(self.on_mw_power_edit)
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
         self.bottomleft_vbox.addWidget(self.textbox_gamma)
+        self.bottomleft_vbox.addWidget(QLabel("Y Shim Voltage (V):"))
+        self.bottomleft_vbox.addWidget(self.textbox_y_shim_voltage)
+        self.bottomleft_vbox.addWidget(QLabel("MW Power (dBm):"))
+        self.bottomleft_vbox.addWidget(self.mw_power_spinbox)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -457,6 +560,14 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
+        self.constant_field_checkbox = QCheckBox("Constant Field")
+        self.constant_field_checkbox.setChecked(False)
+        self.boxes_vbox.addWidget(self.constant_field_checkbox)
+        self.mw_checkbox = QCheckBox("MW Output")
+        self.mw_checkbox.stateChanged.connect(self.on_mw_checkbox_changed)
+        self.boxes_vbox.addWidget(self.mw_checkbox)
+        self.initialize_y_shim_controls()
+        self.initialize_mw_controls()
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders

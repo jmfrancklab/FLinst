@@ -50,16 +50,16 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
     # }}}
     target_directory = psd.getDATADIR(exp_type=my_exp_type)
     # {{{ create filename
-    filename_out = (
-        f"{config_dict['date']}_{config_dict['chemical']}"
-        + f"_{config_dict['type']}.h5"
-    )
-    # }}}
     nodename = (
         config_dict["type"]
         + "_"
         + str(config_dict["%s_counter" % counter_type])
     )
+    filename_out = (
+        f"{config_dict['date']}_{config_dict['chemical']}"
+        + f"_{nodename}.h5"
+    )
+    # }}}
     dataset.name(nodename)
     if os.path.exists(f"{target_directory}{filename_out}"):
         print("this file already exists so we will add a node to it!")
