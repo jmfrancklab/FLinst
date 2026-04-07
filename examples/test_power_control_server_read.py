@@ -1,4 +1,4 @@
-"Reads the output from test_power_control_server.py"
+"Reads the output from the instrument control server test."
 
 import time, h5py
 

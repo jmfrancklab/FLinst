@@ -1,5 +1,5 @@
-"""This class provides a class that acts as a client for the
-power_control_server.
+"""This class provides a client for the
+instrument_control_server.
 
 It should handle:
 
@@ -28,7 +28,7 @@ slow_sleep = 0.5
 buffer_size = 1024
 
 
-class power_control(object):
+class instrument_control(object):
     """wraps the ethernet connection to the XEPR server and allows you to send
     commands (provides a with block)"""
 
@@ -221,3 +221,6 @@ class power_control(object):
         """power down rf and amp"""
         self.send("MW_OFF")
         return
+
+
+power_control = instrument_control

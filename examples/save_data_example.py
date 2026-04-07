@@ -15,7 +15,7 @@ from pyspecdata import ndshape, getDATADIR
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
-from Instruments import power_control
+from Instruments import instrument_control
 import os, time, h5py
 from datetime import datetime
 
@@ -77,7 +77,7 @@ def run_scans(
 
 # }}}
 power_settings_dBm = np.zeros_like(dB_settings)
-with power_control() as p:
+with instrument_control() as p:
     DNP_data = None
     for j, this_dB in enumerate(dB_settings):
         print("I'm going to pretend to run", this_dB, "dBm")

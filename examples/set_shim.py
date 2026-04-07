@@ -1,9 +1,9 @@
 import sys
-from Instruments import power_control
+from Instruments import instrument_control
 from SpinCore_pp import configuration
 
 config_dict = configuration("active.ini")
-with power_control() as p:
+with instrument_control() as p:
     if len(sys.argv) == 2:
         shim_name = str(sys.argv[1])
         shim_voltage_V = config_dict["shim_y_voltage_V"]

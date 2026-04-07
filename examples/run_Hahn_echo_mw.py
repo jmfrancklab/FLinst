@@ -3,7 +3,7 @@
 Uses power control server so this will need to be running in sync. To do so:
     1. Open Xepr on the EPR computer, connect to spectrometer, and enable XEPR_API.
     2. In a separate terminal on the EPR computer, run the program XEPR_API_server.py and wait for it to tell you 'I am listening'.
-    3. On the NMR computer, open a separate terminal in git/inst_notebooks/Instruments and run winpty power_control_server(). When ready to go it will say 'I am listening'.
+    3. On the NMR computer, open a separate terminal in git/inst_notebooks/Instruments and run winpty instrument_control_server(). When ready to go it will say 'I am listening'.
     4. run this program to collect data
 """
 from pyspecdata import *
@@ -16,7 +16,7 @@ from Instruments import (
     Bridge12,
     prologix_connection,
     gigatronics,
-    power_control,
+    instrument_control,
 )
 from serial import Serial
 import time
@@ -61,7 +61,7 @@ assert total_pts < 2**14, (
 )
 # }}}
 # {{{acquire data
-with power_control() as p:
+with instrument_control() as p:
     # JF points out it should be possible to save time by removing this (b/c we
     # shut off microwave right away), but AG notes that doing so causes an
     # error.  Therefore, debug the root cause of the error and remove it!

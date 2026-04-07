@@ -16,7 +16,7 @@ from numpy import r_
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 
-from Instruments import power_control
+from Instruments import instrument_control
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
@@ -68,7 +68,7 @@ if set_B_field:
         "Based on that, and the gamma_eff_MHz_G you have in your .ini"
         " file, I'm setting the field to %f" % field_G
     )
-    with power_control() as p:
+    with instrument_control() as p:
         assert field_G < 3700, "are you crazy??? field is too high!"
         assert field_G > 3300, "are you crazy?? field is too low!"
         field_G = p.set_field(field_G)
@@ -77,7 +77,7 @@ if set_B_field:
 
 data = None
 
-with power_control() as p:
+with instrument_control() as p:
     curr_voltage_V = p.get_shim()["Z0"][0]
     requested_z0_voltage_list = curr_voltage_V + np.arange(0, max_V, stepsize)
     z0_voltage_list = np.array(

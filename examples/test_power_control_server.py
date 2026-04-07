@@ -1,13 +1,13 @@
-"""test the power control server
+"""test the instrument control server
 
-run this while running `python -m Instruments.power_control_server`
-(or `power_control_server` as a command)
+run this while running `python -m Instruments.instrument_control_server`
+(or `instrument_control_server` as a command)
 on the same computer
 
-generates hdf output to be read by test_power_control_server_read.py"""
+generates hdf output to be read by the companion readout example"""
 
 from pyspecdata import init_logging
-from Instruments import power_control
+from Instruments import instrument_control
 from SpinCore_pp import configuration
 import os, time, h5py
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
@@ -22,7 +22,7 @@ assert not os.path.exists("output.h5"), (
     "later we can just check that the node doesn't exist, but in this example,"
     " we're writing a fresh h5 file"
 )
-with power_control() as p:
+with instrument_control() as p:
     p.set_power(10)
     p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
     input("press enter once the waveguide has switched")

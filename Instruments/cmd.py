@@ -1,5 +1,5 @@
 import Instruments
-import Instruments.power_control_server
+import Instruments.instrument_control_server
 import Instruments.microwave_tuning_gui
 import Instruments.nmr_signal_gui
 from Instruments.XEPR_eth import xepr
@@ -17,8 +17,8 @@ def cmd():
     cmds = {
             "NMRsignal":Instruments.nmr_signal_gui.main,
             "MWtune":Instruments.microwave_tuning_gui.main,
-            "server":Instruments.power_control_server.main,
-            "quitServer":Instruments.power_control_server.main,
+            "server":Instruments.instrument_control_server.main,
+            "quitServer":Instruments.instrument_control_server.main,
             "setField":set_field,
             }
     if len(sys.argv) < 2 or sys.argv[1] not in cmds.keys():
