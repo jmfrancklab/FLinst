@@ -14,6 +14,7 @@ from numpy import r_
 import numpy as np
 import time
 import sys
+import re
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -71,6 +72,11 @@ class NMRWindow(QMainWindow):
         self._dragging_center = False
         self._updating_gamma = False
         self._updating_y_shim = False
+        self._updating_mw = False
+        self._y_shim_output_enabled = False
+        self._mw_output_enabled = False
+        self._y_shim_voltage_edited = False
+        self._mw_power_edited = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -143,16 +149,24 @@ class NMRWindow(QMainWindow):
     def format_y_shim_voltage(self, voltage_V):
         return f"{voltage_V:.3g}"
 
+    def text_is_float(self, value):
+        return (
+            re.fullmatch(
+                r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?",
+                value.strip(),
+            )
+            is not None
+        )
+
     def apply_y_shim_voltage(self):
-        try:
-            requested_voltage = float(self.textbox_y_shim_voltage.text())
-        except ValueError:
+        if not self.text_is_float(self.textbox_y_shim_voltage.text()):
             QMessageBox.warning(
                 self,
                 "Invalid Y Shim Voltage",
                 "Enter a numeric voltage for the Y shim.",
             )
             return None
+        requested_voltage = float(self.textbox_y_shim_voltage.text())
         requested_voltage = float(
             self.format_y_shim_voltage(requested_voltage)
         )
@@ -166,6 +180,7 @@ class NMRWindow(QMainWindow):
             self.format_y_shim_voltage(applied_voltage)
         )
         self.myconfig["shim_y_voltage_V"] = applied_voltage
+        self._y_shim_voltage_edited = True
         self.myconfig.write()
         return applied_voltage
 
@@ -193,15 +208,14 @@ class NMRWindow(QMainWindow):
                 self._updating_y_shim = False
                 return
             self.p.set_shim_output("Y", True)
-            print(
-                "Y shim is turned on with voltage",
-                self.textbox_y_shim_voltage.text(),
-                "V",
-            )
+            self._y_shim_output_enabled = True
+            print(f"Y shim is turned on with voltage {applied_voltage} V")
         else:
             self.p.set_shim_voltage("Y", 0.0)
             self.p.set_shim_output("Y", False)
-            print("Y shim is turned off")
+            if self._y_shim_output_enabled:
+                print("Y shim is turned off")
+            self._y_shim_output_enabled = False
         return
 
     def initialize_y_shim_controls(self):
@@ -219,6 +233,7 @@ class NMRWindow(QMainWindow):
     def on_mw_power_edit(self):
         req_power_dBm = self.mw_power_spinbox.value()
         print(f"you changed MW power to {req_power_dBm} dBm")
+        self._mw_power_edited = True
         if not self.mw_checkbox.isChecked():
             print("You should first click the MW checkbox")
             return
@@ -226,24 +241,37 @@ class NMRWindow(QMainWindow):
         return
 
     def on_mw_checkbox_changed(self, state):
+        if self._updating_mw:
+            return
         enabled = state == Qt.Checked
         self.mw_power_spinbox.setEnabled(enabled)
         if enabled:
             req_power_dBm = self.mw_power_spinbox.value()
+            if not self._mw_power_edited:
+                self.mw_power_spinbox.setValue(10.0)
+                req_power_dBm = self.mw_power_spinbox.value()
             self.p.set_power(min(req_power_dBm, 10.0))
             self.p.set_freq(self.myconfig["uw_dip_center_GHz"] * 1e9)
             if req_power_dBm > 10.0:
                 self.p.set_power(req_power_dBm)
-            print("MW is turned on with power", req_power_dBm, "dBm")
+            self._mw_output_enabled = True
+            print(f"MW is turned on with power {req_power_dBm} dBm")
         else:
             self.p.mw_off()
-            print("MW is turned off")
+            self.mw_power_spinbox.setEnabled(False)
+            if self._mw_output_enabled:
+                print("MW is turned off")
+            self._mw_output_enabled = False
         return
 
     def initialize_mw_controls(self):
+        self._updating_mw = True
         self.mw_power_spinbox.setValue(10.0)
         self.mw_checkbox.setChecked(False)
+        self._updating_mw = False
         self.mw_power_spinbox.setEnabled(False)
+        self._mw_output_enabled = False
+        self._mw_power_edited = False
         self.p.mw_off()
         return
 
