@@ -1,4 +1,4 @@
-from numpy import dtype, empty, concatenate
+from numpy import dtype, empty, concatenate, generic
 import time as timemodule
 
 
@@ -81,32 +81,64 @@ class logobj(object):
     def total_log(self, result):
         self._totallog = result
 
+    @staticmethod
+    def _normalize_metadata(inputlist):
+        retval = []
+        for thisitem in inputlist:
+            if isinstance(thisitem, generic):
+                thisitem = thisitem.item()
+            if isinstance(thisitem, bytes):
+                thisitem = thisitem.decode("utf-8")
+            retval.append(thisitem)
+        return retval
+
     def __getstate__(self):
         """return a picklable object -- I go with a dictionary that contains
         the message dict and the total array"""
-        retval = {}
-        retval["dictkeys"] = list(self.log_dict.keys())
-        retval["dictvalues"] = list(self.log_dict.values())
-        retval["array"] = self.total_log
-        return retval
+        return {
+            "array": {
+                "NUMPY_DATA": self.total_log,
+                "dictkeys": list(self.log_dict.keys()),
+                "dictvalues": list(self.log_dict.values()),
+            }
+        }
 
     def __setstate__(self, inputdict):
         in_hdf = False
         if "dictkeys" in inputdict.keys():
-            self.log_dict = dict(
-                zip(inputdict["dictkeys"], inputdict["dictvalues"])
-            )
+            dictkeys = inputdict["dictkeys"]
+            dictvalues = inputdict["dictvalues"]
         elif "dictkeys" in inputdict.attrs.keys():
             # allows setstate from hdf5 node
-            self.log_dict = dict(
-                zip(inputdict.attrs["dictkeys"], inputdict.attrs["dictvalues"])
-            )
+            dictkeys = inputdict.attrs["dictkeys"]
+            dictvalues = inputdict.attrs["dictvalues"]
+            in_hdf = True
+        elif "array" in inputdict.keys() and isinstance(inputdict["array"], dict):
+            dictkeys = inputdict["array"]["dictkeys"]
+            dictvalues = inputdict["array"]["dictvalues"]
+        elif "array" in inputdict.keys() and hasattr(inputdict["array"], "attrs"):
+            dictkeys = inputdict["array"].attrs["dictkeys"]
+            dictvalues = inputdict["array"].attrs["dictvalues"]
             in_hdf = True
         else:
             raise IOError("I can't find dictkeys!")
+        self.log_dict = dict(
+            zip(
+                self._normalize_metadata(dictkeys),
+                self._normalize_metadata(dictvalues),
+            )
+        )
         if in_hdf:
             self.total_log = inputdict["array"][
                 :
             ]  # makes accessible after hdf is closed (forces into memory)
         else:
-            self.total_log = inputdict["array"]
+            array_state = inputdict["array"]
+            if isinstance(array_state, dict):
+                data_keys = [
+                    j for j in array_state.keys() if j not in ("dictkeys", "dictvalues")
+                ]
+                assert len(data_keys) == 1
+                self.total_log = array_state[data_keys[0]]
+            else:
+                self.total_log = array_state
