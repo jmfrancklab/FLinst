@@ -71,9 +71,7 @@ class NMRWindow(QMainWindow):
         # The axvline marks the expected zero-offset position based on gamma.
         self._dragging_center = False
         self._updating_gamma = False
-        self._updating_mw = False
         self._mw_output_enabled = False
-        self._mw_power_edited = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -194,51 +192,32 @@ class NMRWindow(QMainWindow):
     def on_mw_power_edit(self):
         req_power_dBm = self.mw_power_spinbox.value()
         print(f"you changed MW power to {req_power_dBm} dBm")
-        self._mw_power_edited = True
-        if not self.mw_checkbox.isChecked():
-            print("You should first click the MW checkbox")
-            return
-        self.p.set_power(req_power_dBm)
-        return
-
-    def set_mw_spinbox_state(self, enabled):
-        self.mw_power_spinbox.setEnabled(enabled)
-        self.mw_power_spinbox.setReadOnly(not enabled)
+        if self._mw_output_enabled:
+            self.p.set_power(req_power_dBm)
         return
 
     def on_mw_checkbox_changed(self, state):
-        if self._updating_mw:
-            return
         enabled = state == Qt.Checked
-        self.set_mw_spinbox_state(enabled)
-        QApplication.processEvents()
-        if enabled:
+        self.mw_power_spinbox.lineEdit().setReadOnly(not enabled)
+        if enabled and not self._mw_output_enabled:
             req_power_dBm = self.mw_power_spinbox.value()
-            if not self._mw_power_edited:
-                self.mw_power_spinbox.setValue(10.0)
-                req_power_dBm = self.mw_power_spinbox.value()
             self.p.set_power(min(req_power_dBm, 10.0))
             self.p.set_freq(self.myconfig["uw_dip_center_GHz"] * 1e9)
             if req_power_dBm > 10.0:
                 self.p.set_power(req_power_dBm)
             self._mw_output_enabled = True
             print(f"MW is turned on with power {req_power_dBm} dBm")
-        else:
+        elif not enabled and self._mw_output_enabled:
             self.p.mw_off()
-            self.set_mw_spinbox_state(False)
-            if self._mw_output_enabled:
-                print("MW is turned off")
             self._mw_output_enabled = False
+            print("MW is turned off")
         return
 
     def initialize_mw_controls(self):
-        self._updating_mw = True
         self.mw_power_spinbox.setValue(10.0)
+        self.mw_power_spinbox.lineEdit().setReadOnly(True)
         self.mw_checkbox.setChecked(False)
-        self._updating_mw = False
-        self.set_mw_spinbox_state(False)
         self._mw_output_enabled = False
-        self._mw_power_edited = False
         self.p.mw_off()
         return
 
