@@ -81,17 +81,6 @@ class logobj(object):
     def total_log(self, result):
         self._totallog = result
 
-    @staticmethod
-    def _normalize_metadata(inputlist):
-        retval = []
-        for thisitem in inputlist:
-            if isinstance(thisitem, generic):
-                thisitem = thisitem.item()
-            if isinstance(thisitem, bytes):
-                thisitem = thisitem.decode("utf-8")
-            retval.append(thisitem)
-        return retval
-
     def __getstate__(self):
         """return a picklable object -- I go with a dictionary that contains
         the message dict and the total array"""
@@ -105,28 +94,56 @@ class logobj(object):
 
     def __setstate__(self, inputdict):
         in_hdf = False
+        decode_strings = False
         if "dictkeys" in inputdict.keys():
             dictkeys = inputdict["dictkeys"]
             dictvalues = inputdict["dictvalues"]
-        elif "dictkeys" in inputdict.attrs.keys():
+        elif hasattr(inputdict, "attrs") and "dictkeys" in inputdict.attrs.keys():
+            # TODO: some comment needed here, and elsewhere where you use in_hdf to explain that you are identifying this as data that's inside the hdf (and you need to explain why that is).  It also seems that the decode_strings and in_hdf booleans are redundant -- you are decoding exactly b/c you have retrieved the data from inside the hdf5
             # allows setstate from hdf5 node
             dictkeys = inputdict.attrs["dictkeys"]
             dictvalues = inputdict.attrs["dictvalues"]
             in_hdf = True
+            decode_strings = True
         elif "array" in inputdict.keys() and isinstance(inputdict["array"], dict):
+            # pickle over the socket carries the raw __getstate__ dictionary,
+            # so the NUMPY_DATA wrapper is still present here.  The HDF writer
+            # consumes that wrapper and turns it into a dataset plus attrs,
+            # which is why the HDF path above never sees the key.
             dictkeys = inputdict["array"]["dictkeys"]
             dictvalues = inputdict["array"]["dictvalues"]
+            # TODO: but, then, why don't you consume the NUMPY_DATA key here? why do you leave it for below? that is very confusing!
         elif "array" in inputdict.keys() and hasattr(inputdict["array"], "attrs"):
+            # TODO: comment needed -- why are we decoding strings here? What do we interpret as the meaning of this branch?
             dictkeys = inputdict["array"].attrs["dictkeys"]
             dictvalues = inputdict["array"].attrs["dictvalues"]
             in_hdf = True
+            decode_strings = True
         else:
             raise IOError("I can't find dictkeys!")
+        dictkeys = [
+            thisitem.item() if isinstance(thisitem, generic) else thisitem
+            for thisitem in dictkeys
+        ]
+        dictvalues = [
+            thisitem.item() if isinstance(thisitem, generic) else thisitem
+            for thisitem in dictvalues
+        ]
+        if decode_strings:
+            dictkeys = [
+                thisitem.decode("utf-8")
+                if isinstance(thisitem, bytes)
+                else thisitem
+                for thisitem in dictkeys
+            ]
+            dictvalues = [
+                thisitem.decode("utf-8")
+                if isinstance(thisitem, bytes)
+                else thisitem
+                for thisitem in dictvalues
+            ]
         self.log_dict = dict(
-            zip(
-                self._normalize_metadata(dictkeys),
-                self._normalize_metadata(dictvalues),
-            )
+            zip(dictkeys, dictvalues)
         )
         if in_hdf:
             self.total_log = inputdict["array"][
@@ -135,10 +152,6 @@ class logobj(object):
         else:
             array_state = inputdict["array"]
             if isinstance(array_state, dict):
-                data_keys = [
-                    j for j in array_state.keys() if j not in ("dictkeys", "dictvalues")
-                ]
-                assert len(data_keys) == 1
-                self.total_log = array_state[data_keys[0]]
+                self.total_log = array_state["NUMPY_DATA"]
             else:
                 self.total_log = array_state

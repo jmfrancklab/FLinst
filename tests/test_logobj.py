@@ -1,3 +1,6 @@
+import multiprocessing
+import pickle
+import socket
 import tempfile
 import unittest
 
@@ -5,9 +8,60 @@ import h5py
 import numpy as np
 import pyspecdata
 from Instruments.logobj import logobj
+from Instruments.power_control import power_control
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
+
+
+def socket_log_server(port_queue):
+    """Serve a minimal subset of the power control protocol for log transfer."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("127.0.0.1", 0))
+    sock.listen(1)
+    port_queue.put(sock.getsockname()[1])
+    this_logobj = logobj(array_len=8)
+    sample_time = 1.0
+    try:
+        conn, _ = sock.accept()
+        with conn:
+            leave_open = True
+            while leave_open:
+                data = conn.recv(1024)
+                if len(data) == 0:
+                    break
+                for cmd in data.strip().split(b"\n"):
+                    cmd = cmd.strip()
+                    if len(cmd) == 0:
+                        continue
+                    if this_logobj.currently_logging:
+                        this_logobj.add(
+                            time=sample_time,
+                            Rx=sample_time + 1.0,
+                            power=sample_time + 2.0,
+                            cmd=cmd,
+                        )
+                        sample_time += 1.0
+                    if cmd == b"START_LOG":
+                        this_logobj.currently_logging = True
+                    elif cmd == b"STOP_LOG":
+                        this_logobj.currently_logging = False
+                        conn.sendall(
+                            pickle.dumps(this_logobj) + b"ENDTCPIPBLOCK"
+                        )
+                        this_logobj.reset()
+                    elif cmd.startswith(b"SET_POWER "):
+                        continue
+                    elif cmd == b"CLOSE":
+                        leave_open = False
+                        break
+                    else:
+                        raise ValueError(
+                            "unexpected command in test server: " + repr(cmd)
+                        )
+    finally:
+        sock.close()
 
 
 class TestLogobjSerialization(unittest.TestCase):
@@ -67,6 +121,37 @@ class TestLogobjSerialization(unittest.TestCase):
                 recovered.__setstate__(h5file["log"])
         self.assertEqual(recovered.log_dict, original.log_dict)
         np.testing.assert_array_equal(recovered.total_log, original.total_log)
+
+    def test_power_control_stop_log_unwraps_pickled_state_dict(self):
+        """Socket log transfer should rebuild the pickled logobj correctly."""
+        context = multiprocessing.get_context("fork")
+        port_queue = context.Queue()
+        server = context.Process(target=socket_log_server, args=(port_queue,))
+        server.start()
+        try:
+            port = port_queue.get(timeout=5)
+            with power_control(ip="127.0.0.1", port=port) as controller:
+                controller.start_log()
+                controller.set_power(10)
+                recovered = controller.stop_log()
+            server.join(timeout=5)
+            self.assertFalse(server.is_alive())
+            self.assertEqual(server.exitcode, 0)
+        finally:
+            if server.is_alive():
+                server.terminate()
+                server.join(timeout=5)
+        self.assertIsInstance(recovered, logobj)
+        self.assertIsInstance(recovered.total_log, np.ndarray)
+        self.assertEqual(len(recovered.total_log), 2)
+        self.assertEqual(
+            recovered.log_dict[recovered.total_log[0]["cmd"]],
+            b"SET_POWER 10.00",
+        )
+        self.assertEqual(
+            recovered.log_dict[recovered.total_log[1]["cmd"]],
+            b"STOP_LOG",
+        )
 
 
 if __name__ == "__main__":
