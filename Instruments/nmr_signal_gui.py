@@ -192,7 +192,16 @@ class NMRWindow(QMainWindow):
                 self.y_shim_checkbox.setChecked(False)
                 self._updating_y_shim = False
                 return
-        self.p.set_shim_output("Y", enabled)
+            self.p.set_shim_output("Y", True)
+            print(
+                "Y shim is turned on with voltage",
+                self.textbox_y_shim_voltage.text(),
+                "V",
+            )
+        else:
+            self.p.set_shim_voltage("Y", 0.0)
+            self.p.set_shim_output("Y", False)
+            print("Y shim is turned off")
         return
 
     def initialize_y_shim_controls(self):
@@ -203,6 +212,7 @@ class NMRWindow(QMainWindow):
         )
         self.y_shim_checkbox.setChecked(False)
         self._updating_y_shim = False
+        self.p.set_shim_voltage("Y", 0.0)
         self.p.set_shim_output("Y", False)
         return
 
@@ -210,6 +220,7 @@ class NMRWindow(QMainWindow):
         req_power_dBm = self.mw_power_spinbox.value()
         print(f"you changed MW power to {req_power_dBm} dBm")
         if not self.mw_checkbox.isChecked():
+            print("You should first click the MW checkbox")
             return
         self.p.set_power(req_power_dBm)
         return
@@ -218,10 +229,15 @@ class NMRWindow(QMainWindow):
         enabled = state == Qt.Checked
         self.mw_power_spinbox.setEnabled(enabled)
         if enabled:
-            self.p.set_freq(self.myconfig["carrierFreq_MHz"] * 1e6)
-            self.p.set_power(self.mw_power_spinbox.value())
+            req_power_dBm = self.mw_power_spinbox.value()
+            self.p.set_power(min(req_power_dBm, 10.0))
+            self.p.set_freq(self.myconfig["uw_dip_center_GHz"] * 1e9)
+            if req_power_dBm > 10.0:
+                self.p.set_power(req_power_dBm)
+            print("MW is turned on with power", req_power_dBm, "dBm")
         else:
             self.p.mw_off()
+            print("MW is turned off")
         return
 
     def initialize_mw_controls(self):
