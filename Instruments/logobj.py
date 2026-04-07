@@ -93,43 +93,22 @@ class logobj(object):
         }
 
     def __setstate__(self, inputdict):
-        in_hdf = False
-        decode_strings = False
         if "dictkeys" in inputdict.keys():
+            # {{{ legacy plain-dict state: older code stored both
+            #     metadata lists and the array directly at the top level
             dictkeys = inputdict["dictkeys"]
             dictvalues = inputdict["dictvalues"]
+            total_log = inputdict["array"]
+            # }}}
         elif hasattr(inputdict, "attrs") and "dictkeys" in inputdict.attrs.keys():
-            # TODO: some comment needed here, and elsewhere where you use in_hdf to explain that you are identifying this as data that's inside the hdf (and you need to explain why that is).  It also seems that the decode_strings and in_hdf booleans are redundant -- you are decoding exactly b/c you have retrieved the data from inside the hdf5
-            # allows setstate from hdf5 node
+            # {{{ legacy HDF layout: the group carries the metadata as
+            #     attrs and the actual structured array lives in the
+            #     "array" dataset below it
             dictkeys = inputdict.attrs["dictkeys"]
             dictvalues = inputdict.attrs["dictvalues"]
-            in_hdf = True
-            decode_strings = True
-        elif "array" in inputdict.keys() and isinstance(inputdict["array"], dict):
-            # pickle over the socket carries the raw __getstate__ dictionary,
-            # so the NUMPY_DATA wrapper is still present here.  The HDF writer
-            # consumes that wrapper and turns it into a dataset plus attrs,
-            # which is why the HDF path above never sees the key.
-            dictkeys = inputdict["array"]["dictkeys"]
-            dictvalues = inputdict["array"]["dictvalues"]
-            # TODO: but, then, why don't you consume the NUMPY_DATA key here? why do you leave it for below? that is very confusing!
-        elif "array" in inputdict.keys() and hasattr(inputdict["array"], "attrs"):
-            # TODO: comment needed -- why are we decoding strings here? What do we interpret as the meaning of this branch?
-            dictkeys = inputdict["array"].attrs["dictkeys"]
-            dictvalues = inputdict["array"].attrs["dictvalues"]
-            in_hdf = True
-            decode_strings = True
-        else:
-            raise IOError("I can't find dictkeys!")
-        dictkeys = [
-            thisitem.item() if isinstance(thisitem, generic) else thisitem
-            for thisitem in dictkeys
-        ]
-        dictvalues = [
-            thisitem.item() if isinstance(thisitem, generic) else thisitem
-            for thisitem in dictvalues
-        ]
-        if decode_strings:
+            total_log = inputdict["array"][
+                :
+            ]  # force the dataset into memory before the file is closed
             dictkeys = [
                 thisitem.decode("utf-8")
                 if isinstance(thisitem, bytes)
@@ -142,16 +121,52 @@ class logobj(object):
                 else thisitem
                 for thisitem in dictvalues
             ]
-        self.log_dict = dict(
-            zip(dictkeys, dictvalues)
-        )
-        if in_hdf:
-            self.total_log = inputdict["array"][
-                :
-            ]  # makes accessible after hdf is closed (forces into memory)
-        else:
+            # }}}
+        elif "array" in inputdict.keys() and isinstance(inputdict["array"], dict):
+            # {{{ pickle over the socket carries the raw __getstate__
+            #     dictionary, so the NUMPY_DATA key is still present
+            #     here, as opposed to when we use hdf_save_dict_to_group
+            #     to write to disk, and it consumes that wrapper when
+            #     writing HDF5, so only the raw dict path should still
+            #     see it.
             array_state = inputdict["array"]
-            if isinstance(array_state, dict):
-                self.total_log = array_state["NUMPY_DATA"]
-            else:
-                self.total_log = array_state
+            dictkeys = array_state["dictkeys"]
+            dictvalues = array_state["dictvalues"]
+            total_log = array_state["NUMPY_DATA"]
+            # }}}
+        elif "array" in inputdict.keys() and hasattr(inputdict["array"], "attrs"):
+            # {{{ current HDF layout: hdf_save_dict_to_group has already
+            #     consumed the NUMPY_DATA wrapper and written the array
+            #     as the "array" dataset.  The remaining metadata is
+            #     stored as dataset attrs, and HDF gives string attrs
+            #     back as bytes that need decoding here.
+            array_node = inputdict["array"]
+            dictkeys = array_node.attrs["dictkeys"]
+            dictvalues = array_node.attrs["dictvalues"]
+            total_log = array_node[
+                :
+            ]  # force the dataset into memory before the file is closed
+            dictkeys = [
+                thisitem.decode("utf-8")
+                if isinstance(thisitem, bytes)
+                else thisitem
+                for thisitem in dictkeys
+            ]
+            dictvalues = [
+                thisitem.decode("utf-8")
+                if isinstance(thisitem, bytes)
+                else thisitem
+                for thisitem in dictvalues
+            ]
+        else:
+            raise IOError("I can't find dictkeys!")
+        dictkeys = [
+            thisitem.item() if isinstance(thisitem, generic) else thisitem
+            for thisitem in dictkeys
+        ]
+        dictvalues = [
+            thisitem.item() if isinstance(thisitem, generic) else thisitem
+            for thisitem in dictvalues
+        ]
+        self.log_dict = dict(zip(dictkeys, dictvalues))
+        self.total_log = total_log
