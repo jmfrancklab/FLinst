@@ -71,11 +71,8 @@ class NMRWindow(QMainWindow):
         # The axvline marks the expected zero-offset position based on gamma.
         self._dragging_center = False
         self._updating_gamma = False
-        self._updating_y_shim = False
         self._updating_mw = False
-        self._y_shim_output_enabled = False
         self._mw_output_enabled = False
-        self._y_shim_voltage_edited = False
         self._mw_power_edited = False
         self.create_status_bar()
         self.nPhaseSteps = 4
@@ -180,54 +177,18 @@ class NMRWindow(QMainWindow):
             self.format_y_shim_voltage(applied_voltage)
         )
         self.myconfig["shim_y_voltage_V"] = applied_voltage
-        self._y_shim_voltage_edited = True
         self.myconfig.write()
         return applied_voltage
 
     def on_y_shim_voltage_edit(self):
-        if self._updating_y_shim:
-            return
-        applied_voltage = self.apply_y_shim_voltage()
-        if applied_voltage is None:
-            return
-        if not self.y_shim_checkbox.isChecked():
-            self._updating_y_shim = True
-            self.y_shim_checkbox.setChecked(True)
-            self._updating_y_shim = False
-        return
-
-    def on_y_shim_checkbox_changed(self, state):
-        if self._updating_y_shim:
-            return
-        enabled = state == Qt.Checked
-        if enabled:
-            applied_voltage = self.apply_y_shim_voltage()
-            if applied_voltage is None:
-                self._updating_y_shim = True
-                self.y_shim_checkbox.setChecked(False)
-                self._updating_y_shim = False
-                return
-            self.p.set_shim_output("Y", True)
-            self._y_shim_output_enabled = True
-            print(f"Y shim is turned on with voltage {applied_voltage} V")
-        else:
-            self.p.set_shim_voltage("Y", 0.0)
-            self.p.set_shim_output("Y", False)
-            if self._y_shim_output_enabled:
-                print("Y shim is turned off")
-            self._y_shim_output_enabled = False
+        self.apply_y_shim_voltage()
         return
 
     def initialize_y_shim_controls(self):
         y_voltage = self.myconfig["shim_y_voltage_V"]
-        self._updating_y_shim = True
         self.textbox_y_shim_voltage.setText(
             self.format_y_shim_voltage(y_voltage)
         )
-        self.y_shim_checkbox.setChecked(False)
-        self._updating_y_shim = False
-        self.p.set_shim_voltage("Y", 0.0)
-        self.p.set_shim_output("Y", False)
         return
 
     def on_mw_power_edit(self):
@@ -240,11 +201,17 @@ class NMRWindow(QMainWindow):
         self.p.set_power(req_power_dBm)
         return
 
+    def set_mw_spinbox_state(self, enabled):
+        self.mw_power_spinbox.setEnabled(enabled)
+        self.mw_power_spinbox.setReadOnly(not enabled)
+        return
+
     def on_mw_checkbox_changed(self, state):
         if self._updating_mw:
             return
         enabled = state == Qt.Checked
-        self.mw_power_spinbox.setEnabled(enabled)
+        self.set_mw_spinbox_state(enabled)
+        QApplication.processEvents()
         if enabled:
             req_power_dBm = self.mw_power_spinbox.value()
             if not self._mw_power_edited:
@@ -258,7 +225,7 @@ class NMRWindow(QMainWindow):
             print(f"MW is turned on with power {req_power_dBm} dBm")
         else:
             self.p.mw_off()
-            self.mw_power_spinbox.setEnabled(False)
+            self.set_mw_spinbox_state(False)
             if self._mw_output_enabled:
                 print("MW is turned off")
             self._mw_output_enabled = False
@@ -269,7 +236,7 @@ class NMRWindow(QMainWindow):
         self.mw_power_spinbox.setValue(10.0)
         self.mw_checkbox.setChecked(False)
         self._updating_mw = False
-        self.mw_power_spinbox.setEnabled(False)
+        self.set_mw_spinbox_state(False)
         self._mw_output_enabled = False
         self._mw_power_edited = False
         self.p.mw_off()
@@ -593,7 +560,7 @@ class NMRWindow(QMainWindow):
             self.on_y_shim_voltage_edit
         )
         self.mw_power_spinbox.setDecimals(1)
-        self.mw_power_spinbox.setRange(0, 40.0)
+        self.mw_power_spinbox.setRange(0, 35.0)
         self.mw_power_spinbox.setSingleStep(1.0)
         self.mw_power_spinbox.setValue(10.0)
         self.mw_power_spinbox.editingFinished.connect(self.on_mw_power_edit)
@@ -614,11 +581,6 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
-        self.y_shim_checkbox = QCheckBox("Y Shim Output")
-        self.y_shim_checkbox.stateChanged.connect(
-            self.on_y_shim_checkbox_changed
-        )
-        self.boxes_vbox.addWidget(self.y_shim_checkbox)
         self.constant_field_checkbox = QCheckBox("Constant Field")
         self.constant_field_checkbox.setChecked(False)
         self.boxes_vbox.addWidget(self.constant_field_checkbox)
