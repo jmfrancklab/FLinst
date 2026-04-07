@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 from datetime import datetime
+from Instruments import instrument_control
 
 
 def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
@@ -77,6 +78,8 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
                     + str(config_dict["%s_counter" % counter_type])
                 )
             dataset.name(nodename)
+    with instrument_control() as p:
+        dataset.set_prop("shim_readback", p.get_shim())
     dataset.hdf5_write(f"{filename_out}", directory=target_directory)
     print("\n** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(
