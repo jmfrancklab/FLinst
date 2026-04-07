@@ -11,8 +11,10 @@ Uses power control server so this will need to be running in sync. To do so:
     4. run this program to collect data
 """
 
-from pyspecdata import *
-from numpy import *
+import h5py
+import pyspecdata as psd
+import numpy as np
+from numpy import r_
 import os
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
@@ -23,7 +25,7 @@ import time
 from datetime import datetime
 from SpinCore_pp.power_helper import gen_powerlist
 
-fl = figlist_var()
+fl = psd.figlist_var()
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
@@ -99,7 +101,7 @@ with instrument_control() as p:
     power_settings_dBm = np.zeros_like(dB_settings)
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     for j, this_dB in enumerate(dB_settings):
-        logger.debug(
+        psd.logger.debug(
             "SETTING THIS POWER",
             this_dB,
             "(",
@@ -169,7 +171,7 @@ else:
 echo_data.name(config_dict["type"] + "_" + str(config_dict["echo_counter"]))
 echo_data.set_prop("postproc_type", "proc_Hahn_echoph")
 echo_data.set_prop("acq_params", config_dict.asdict())
-target_directory = getDATADIR(exp_type="ODNP_NMR_comp/Echoes")
+target_directory = psd.getDATADIR(exp_type="ODNP_NMR_comp/Echoes")
 filename_out = filename + ".h5"
 nodename = echo_data.name()
 if os.path.exists(f"{filename_out}"):
@@ -185,7 +187,7 @@ if os.path.exists(f"{filename_out}"):
 else:
     try:
         echo_data.hdf5_write(f"{filename_out}", directory=target_directory)
-    except:
+    except Exception:
         print(
             f"I had problems writing to the correct file {filename}.h5, so I'm"
             " going to try to save your file to temp_echo.h5 in the current "
