@@ -1,24 +1,24 @@
 """Run an Enhancement Experiment
 ================================
 Uses power control server so this will need to be running in sync. To do so:
-    1. Open Xepr on the EPR computer, connect to spectrometer, and enable XEPR_API.
-    2. In a separate terminal on the EPR computer, run the program XEPR_API_server.py and wait for it to tell you 'I am listening'.
-    3. On the NMR computer, open a separate terminal in git/inst_notebooks/Instruments and run winpty instrument_control_server(). When ready to go it will say 'I am listening'.
+    1. Open Xepr on the EPR computer, connect to spectrometer, and enable
+    XEPR_API.
+    2. In a separate terminal on the EPR computer, run the program
+    XEPR_API_server.py and wait for it to tell you 'I am listening'.
+    3. On the NMR computer, open a separate terminal in
+    git/inst_notebooks/Instruments and run winpty instrument_control_server().
+    When ready to go it will say 'I am listening'.
     4. run this program to collect data
 """
+
 from pyspecdata import *
 from numpy import *
 import os
-import sys
 import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 from Instruments import (
-    Bridge12,
-    prologix_connection,
-    gigatronics,
     instrument_control,
 )
-from serial import Serial
 import time
 from datetime import datetime
 from SpinCore_pp.power_helper import gen_powerlist
@@ -33,7 +33,10 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "enhancement"
 config_dict["date"] = date
 config_dict["odnp_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}_{config_dict['odnp_counter']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}"
+    + f"_{config_dict['type']}_{config_dict['odnp_counter']}"
+)
 # }}}
 # {{{set phase cycling
 phase_cycling = True
@@ -56,7 +59,9 @@ powers = 1e-3 * 10 ** (dB_settings / 10.0)
 # {{{check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
-    "You are trying to acquire %d points (too many points) -- either change SW or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try reducing the acq_time_ms to %f"
+    "You are trying to acquire %d points (too many points) -- either change SW"
+    " or acq time so nPoints x nPhaseSteps is less than 16384\nyou could try"
+    "reducing the acq_time_ms to %f"
     % (total_pts, config_dict["acq_time_ms"] * 16384 / total_pts)
 )
 # }}}
@@ -182,14 +187,17 @@ else:
         echo_data.hdf5_write(f"{filename_out}", directory=target_directory)
     except:
         print(
-            f"I had problems writing to the correct file {filename}.h5, so I'm going to try to save your file to temp_echo.h5 in the current directory"
+            f"I had problems writing to the correct file {filename}.h5, so I'm"
+            " going to try to save your file to temp_echo.h5 in the current "
+            "directory"
         )
         if os.path.exists("temp_echo.h5"):
             print("there is a temp_echo.h5 already! -- I'm removing it")
             os.remove("temp_echo.h5")
             echo_data.hdf5_write("temp_echo.h5")
             print(
-                "if I got this far, that probably worked -- be sure to move/rename temp_echo.h5 to the correct name!!"
+                "if I got this far, that probably worked -- be sure to "
+                "move/rename temp_echo.h5 to the correct name!!"
             )
 print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
 print(("Name of saved data", echo_data.name()))
