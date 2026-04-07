@@ -108,7 +108,10 @@ class logobj(object):
             dictvalues = inputdict["dictvalues"]
             total_log = inputdict["array"]
             # }}}
-        elif hasattr(inputdict, "attrs") and "dictkeys" in inputdict.attrs.keys():
+        elif (
+            hasattr(inputdict, "attrs")
+            and "dictkeys" in inputdict.attrs.keys()
+        ):
             # {{{ legacy HDF layout: the group carries the metadata as
             #     attrs and the actual structured array lives in the
             #     "array" dataset below it
@@ -130,7 +133,9 @@ class logobj(object):
                 for thisitem in dictvalues
             ]
             # }}}
-        elif "array" in inputdict.keys() and isinstance(inputdict["array"], dict):
+        elif "array" in inputdict.keys() and isinstance(
+            inputdict["array"], dict
+        ):
             # {{{ pickle over the socket carries the raw __getstate__
             #     dictionary, so the NUMPY_DATA key is still present
             #     here, as opposed to when we use hdf_save_dict_to_group
@@ -142,7 +147,9 @@ class logobj(object):
             dictvalues = array_state["dictvalues"]
             total_log = array_state["NUMPY_DATA"]
             # }}}
-        elif "array" in inputdict.keys() and hasattr(inputdict["array"], "attrs"):
+        elif "array" in inputdict.keys() and hasattr(
+            inputdict["array"], "attrs"
+        ):
             # {{{ current HDF layout: hdf_save_dict_to_group has already
             #     consumed the NUMPY_DATA wrapper and written the array
             #     as the "array" dataset.  The remaining metadata is
