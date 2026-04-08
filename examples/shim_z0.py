@@ -52,10 +52,7 @@ assert total_pts < 2**14, (
 # }}}
 
 # {{{ add file saving parameters to config dict
-# TODO ☐: it's unclear what this is for, or if it's needed.  Why are we
-#         storing the "type" of the current experiment in the config
-#         dict?
-config_dict["type"] = "shim_z0"
+config_dict["type"] = "shim_z0"  # save_data.py expects type in config_dict
 # }}}
 
 data = None
