@@ -234,9 +234,6 @@ def main():
                     case b"GET_POWER":
                         result = b.power_float()
                         conn.send(("%0.1f" % result).encode("ASCII"))
-                    case b"MW_OFF":
-                        b.soft_shutdown()
-
                     case b"QUIT":
                         print("closing connection")
                         conn.close()
@@ -259,13 +256,6 @@ def main():
                         conn.send(
                             str(int(sh_map.output[shim_name])).encode("ASCII")
                         )
-                    case _:
-                        raise ValueError(
-                            "I don't understand this 2"
-                            " component command" + str(args)
-                        )
-            if len(args) == 1:
-                match args[0]:
                     case b"GET_SHIM":
                         retval = (
                             pickle.dumps(
