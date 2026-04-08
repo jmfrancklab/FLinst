@@ -15,7 +15,7 @@ requested_voltages_V = np.arange(0.0, 4.0 + 0.25 / 2, 0.25)
 settle_s = 1.0
 
 with power_control() as p:
-    initial_voltage_V = p.get_shim()[shim_name][0]
+    initial_voltage_V = p.get_shims()[shim_name][0]
     voltages_V = np.array(
         list(
             dict.fromkeys(

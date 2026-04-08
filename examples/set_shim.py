@@ -25,4 +25,4 @@ with power_control() as p:
         p.shim[shim_name] = shim_voltage_V
     else:
         raise ValueError("You entered an extra argument.")
-    print(f"{shim_name}: {p.get_shim()[shim_name]}")
+    print(f"{shim_name}: {p.get_shims()[shim_name]}")

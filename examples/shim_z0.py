@@ -51,13 +51,9 @@ assert total_pts < 2**14, (
 )
 # }}}
 
-# {{{ add file saving parameters to config dict
-config_dict["type"] = "shim_z0"  # save_data.py expects type in config_dict
-# }}}
-
 data = None
 with power_control() as p:
-    orig_voltage_V = p.get_shim()["Z0"][0]
+    orig_voltage_V = p.get_shims()["Z0"][0]
     requested_z0_voltage_list = orig_voltage_V + np.arange(0, max_V, stepsize)
     z0_voltage_list = p.round_shim_voltage("Z0", requested_z0_voltage_list)
     print("current Z0 voltage:", orig_voltage_V)
@@ -109,6 +105,6 @@ data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = save_data(data, my_exp_type, config_dict, "shim_z0")
+config_dict = save_data(data, my_exp_type, config_dict, counter_type="shim_z0")
 config_dict.write()
 # }}}

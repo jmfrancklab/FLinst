@@ -15,6 +15,20 @@ import SpinCore_pp
 IP = "0.0.0.0"
 PORT = 6002
 
+def round_and_set_shim_quant(sh_map, input_string, I_or_V, which_prop):
+    current_or_voltage = float(input_string)
+    current_or_voltage = sh_map.round_to_allowed(
+        I_or_V, shim_name, current_or_voltage
+    )
+    if (
+        not sh_map.output[shim_name]
+        and current_or_voltage != 0
+    ):
+        which_prop[shim_name] = 0
+        sh_map.output[shim_name] = 1
+    which_prop[shim_name] = current_or_voltage
+    return current_or_voltage
+
 
 def main():
     # {{{ set up log at ~/power_control_server.log
@@ -70,8 +84,10 @@ def main():
                     power=g.read_power(),
                     cmd=cmd,
                 )
-            args = cmd.split(b" ", 2)  # Argument 2 is for splitting lists as
-            # a single argument.
+            args = cmd.split(b" ")
+            if len(args) > 3 and args[2].startswith("["):
+                # this appears to be a list
+                args = [args[0], args[1], " ".join(args[2:])]
             print("I split it to ", args)
             if len(args) == 3:
                 match args[0]:
@@ -90,32 +106,12 @@ def main():
                         this_logobj.wg_has_been_flipped = True
                     case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
-                        requested_current_A = float(args[2])
-                        current_A = sh_map.round_to_allowed(
-                            "I", shim_name, requested_current_A
-                        )
-                        if (
-                            not sh_map.output[shim_name]
-                            and requested_current_A != 0
-                        ):
-                            sh_map.I_limit[shim_name] = 0
-                            sh_map.output[shim_name] = 1
-                        sh_map.I_limit[shim_name] = current_A
-                        conn.send(("%0.3f" % current_A).encode("ASCII"))
+                        retval = round_and_set_shim_quant(sh_map, args[2], "I", sh_map.I_limit)
+                        conn.send(("%0.4f" % retval).encode("ASCII"))
                     case b"SET_SHIM_VOLTAGE":
                         shim_name = args[1].decode("ASCII")
-                        requested_voltage_V = float(args[2])
-                        voltage_V = sh_map.round_to_allowed(
-                            "V", shim_name, requested_voltage_V
-                        )
-                        if (
-                            not sh_map.output[shim_name]
-                            and requested_voltage_V != 0
-                        ):
-                            sh_map.V_limit[shim_name] = 0
-                            sh_map.output[shim_name] = 1
-                        sh_map.V_limit[shim_name] = voltage_V
-                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
+                        retval = round_and_set_shim_quant(sh_map, args[2], "V", sh_map.V_limit)
+                        conn.send(("%0.4f" % retval).encode("ASCII"))
                     case b"ROUND_SHIM_VOLTAGES":
                         shim_name = args[1].decode("ASCII")
                         rounded_voltages = sh_map.round_to_allowed(

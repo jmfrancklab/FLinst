@@ -615,6 +615,7 @@ class HP6623A(gpib_eth):
         if which == "V" and channel in [0, 1]:
             if value == 0:
                 return 0.0
+            # {{{ round to an allowed voltage
             offset = self._voltage_rounding_offset[channel]
             interval = self._voltage_rounding_interval[channel]
             if offset is None or interval is None:
@@ -626,6 +627,7 @@ class HP6623A(gpib_eth):
                 np.round((value - offset) / interval) * interval + offset,
                 3,
             )
+            # }}}
         the_values = getattr(self, "allowed_" + which)[channel]
         return the_values[np.argmin(abs(value - the_values))]
 
