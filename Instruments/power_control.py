@@ -141,6 +141,12 @@ class power_control(object):
         self.send("SET_FREQ %f" % freq)
         return
 
+    # TODO ☐: make sure that you have a test that tests this, both for a
+    #         single shim, and for all:
+    #         pcontrolinst.shim_current['Z0'] as well as
+    #         pcontrolinst.shim_current[:] (or
+    #         pcontrolinst.shim_current, I forget which is supported)
+    #         restored: A test, not an example.
     @inst_dict_property
     def shim_current(self, shim_name):
         """Return the current for one or more shims."""
@@ -159,6 +165,11 @@ class power_control(object):
             self._shim_current_cache[shim_name] = retval
             return retval
 
+    # TODO ☐: make sure that you have a test that tests this, both for a
+    #         single shim, and for all:
+    #         pcontrolinst.shim_voltage['Z0'] as well as
+    #         pcontrolinst.shim_voltage[:] (or
+    #         pcontrolinst.shim_voltage, I forget which is supported)
     @inst_dict_property
     def shim_voltage(self, shim_name):
         """Return the voltage for one or more shims."""
@@ -213,24 +224,21 @@ class power_control(object):
         return retval
 
     def get_shims(self):
-        """Return shim readbacks from the server and refresh local caches.
-
-        `_shim_dict` preserves the server-provided shim-name mapping so
-        `inst_dict_property` can validate shim names and keep slice order
-        aligned with the instrument.
-        """
+        """Return shim readbacks from the server and refresh local caches."""
         self.send("GET_SHIM")
         retval = self.get_bytes(b"ENDTCPIPBLOCK")
         retval = pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
-        self._shim_dict = retval
+        # {{{ we pull retval apart into its sensible parts, so we don't need to
+        #     keep it around
         self._shim_voltage_cache = {
-            shim_name: voltage_current[0]
-            for shim_name, voltage_current in retval.items()
+            j: k[0]
+            for j, k in retval.items()
         }
         self._shim_current_cache = {
-            shim_name: voltage_current[1]
-            for shim_name, voltage_current in retval.items()
+            j: k[1]
+            for j, k in retval.items()
         }
+        # }}}
         return retval
 
     def get_power_setting(self):

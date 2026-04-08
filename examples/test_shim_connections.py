@@ -1,15 +1,26 @@
-"""Exercise shim-voltage readback and rounding through power_control."""
+"""
+HP Shim Power Supply
+====================
+
+Test control over the shims via the server.
+"""
 
 from Instruments import power_control
 
 
 with power_control() as p:
-    shim_names = list(p.get_shims())
+    shim_names = list(p.get_shims().keys())
     print("initial shim readback:", p.get_shims())
     print("\nVoltage test")
     p.shim_voltage[:] = 0.0
     p.shim_current[:] = 1.5
     print("device readback after voltage/current setup:", p.get_shims())
+    # TODO ☐: I don't really understand this.  (1) the server rounds for
+    #         you, so why do that here? (2) why is there a loop? You set
+    #         up the properties as dict properties, so you should be able
+    #         to set them to a vector if you like.
+    #         This is an example, so you want to be showing you how
+    #         acctually expect people to interact with the module.
     for shim_name in shim_names:
         rounded_voltage = p.round_shim_voltage(shim_name, 1.5)
         print(
