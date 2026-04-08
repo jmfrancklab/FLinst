@@ -84,9 +84,9 @@ def main():
                     cmd=cmd,
                 )
             args = cmd.split(b" ")
-            if len(args) > 3 and args[2].startswith("["):
+            if len(args) > 3 and args[2].startswith(b"["):
                 # this appears to be a list
-                args = [args[0], args[1], " ".join(args[2:])]
+                args = [args[0], args[1], b" ".join(args[2:])]
             print("I split it to ", args)
             if len(args) == 3:
                 match args[0]:

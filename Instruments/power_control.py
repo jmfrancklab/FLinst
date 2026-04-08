@@ -171,7 +171,7 @@ class power_control(object):
         if cached_voltage == voltage_V:
             return cached_voltage
         else:
-            self.send("SET_SHIM_CURRENT %s %f" % (shim_name, voltage_V))
+            self.send("SET_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
             retval = self.get()
             retval = float(retval)
             self._shim_voltage_cache[shim_name] = retval

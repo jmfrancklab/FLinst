@@ -9,6 +9,7 @@ with power_control() as p:
     print("\nVoltage test")
     p.shim_voltage[:] = 0.0
     p.shim_current[:] = 1.5
+    print("device readback after voltage/current setup:", p.get_shims())
     for shim_name in shim_names:
         rounded_voltage = p.round_shim_voltage(shim_name, 1.5)
         print(
@@ -22,7 +23,7 @@ with power_control() as p:
             "device read voltage for",
             shim_name,
             "after float set:",
-            p.shim_voltage[shim_name],
+            p.get_shims()[shim_name][0],
         )
     rounded_voltage_arrays = {
         shim_name: p.round_shim_voltage(shim_name, [2.0, 2.0])
@@ -38,30 +39,29 @@ with power_control() as p:
     p.shim_voltage[:] = rounded_voltages
     print(
         "device read voltages after array set:",
-        p.shim_voltage[:],
+        {shim_name: p.get_shims()[shim_name][0] for shim_name in shim_names},
     )
     p.shim_voltage[:] = 0.0
     p.shim_current[:] = 0.0
-    print("all shim voltages after voltage test shutdown:", p.shim_voltage[:])
-    print("all shim currents after voltage test shutdown:", p.shim_current[:])
+    print("device readback after voltage test shutdown:", p.get_shims())
 
     print("\nCurrent test")
     p.shim_current[:] = 0.0
     p.shim_voltage[:] = 15.0
+    print("device readback after current/voltage setup:", p.get_shims())
     for shim_name in shim_names:
         p.shim_current[shim_name] = 0.5
         print(
             "device read current for",
             shim_name,
             "after float set to 0.5 A:",
-            p.shim_current[shim_name],
+            p.get_shims()[shim_name][1],
         )
     p.shim_current[:] = [0.7] * len(shim_names)
     print(
         "device read currents after array set to 0.7 A:",
-        p.shim_current[:],
+        {shim_name: p.get_shims()[shim_name][1] for shim_name in shim_names},
     )
     p.shim_current[:] = 0.0
     p.shim_voltage[:] = 0.0
-    print("all shim currents after current test shutdown:", p.shim_current[:])
-    print("all shim voltages after current test shutdown:", p.shim_voltage[:])
+    print("device readback after current test shutdown:", p.get_shims())

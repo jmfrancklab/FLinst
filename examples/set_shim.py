@@ -18,11 +18,11 @@ with power_control() as p:
             "(including 0 to turn off the shim) you can specify "
             "as an argument on the command line)"
         )
-        p.shim[shim_name] = shim_voltage_V
+        p.shim_voltage[shim_name] = shim_voltage_V
     elif len(sys.argv) == 3:
         shim_name = str(sys.argv[1])
         shim_voltage_V = float(sys.argv[2])
-        p.shim[shim_name] = shim_voltage_V
+        p.shim_voltage[shim_name] = shim_voltage_V
     else:
         raise ValueError("You entered an extra argument.")
     print(f"{shim_name}: {p.get_shims()[shim_name]}")
