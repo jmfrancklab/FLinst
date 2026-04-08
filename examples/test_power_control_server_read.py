@@ -37,7 +37,7 @@ for j in range(len(read_array)):
         thispower,
         read_dict[thiscmd],
     )
-# TODO ☐: again -- why no field, now? -- pertains to all changes
+# TODO ☐: again -- why no field, now? -- pertains to all changes to this file since bfbef68
 fig, (ax_Rx, ax_power) = plt.subplots(2, 1, figsize=(10, 8))
 ax_Rx.xaxis.set_major_formatter(thetime)
 ax_power.xaxis.set_major_formatter(thetime)

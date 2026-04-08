@@ -228,6 +228,7 @@ class power_control(object):
         self.send("GET_SHIM")
         retval = self.get_bytes(b"ENDTCPIPBLOCK")
         retval = pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
+        # TODO ☐: what is _shim_dict for? Needs explanation
         self._shim_dict = {shim_name: None for shim_name in retval}
         self._shim_voltage_cache = {
             shim_name: voltage_current[0]
