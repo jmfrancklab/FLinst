@@ -231,6 +231,7 @@ class power_control(object):
         return retval
 
     def get_shim(self):
+        """Return shim readbacks from the server and refresh local caches."""
         self.send("GET_SHIM")
         retval = self.get_bytes(b"ENDTCPIPBLOCK")
         retval = pickle.loads(retval[: -len("ENDTCPIPBLOCK")])

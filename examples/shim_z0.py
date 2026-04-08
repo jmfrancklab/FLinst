@@ -64,13 +64,14 @@ with power_control() as p:
     # TODO ☐: There was a very complicated construction here, which
     #         seemed very unlikely to be justified.  You want to change
     #         the power control module so that the following just works.
-    p.round_shim_voltage("Z0", orig_voltage_V + np.arange(0, max_V, stepsize)
+    p.round_shim_voltage("Z0", orig_voltage_V + np.arange(0, max_V, stepsize))
     print("current Z0 voltage:", orig_voltage_V)
     print("requested Z0 voltages:", requested_z0_voltage_list)
     print("allowed Z0 voltages:", z0_voltage_list)
     for idx, requested_voltage in enumerate(z0_voltage_list):
         # TODO ☐: see comments elsewhere about need for inst dict property
-        applied_voltage = p.set_shim_voltage("Z0", requested_voltage)
+        p.shim["Z0"] = requested_voltage
+        applied_voltage = p.shim["Z0"]
         print(
             "set Z0 shim to",
             applied_voltage,
@@ -98,7 +99,7 @@ with power_control() as p:
             ret_data=data,
         )
     # set back to the original voltage at the end
-    p.set_shim_voltage("Z0", orig_voltage_V)
+    p.shim["Z0"] = orig_voltage_V
     print("restored Z0 shim to", orig_voltage_V, "V")
 
 data.rename("indirect", "z0_voltage")

@@ -118,7 +118,7 @@ with power_control() as p:
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    p.set_shim_voltage("Y", 0.0)
+    p.shim["Y"] = 0.0
     print("Y shim is turned off")
 
 data.rename("indirect", "y_voltage")
