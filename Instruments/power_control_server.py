@@ -60,22 +60,6 @@ def main():
         sock.bind((IP, PORT))
         this_logobj = logobj()
 
-        def set_shim_limit(
-            limit_proxy, limit_type, shim_name, requested_value
-        ):
-            # TODO ☐: needs docstring to allow function review
-            #         BUT -- since the instrument is essentially going to do
-            #         round_to_allowed anyways, it seems very unlikely that the
-            #         existence of this function is justified
-            rounded_value = sh_map.round_to_allowed(
-                limit_type, shim_name, requested_value
-            )
-            if not sh_map.output[shim_name] and requested_value != 0:
-                limit_proxy[shim_name] = 0
-                sh_map.output[shim_name] = 1
-            limit_proxy[shim_name] = rounded_value
-            return rounded_value
-
         def process_cmd(cmd, this_logobj):
             leave_open = True
             cmd = cmd.strip()
@@ -86,7 +70,8 @@ def main():
                     power=g.read_power(),
                     cmd=cmd,
                 )
-            args = cmd.split(b" ", 2)
+            args = cmd.split(b" ", 2)  # Argument 2 is for splitting lists as
+            # a single argument.
             print("I split it to ", args)
             if len(args) == 3:
                 match args[0]:
@@ -105,19 +90,31 @@ def main():
                         this_logobj.wg_has_been_flipped = True
                     case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
-                        # TODO ☐: this set_shim_limit definition decreases
-                        #         readability, and it seems very unlikely that
-                        #         its existence is justified.
-                        current_A = set_shim_limit(
-                            sh_map.I_limit, "I", shim_name, float(args[2])
+                        requested_current_A = float(args[2])
+                        current_A = sh_map.round_to_allowed(
+                            "I", shim_name, requested_current_A
                         )
+                        if (
+                            not sh_map.output[shim_name]
+                            and requested_current_A != 0
+                        ):
+                            sh_map.I_limit[shim_name] = 0
+                            sh_map.output[shim_name] = 1
+                        sh_map.I_limit[shim_name] = current_A
                         conn.send(("%0.3f" % current_A).encode("ASCII"))
                     case b"SET_SHIM_VOLTAGE":
-                        # TODO ☐: same comments
                         shim_name = args[1].decode("ASCII")
-                        voltage_V = set_shim_limit(
-                            sh_map.V_limit, "V", shim_name, float(args[2])
+                        requested_voltage_V = float(args[2])
+                        voltage_V = sh_map.round_to_allowed(
+                            "V", shim_name, requested_voltage_V
                         )
+                        if (
+                            not sh_map.output[shim_name]
+                            and requested_voltage_V != 0
+                        ):
+                            sh_map.V_limit[shim_name] = 0
+                            sh_map.output[shim_name] = 1
+                        sh_map.V_limit[shim_name] = voltage_V
                         conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case b"ROUND_SHIM_VOLTAGES":
                         shim_name = args[1].decode("ASCII")
