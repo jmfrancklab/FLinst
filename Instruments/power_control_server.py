@@ -103,7 +103,7 @@ def main():
                         min_f = float(b.freq_int()) * 1e3
                         conn.send(("%0.6f" % min_f).encode("ASCII"))
                         this_logobj.wg_has_been_flipped = True
-                    case b"SET_SHIM_CURRENT"
+                    case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
                         # TODO ☐: this set_shim_limit definition decreases
                         #         readability, and it seems very unlikely that
@@ -127,8 +127,7 @@ def main():
                             ast.literal_eval(args[2].decode("ASCII")),
                         )
                         conn.send(
-                            pickle.dumps(rounded_voltages)
-                            + b"ENDTCPIPBLOCK"
+                            pickle.dumps(rounded_voltages) + b"ENDTCPIPBLOCK"
                         )
                     case _:
                         raise ValueError(
