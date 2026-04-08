@@ -7,8 +7,9 @@ Similar in fashion, the script generates a power list, and loops through
 each power generating fake data using the run_scans function defined
 below. At each power the "data" records the start and stop times that
 will correspond to the times and powers inside the log allowing one to
-average over each power step in a later post processing step. 
+average over each power step in a later post processing step.
 """
+
 from numpy import r_
 import numpy as np
 from pyspecdata import ndshape, getDATADIR
@@ -31,7 +32,8 @@ powers = 1e-3 * 10 ** (dB_settings / 10.0)
 uw_dip_center_GHz = 9.818061
 uw_dip_width_GHz = 0.008
 result = input(
-    "to keep this example minimal, it doesn't read from the config file!!\nThe dip frequency is currently set to %0.6f GHz\nIs that correct???"
+    "to keep this example minimal, it doesn't read from the config file!!"
+    "\nThe dip frequency is currently set to %0.6f GHz\nIs that correct???"
     % uw_dip_center_GHz
 )
 if not result.lower().startswith("y"):
@@ -52,13 +54,15 @@ def run_scans(
     for nScans_idx in range(nScans):
         data_array = np.random.random(2 * data_length).view(
             np.complex128
-        )  # enough random numbers for both real and imaginary, then use view to alternate real,imag
+        )  # enough random numbers for both real and imaginary, then use view
+        # to alternate real,imag
         if ret_data is None:
             times_dtype = np.dtype(
                 [
                     (indirect_fields[0], np.double),
                     (indirect_fields[1], np.double),
-                ]  # typically, the two columns/fields give start and stop times
+                ]  # typically, the two columns/fields give start and
+                # stop times
             )
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
             direct_time_axis = r_[0 : np.shape(data_array)[0]] / (
@@ -115,7 +119,7 @@ with power_control() as p:
     nodename = DNP_data.name()
     try:
         DNP_data.hdf5_write(filename, directory=target_directory)
-    except:
+    except Exception:
         print(
             "***Warning*** Writing to",
             filename,
@@ -128,4 +132,4 @@ with power_control() as p:
 with h5py.File(
     os.path.normpath(os.path.join(target_directory, filename)), "a"
 ) as f:
-    hdf_save_dict_to_group(f, {"log":this_log.__getstate__()})
+    hdf_save_dict_to_group(f, {"log": this_log.__getstate__()})

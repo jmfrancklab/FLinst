@@ -30,7 +30,8 @@ class ShimDictMapping:
             Per-channel overvoltage limit applied in :meth:`__enter__`. Use
             ``None`` to leave the instrument setting unchanged.
         safe_current : float or None, optional
-            Safe current limit applied to owned instruments in :meth:`__enter__`.
+            Safe current limit applied to owned instruments in :meth:
+            `__enter__`.
             Use ``None`` to leave the instrument setting unchanged.
 
         Raises
@@ -41,7 +42,9 @@ class ShimDictMapping:
             If an instrument specifier is neither an integer GPIB address nor
             an :class:`HP6623A` instance, or if a channel is not an integer.
         """
-        shim_dict = OrderedDict(sorted(dict(shim_dict).items(), key=lambda x: x[0]))
+        shim_dict = OrderedDict(
+            sorted(dict(shim_dict).items(), key=lambda x: x[0])
+        )
         for shim_name, connection in shim_dict.items():
             if not isinstance(connection, tuple) or len(connection) != 2:
                 raise ValueError(
