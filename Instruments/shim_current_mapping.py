@@ -14,6 +14,7 @@ class ShimDictMapping:
         overvoltage=15.0,
         safe_current=None,
     ):
+        # TODO ☐: standard numpy-style docstring
         """Create a named shim-to-channel mapping.
 
         `shim_dict` must map shim names to `(instrument_or_address, channel)`
@@ -21,8 +22,7 @@ class ShimDictMapping:
         instance or an integer GPIB address. Keys are sorted alphabetically
         and stored in an `OrderedDict`.
         """
-        sorted_items = sorted(dict(shim_dict).items(), key=lambda x: x[0])
-        shim_dict = OrderedDict(sorted_items)
+        shim_dict = OrderedDict(sorted(dict(shim_dict).items(), key=lambda x: x[0]))
         for shim_name, connection in shim_dict.items():
             if not isinstance(connection, tuple) or len(connection) != 2:
                 raise ValueError(
@@ -122,17 +122,11 @@ class ShimDictMapping:
     def __contains__(self, which_shim):
         return which_shim in self._shim_dict
 
-    def connection(self, which_shim):
-        return self._shim_dict[which_shim]
-
     def instrument(self, which_shim):
-        return self.connection(which_shim)[0]
+        return self._shim_dict[which_shim][0]
 
     def channel(self, which_shim):
-        return self.connection(which_shim)[1]
-
-    def connections(self):
-        return self._shim_dict.items()
+        return self._shim_dict[which_shim][1]
 
     def round_to_allowed(self, which_limit, key, value):
         which_inst, ch = self._shim_dict[key]

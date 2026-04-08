@@ -1,3 +1,4 @@
+# TODO ☐: not reviewed yet
 class inst_dict_proxy:
     r"""
     Per-instance bound view returned by inst_dict_property.__get__.

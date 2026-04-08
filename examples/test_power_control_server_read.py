@@ -1,7 +1,6 @@
 "Reads the output from test_power_control_server.py"
 
 import time, h5py
-
 from pathlib import Path
 import pylab as plt
 from matplotlib.ticker import FuncFormatter
@@ -28,7 +27,7 @@ with h5py.File(fname, "r") as f:
     read_array = thislog.total_log
     read_dict = thislog.log_dict
 
-
+# {{{ TODO ☐: should not be required -- logobj from group should take care of all of this
 def _decode_list_node(h5group):
     item_names = sorted(
         (name for name in h5group.attrs if name.startswith("ITEM")),
@@ -54,6 +53,7 @@ with h5py.File(output_path, "r") as f:
             _decode_list_node(log_group["dictvalues"]),
         )
     )
+# }}}
 print(read_array)
 for j in range(len(read_array)):
     thistime, thisrx, thispower, thisfield, thiscmd = read_array[j]

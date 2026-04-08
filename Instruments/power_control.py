@@ -135,6 +135,11 @@ class power_control(object):
         self.send("SET_FREQ %f" % freq)
         return
 
+    # TODO ☐: as noted elsewhere, it's important for THESE to be inst dict properties.
+    # TODO ☐: furthermore, b/c talking to the server is expensive, it's
+    #         smart to have a cache (just a dict attribute of this
+    #         object) that you test against, and only actually send
+    #         commands if you're asking for a change
     def set_shim_current(self, shim_name, current_A):
         """Sets the shim current of the specified shim channel.  The shim_name
         should be one of the keys in the config_dict["shim_channels"] dict, and
@@ -163,6 +168,8 @@ class power_control(object):
                 self.round_shim_voltage(shim_name, this_voltage)
                 for this_voltage in voltage_V
             ]
+        # TODO ☐: I do not this think is the way to do this.  It's
+        #         very slow.  You should send the list to the server.
         self.send("ROUND_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
         retval = self.get()
         retval = float(retval)

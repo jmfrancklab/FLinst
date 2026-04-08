@@ -158,6 +158,7 @@ class HP6623A(gpib_eth):
         """Convert 0-based channel index to 1-based for GPIB commands."""
         return channel + 1
 
+    # TODO ☐: this function is only used once, so the code should just be inlined
     def _round_voltage_to_allowed(self, channel, value):
         offset = self._voltage_rounding_offset[channel]
         interval = self._voltage_rounding_interval[channel]

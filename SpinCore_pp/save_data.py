@@ -60,7 +60,6 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
         + "_"
         + str(config_dict["%s_counter" % counter_type])
     )
-    # }}}
     dataset.name(nodename)
     if os.path.exists(f"{target_directory}{filename_out}"):
         print("this file already exists so we will add a node to it!")
