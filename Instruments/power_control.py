@@ -195,16 +195,10 @@ class power_control(object):
         if isinstance(voltage_V, Iterable) and not isinstance(
             voltage_V, (str, bytes)
         ):
-            return [
-                self.round_shim_voltage(shim_name, this_voltage)
-                for this_voltage in voltage_V
-            ]
-        # TODO ☐: I do not this think is the way to do this.  It's
-        #         very slow.  You should send the list to the server.
-        self.send("ROUND_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
-        retval = self.get()
-        retval = float(retval)
-        return retval
+            voltage_V = list(voltage_V)
+        self.send("ROUND_SHIM_VOLTAGES %s %r" % (shim_name, voltage_V))
+        retval = self.get_bytes(b"ENDTCPIPBLOCK")
+        return pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
 
     def set_power(self, dBm):
         "Sets the power of the Bridge12"

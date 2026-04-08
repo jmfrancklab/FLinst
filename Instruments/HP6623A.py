@@ -598,6 +598,13 @@ class HP6623A(gpib_eth):
         """
         if len(args) == 2:
             channel, value = args
+            if hasattr(value, "__iter__") and not isinstance(
+                value, (str, bytes)
+            ):
+                return [
+                    self.round_to_allowed(which, channel, this_value)
+                    for this_value in value
+                ]
         elif len(args) == 1 and hasattr(args[0], "__iter__"):
             return [
                 self.round_to_allowed(which, j, args[0][j])

@@ -1,5 +1,5 @@
 # To be run from the computer connected to the EPR spectrometer
-import time, socket, pickle, os, logging, sys
+import ast, time, socket, pickle, os, logging, sys
 from Instruments import (
     Bridge12,
     prologix_connection,
@@ -86,7 +86,7 @@ def main():
                     power=g.read_power(),
                     cmd=cmd,
                 )
-            args = cmd.split(b" ")
+            args = cmd.split(b" ", 2)
             print("I split it to ", args)
             if len(args) == 3:
                 match args[0]:
@@ -122,13 +122,18 @@ def main():
                             sh_map.V_limit, "V", shim_name, float(args[2])
                         )
                         conn.send(("%0.3f" % voltage_V).encode("ASCII"))
-                    case b"ROUND_SHIM_VOLTAGE":
+                    case b"ROUND_SHIM_VOLTAGES":
                         # TODO ☐: same comments
                         shim_name = args[1].decode("ASCII")
-                        voltage_V = sh_map.round_to_allowed(
-                            "V", shim_name, float(args[2])
+                        rounded_voltages = sh_map.round_to_allowed(
+                            "V",
+                            shim_name,
+                            ast.literal_eval(args[2].decode("ASCII")),
                         )
-                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
+                        conn.send(
+                            pickle.dumps(rounded_voltages)
+                            + b"ENDTCPIPBLOCK"
+                        )
                     case _:
                         raise ValueError(
                             "I don't understand this 3 component command"
