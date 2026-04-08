@@ -76,17 +76,14 @@ if set_B_field:
 
 data = None
 
-requested_y_voltage_list = np.arange(V_min, V_max, step)
 with power_control() as p:
-    y_voltage_list = np.array(
-        list(
-            dict.fromkeys(p.round_shim_voltage("Y", requested_y_voltage_list))
-        )
-    )
+    requested_y_voltage_list = np.arange(V_min, V_max, step)
+    y_voltage_array = p.round_shim_voltage("Y", requested_y_voltage_list)
     print("requested Y voltages:", requested_y_voltage_list)
-    print("allowed Y voltages:", y_voltage_list)
-    for idx, requested_voltage in enumerate(y_voltage_list):
-        applied_voltage = p.set_shim_voltage("Y", requested_voltage)
+    print("allowed Y voltages:", y_voltage_array)
+    for idx, requested_voltage in enumerate(y_voltage_array):
+        p.shim["Y"] = requested_voltage
+        applied_voltage = p.shim["Y"]
         print(
             "set Y shim to",
             applied_voltage,
@@ -100,7 +97,7 @@ with power_control() as p:
             deblank_us=config_dict["deblank_us"],
             nScans=config_dict["nScans"],
             indirect_idx=idx,
-            indirect_len=len(y_voltage_list),
+            indirect_len=len(y_voltage_array),
             ph1_cyc=ph1_cyc,
             amplitude=config_dict["amplitude"],
             adcOffset=config_dict["adc_offset"],
@@ -113,11 +110,11 @@ with power_control() as p:
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    p.set_shim_voltage("Y", 0.0)
+    p.shim["Y"] = 0.0
     print("Y shim is turned off")
 
 data.rename("indirect", "y_voltage")
-data.setaxis("y_voltage", y_voltage_list).set_units("y_voltage", "V")
+data.setaxis("y_voltage", y_voltage_array).set_units("y_voltage", "V")
 
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])

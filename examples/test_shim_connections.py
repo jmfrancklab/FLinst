@@ -2,45 +2,77 @@
 HP Shim Power Supply
 ====================
 
-This script provides a small shim-mapping layer for HP6623A supplies.
-Named shim channels (e.g., Z0, Z1, Z2, X, Y) are mapped to a specific
-instrument address and output channel.
+Test control over the shims via the server.
 """
 
-from collections import OrderedDict
-
-from Instruments import ShimDictMapping, prologix_connection
+from Instruments import power_control
 
 
-with prologix_connection() as p:
-    with ShimDictMapping(
-        OrderedDict(
-            {
-                "Z0": (3, 0),
-                "Y": (3, 1),
-                # "Z1": (5, 0),
-                # "Z2": (5, 1),
-                # "X": (5, 2),
-            }
-        ),
-        prologix_instance=p,
-        safe_current=1.8,
-        overvoltage=16.0,
-    ) as shims:
-        # {{{ Commented HP2 attributes since we are not using
-        # them currently. We will use them when we implement
-        # Z1 and Z2 correction.
-        shims.I_limit["Z0"] = 1.5
-        shims.V_limit["Z0"] = 2.0
-        shims.I_limit["Y"] = 1.5
-        shims.V_limit["Y"] = 2.0
-        # shims.I_limit["Z1"] = 0.0
-        # shims.V_limit["Z1"] = 0.0
-        # shims.I_limit["Z2"] = 0.0
-        # shims.V_limit["Z2"] = 0.0
-        # shims.I_limit["X"] = 0.0
-        # shims.V_limit["X"] = 0.0
-        # }}}
-        input("Press enter to exit")
-        shims.V_limit[:] = 0.0
-        shims.I_limit[:] = 0.0
+with power_control() as p:
+    shim_names = list(p.get_shims().keys())
+    print("initial shim readback:", p.get_shims())
+    print("\nVoltage test")
+    p.shim_voltage[:] = 0.0
+    p.shim_current[:] = 1.5
+    print("device readback after voltage/current setup:", p.get_shims())
+    # TODO ☐: I don't really understand this.  (1) the server rounds for
+    #         you, so why do that here? (2) why is there a loop? You set
+    #         up the properties as dict properties, so you should be able
+    #         to set them to a vector if you like.
+    #         This is an example, so you want to be showing you how
+    #         acctually expect people to interact with the module.
+    for shim_name in shim_names:
+        rounded_voltage = p.round_shim_voltage(shim_name, 1.5)
+        print(
+            "rounded float voltage for",
+            shim_name,
+            "from 1.5 V to:",
+            rounded_voltage,
+        )
+        p.shim_voltage[shim_name] = rounded_voltage
+        print(
+            "device read voltage for",
+            shim_name,
+            "after float set:",
+            p.get_shims()[shim_name][0],
+        )
+    rounded_voltage_arrays = {
+        shim_name: p.round_shim_voltage(shim_name, [2.0, 2.0])
+        for shim_name in shim_names
+    }
+    print(
+        "rounded array voltages from 2.0 V request:",
+        rounded_voltage_arrays,
+    )
+    rounded_voltages = [
+        rounded_voltage_arrays[shim_name][0] for shim_name in shim_names
+    ]
+    p.shim_voltage[:] = rounded_voltages
+    print(
+        "device read voltages after array set:",
+        {shim_name: p.get_shims()[shim_name][0] for shim_name in shim_names},
+    )
+    p.shim_voltage[:] = 0.0
+    p.shim_current[:] = 0.0
+    print("device readback after voltage test shutdown:", p.get_shims())
+
+    print("\nCurrent test")
+    p.shim_current[:] = 0.0
+    p.shim_voltage[:] = 15.0
+    print("device readback after current/voltage setup:", p.get_shims())
+    for shim_name in shim_names:
+        p.shim_current[shim_name] = 0.5
+        print(
+            "device read current for",
+            shim_name,
+            "after float set to 0.5 A:",
+            p.get_shims()[shim_name][1],
+        )
+    p.shim_current[:] = [0.7] * len(shim_names)
+    print(
+        "device read currents after array set to 0.7 A:",
+        {shim_name: p.get_shims()[shim_name][1] for shim_name in shim_names},
+    )
+    p.shim_current[:] = 0.0
+    p.shim_voltage[:] = 0.0
+    print("device readback after current test shutdown:", p.get_shims())

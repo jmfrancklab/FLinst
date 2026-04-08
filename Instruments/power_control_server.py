@@ -1,5 +1,5 @@
 # To be run from the computer connected to the EPR spectrometer
-import time, socket, pickle, os, logging, sys
+import ast, time, socket, pickle, os, logging, sys
 from Instruments import (
     Bridge12,
     prologix_connection,
@@ -14,6 +14,19 @@ import SpinCore_pp
 
 IP = "0.0.0.0"
 PORT = 6002
+
+def round_and_set_shim_quant(
+    sh_map, shim_name, input_string, I_or_V, which_prop
+):
+    current_or_voltage = float(input_string)
+    current_or_voltage = sh_map.round_to_allowed(
+        I_or_V, shim_name, current_or_voltage
+    )
+    if not sh_map.output[shim_name] and current_or_voltage != 0:
+        which_prop[shim_name] = 0
+        sh_map.output[shim_name] = 1
+    which_prop[shim_name] = current_or_voltage
+    return current_or_voltage
 
 
 def main():
@@ -60,18 +73,6 @@ def main():
         sock.bind((IP, PORT))
         this_logobj = logobj()
 
-        def set_shim_limit(
-            limit_proxy, limit_type, shim_name, requested_value
-        ):
-            rounded_value = sh_map.round_to_allowed(
-                limit_type, shim_name, requested_value
-            )
-            if not sh_map.output[shim_name] and requested_value != 0:
-                limit_proxy[shim_name] = 0
-                sh_map.output[shim_name] = 1
-            limit_proxy[shim_name] = rounded_value
-            return rounded_value
-
         def process_cmd(cmd, this_logobj):
             leave_open = True
             cmd = cmd.strip()
@@ -84,6 +85,9 @@ def main():
                     cmd=cmd,
                 )
             args = cmd.split(b" ")
+            if len(args) > 3 and args[2].startswith(b"["):
+                # this appears to be a list
+                args = [args[0], args[1], b" ".join(args[2:])]
             print("I split it to ", args)
             if len(args) == 3:
                 match args[0]:
@@ -102,22 +106,34 @@ def main():
                         this_logobj.wg_has_been_flipped = True
                     case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
-                        current_A = set_shim_limit(
-                            sh_map.I_limit, "I", shim_name, float(args[2])
+                        retval = round_and_set_shim_quant(
+                            sh_map,
+                            shim_name,
+                            args[2],
+                            "I",
+                            sh_map.I_limit,
                         )
-                        conn.send(("%0.3f" % current_A).encode("ASCII"))
+                        conn.send(("%0.4f" % retval).encode("ASCII"))
                     case b"SET_SHIM_VOLTAGE":
                         shim_name = args[1].decode("ASCII")
-                        voltage_V = set_shim_limit(
-                            sh_map.V_limit, "V", shim_name, float(args[2])
+                        retval = round_and_set_shim_quant(
+                            sh_map,
+                            shim_name,
+                            args[2],
+                            "V",
+                            sh_map.V_limit,
                         )
-                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
-                    case b"ROUND_SHIM_VOLTAGE":
+                        conn.send(("%0.4f" % retval).encode("ASCII"))
+                    case b"ROUND_SHIM_VOLTAGES":
                         shim_name = args[1].decode("ASCII")
-                        voltage_V = sh_map.round_to_allowed(
-                            "V", shim_name, float(args[2])
+                        rounded_voltages = sh_map.round_to_allowed(
+                            "V",
+                            shim_name,
+                            ast.literal_eval(args[2].decode("ASCII")),
                         )
-                        conn.send(("%0.3f" % voltage_V).encode("ASCII"))
+                        conn.send(
+                            pickle.dumps(rounded_voltages) + b"ENDTCPIPBLOCK"
+                        )
                     case _:
                         raise ValueError(
                             "I don't understand this 3 component command"

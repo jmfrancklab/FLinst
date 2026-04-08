@@ -18,19 +18,21 @@ from SpinCore_pp.ppg import run_spin_echo
 
 from Instruments import power_control
 
+# {{{ before wasting time running the experiment, make sure the output
+#     directory exists
 my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
+# }}}
 
 config_dict = SpinCore_pp.configuration("active.ini")
 
 # {{{ user settings
 settle_s = config_dict["magnet_settle_medium"]
-set_B_field = False  # this is also particular to this script
 stepsize = 0.005
 max_V = 1 / 3.69
 # }}}
 
-# {{{ importing acquisition parameters
+# {{{ pull acq settings, and check for consistency
 (
     nPoints,
     config_dict["SW_kHz"],
@@ -40,13 +42,6 @@ max_V = 1 / 3.69
 )
 ph1_cyc = r_[0, 1, 2, 3]
 nPhaseSteps = len(ph1_cyc)
-# }}}
-
-# {{{ add file saving parameters to config dict
-config_dict["type"] = "shim_z0"
-# }}}
-
-# {{{ check total points
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
     "You are trying to acquire %d points (too many points) -- either"
@@ -56,42 +51,17 @@ assert total_pts < 2**14, (
 )
 # }}}
 
-# {{{ set field
-if set_B_field:
-    input(
-        "I'm assuming that you've tuned your probe to %f since that's"
-        " what's in your .ini file. Hit enter if this is true"
-        % config_dict["carrierFreq_MHz"]
-    )
-    field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
-    print(
-        "Based on that, and the gamma_eff_MHz_G you have in your .ini"
-        " file, I'm setting the field to %f" % field_G
-    )
-    with power_control() as p:
-        assert field_G < 3700, "are you crazy??? field is too high!"
-        assert field_G > 3300, "are you crazy?? field is too low!"
-        field_G = p.set_field(field_G)
-        print("field set to ", field_G)
-# }}}
-
 data = None
-
 with power_control() as p:
-    curr_voltage_V = p.get_shim()["Z0"][0]
-    requested_z0_voltage_list = curr_voltage_V + np.arange(0, max_V, stepsize)
-    z0_voltage_list = np.array(
-        list(
-            dict.fromkeys(
-                p.round_shim_voltage("Z0", requested_z0_voltage_list)
-            )
-        )
-    )
-    print("current Z0 voltage:", curr_voltage_V)
+    orig_voltage_V = p.get_shims()["Z0"][0]
+    requested_z0_voltage_list = orig_voltage_V + np.arange(0, max_V, stepsize)
+    z0_voltage_list = p.round_shim_voltage("Z0", requested_z0_voltage_list)
+    print("current Z0 voltage:", orig_voltage_V)
     print("requested Z0 voltages:", requested_z0_voltage_list)
     print("allowed Z0 voltages:", z0_voltage_list)
     for idx, requested_voltage in enumerate(z0_voltage_list):
-        applied_voltage = p.set_shim_voltage("Z0", requested_voltage)
+        p.shim["Z0"] = requested_voltage
+        applied_voltage = p.shim["Z0"]
         print(
             "set Z0 shim to",
             applied_voltage,
@@ -118,11 +88,12 @@ with power_control() as p:
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    p.set_shim_voltage("Z0", curr_voltage_V)
-    print("restored Z0 shim to", curr_voltage_V, "V")
+    # set back to the original voltage at the end
+    p.shim["Z0"] = orig_voltage_V
+    print("restored Z0 shim to", orig_voltage_V, "V")
 
 data.rename("indirect", "z0_voltage")
-data.setaxis("z0_voltage", z0_voltage_list).set_units("z0_voltage", "V")
+data.set_axis("z0_voltage", z0_voltage_list).set_units("z0_voltage", "V")
 
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
@@ -134,6 +105,6 @@ data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = save_data(data, my_exp_type, config_dict, "shim_z0")
+config_dict = save_data(data, my_exp_type, config_dict, counter_type="shim_z0")
 config_dict.write()
 # }}}

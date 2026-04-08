@@ -1,3 +1,4 @@
+# TODO ☐: not reviewed yet
 """
 Measure magnetic field versus Z0 shim voltage through the power control server.
 """
@@ -14,7 +15,7 @@ requested_voltages_V = np.arange(0.0, 4.0 + 0.25 / 2, 0.25)
 settle_s = 1.0
 
 with power_control() as p:
-    initial_voltage_V = p.get_shim()[shim_name][0]
+    initial_voltage_V = p.get_shims()[shim_name][0]
     voltages_V = np.array(
         list(
             dict.fromkeys(
@@ -27,7 +28,8 @@ with power_control() as p:
     print("allowed voltages:", voltages_V)
     try:
         for idx, voltage_V in enumerate(voltages_V):
-            applied_voltage_V = p.set_shim_voltage(shim_name, voltage_V)
+            p.shim[shim_name] = voltage_V
+            applied_voltage_V = p.shim[shim_name]
             time.sleep(settle_s)
             fields_G[idx] = p.get_field()
             print(
@@ -35,7 +37,7 @@ with power_control() as p:
                 f" field = {fields_G[idx]:0.3f} G"
             )
     finally:
-        p.set_shim_voltage(shim_name, initial_voltage_V)
+        p.shim[shim_name] = initial_voltage_V
         print(f"Restored {shim_name} to {initial_voltage_V:0.3f} V")
 
 fields_G = fields_G - fields_G[0]
