@@ -1,9 +1,11 @@
 import h5py
 import os
 import pyspecdata as psd
-import pyspecProcScripts
 import subprocess
+import sys
+import tempfile
 from datetime import datetime
+from Instruments import instrument_control
 
 
 def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
@@ -75,6 +77,8 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
                     + str(config_dict["%s_counter" % counter_type])
                 )
             dataset.name(nodename)
+    with instrument_control() as p:
+        dataset.set_prop("shim_readback", p.get_shim())
     dataset.hdf5_write(f"{filename_out}", directory=target_directory)
     print("\n** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(
@@ -84,25 +88,32 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
         my_exp_type,
     )
     if proc:
-        env = os.environ
-        subprocess.call(
-            (
-                " ".join(
-                    [
-                        "python",
-                        os.path.join(
-                            os.path.split(
-                                os.path.split(pyspecProcScripts.__file__)[0]
-                            )[0],
-                            "examples",
-                            "proc_raw.py",
-                        ),
-                        dataset.name(),
-                        filename_out,
-                        my_exp_type,
-                    ]
-                )
-            ),
-            env=env,
+        env = os.environ.copy()
+        # Avoid matplotlib cache warnings when post-processing is launched
+        # from restricted environments.
+        env.setdefault(
+            "MPLCONFIGDIR",
+            os.path.join(tempfile.gettempdir(), "matplotlib"),
         )
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "from pyspecProcScripts.raw import run_raw; "
+                    "import sys; "
+                    "run_raw(sys.argv[1], sys.argv[2], sys.argv[3])"
+                ),
+                my_exp_type,
+                filename_out,
+                dataset.name(),
+            ],
+            env=env,
+            check=False,
+        )
+        if result.returncode != 0:
+            print(
+                "\n*** WARNING: automatic post-processing failed, "
+                "but the dataset was saved successfully. ***\n"
+            )
     return config_dict

@@ -28,7 +28,7 @@ import h5py
 import SpinCore_pp
 from SpinCore_pp.power_helper import gen_powerlist, Ep_spacing_from_phalf
 from SpinCore_pp.ppg import run_spin_echo, run_IR
-from Instruments import power_control
+from Instruments import instrument_control
 from datetime import datetime
 
 def IR_measurement(
@@ -220,7 +220,7 @@ if os.path.exists(filename):
 # SEPERATELY serves as a control to compare the thermal of Ep to ensure no
 # microwaves were leaking call A to run spin echo
 # {{{run enhancement
-with power_control() as p:
+with instrument_control() as p:
     # we do not dip lock or anything here, because we assume
     # uw_dip_center_GHz stores the frequency of the center of the cavity
     # resonance, which was set from the microwave tuning gui

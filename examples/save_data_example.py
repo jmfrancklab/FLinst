@@ -1,26 +1,33 @@
 """
-test of dip locking and logging
-===============================
+test save_data with fake power stepping
+======================================
 
-This is roughly derived from the combined_ODNP.py example in SpinCore.
-Similar in fashion, the script generates a power list, and loops through
-each power generating fake data using the run_scans function defined
-below. At each power the "data" records the start and stop times that
-will correspond to the times and powers inside the log allowing one to
-average over each power step in a later post processing step. 
+This keeps the original fake-data profile: step through a list of powers,
+generate dummy data with indirect start/stop timestamps, and retain the
+instrument-control logging block. The final dataset is saved using
+``SpinCore_pp.save_data`` so the script can be used to test updates to
+``save_data.py``.
 """
+
 from numpy import r_
 import numpy as np
 from pyspecdata import ndshape, getDATADIR
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
-from Instruments import power_control
-import os, time, h5py
+from Instruments import instrument_control
+import os
+import time
+import h5py
 from datetime import datetime
+import SpinCore_pp
+from SpinCore_pp import save_data
 
-filename = datetime.now().strftime("%y%m%d") + "_" + "test_B12_log.h5"
-target_directory = getDATADIR(exp_type="ODNP_NMR_comp/test_equipment")
+my_exp_type = "ODNP_NMR_comp/test_equipment"
+config_dict = SpinCore_pp.configuration("active.ini")
+config_dict["date"] = datetime.now().strftime("%y%m%d")
+config_dict["type"] = "save_data_test"
+
 # {{{ data properties
 nPoints = 2048
 nScans = 1
@@ -28,18 +35,10 @@ nScans = 1
 # {{{ params for Bridge 12/power
 dB_settings = np.unique(np.round(np.linspace(0, 35, 5) / 0.5) * 0.5)
 powers = 1e-3 * 10 ** (dB_settings / 10.0)
-uw_dip_center_GHz = 9.818061
-uw_dip_width_GHz = 0.008
-result = input(
-    "to keep this example minimal, it doesn't read from the config file!!\nThe dip frequency is currently set to %0.6f GHz\nIs that correct???"
-    % uw_dip_center_GHz
-)
-if not result.lower().startswith("y"):
-    raise ValueError("Incorrect dip frequency")
 # }}}
 # {{{ delays used in test
 short_delay = 0.5
-long_delay = 10  # this is the delay where it holds the same power
+long_delay = 10
 
 
 # }}}
@@ -50,20 +49,16 @@ def run_scans(
     "this is a dummy replacement to run_scans that generates random data"
     data_length = 2 * nPoints
     for nScans_idx in range(nScans):
-        data_array = np.random.random(2 * data_length).view(
-            np.complex128
-        )  # enough random numbers for both real and imaginary, then use view to alternate real,imag
+        data_array = np.random.random(2 * data_length).view(np.complex128)
         if ret_data is None:
             times_dtype = np.dtype(
                 [
                     (indirect_fields[0], np.double),
                     (indirect_fields[1], np.double),
-                ]  # typically, the two columns/fields give start and stop times
+                ]
             )
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
-            direct_time_axis = r_[0 : np.shape(data_array)[0]] / (
-                3.9e3
-            )  # fake it like this is 3.9 kHz SW data
+            direct_time_axis = r_[0 : np.shape(data_array)[0]] / 3.9e3
             ret_data = ndshape(
                 [indirect_len, nScans, len(direct_time_axis)],
                 ["indirect", "nScans", "t"],
@@ -77,7 +72,7 @@ def run_scans(
 
 # }}}
 power_settings_dBm = np.zeros_like(dB_settings)
-with power_control() as p:
+with instrument_control() as p:
     DNP_data = None
     for j, this_dB in enumerate(dB_settings):
         print("I'm going to pretend to run", this_dB, "dBm")
@@ -93,11 +88,6 @@ with power_control() as p:
         time.sleep(long_delay)
         power_settings_dBm[j] = p.get_power_setting()
         DNP_ini_time = time.time()
-        if j == 0:
-            retval = p.dip_lock(
-                uw_dip_center_GHz - uw_dip_width_GHz / 2,
-                uw_dip_center_GHz + uw_dip_width_GHz / 2,
-            )  # test the dip lock!
         DNP_data = run_scans(
             indirect_idx=j,
             indirect_len=len(powers),
@@ -110,23 +100,21 @@ with power_control() as p:
             time_axis_coords = DNP_data.getaxis("indirect")
         time_axis_coords[j]["start_times"] = DNP_ini_time
         time_axis_coords[j]["stop_times"] = DNP_done
-    DNP_data.name("nodename_test")
-    DNP_data.set_prop("power_settings", power_settings_dBm)
-    nodename = DNP_data.name()
-    try:
-        DNP_data.hdf5_write(filename, directory=target_directory)
-    except:
-        print(
-            "***Warning*** Writing to",
-            filename,
-            " failed, so saving to temp.h5",
-        )
-        if os.path.exists("temp.h5"):
-            os.remove("temp.h5")
-            DNP_data.hdf5_write("temp.h5")
     this_log = p.stop_log()
+
+DNP_data.set_prop("power_settings", power_settings_dBm)
+DNP_data.set_prop("postproc_type", "synthetic_test")
+DNP_data.set_prop("acq_params", config_dict.asdict())
+config_dict = save_data(
+    DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=False
+)
+
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
+)
+target_directory = getDATADIR(exp_type=my_exp_type)
 with h5py.File(
     os.path.normpath(os.path.join(target_directory, filename)), "a"
 ) as f:
-    log_grp = f.create_group("log")
+    log_grp = f.require_group("log")
     hdf_save_dict_to_group(log_grp, this_log.__getstate__())
