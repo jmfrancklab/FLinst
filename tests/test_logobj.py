@@ -81,22 +81,45 @@ class TestLogobjSerialization(unittest.TestCase):
         original = self.build_log()
         state = original.__getstate__()
         self.assertEqual(
-            set(state["array"].keys()),
+            set(state.keys()),
             {"NUMPY_DATA", "dictkeys", "dictvalues"},
         )
         recovered = logobj()
         with tempfile.NamedTemporaryFile(suffix=".h5") as tmpfile:
             with h5py.File(tmpfile.name, "w") as h5file:
-                log_group = h5file.create_group("log")
-                hdf_save_dict_to_group(log_group, state)
+                hdf_save_dict_to_group(h5file, {"log": state})
             with h5py.File(tmpfile.name, "r") as h5file:
                 log_group = h5file["log"]
-                self.assertEqual(list(log_group.keys()), ["array"])
-                self.assertIn("dictkeys", log_group["array"].attrs)
-                self.assertIn("dictvalues", log_group["array"].attrs)
+                self.assertIn("dictkeys", log_group.attrs)
+                self.assertIn("dictvalues", log_group.attrs)
                 recovered.__setstate__(log_group)
         self.assertEqual(recovered.log_dict, original.log_dict)
         np.testing.assert_array_equal(recovered.total_log, original.total_log)
+
+    def test_nddata_property_hdf5_roundtrip_restores_logobj_state(self):
+        """Round-trip log state stored as an nddata property through HDF5."""
+        original = self.build_log()
+        dataset = pyspecdata.nddata(np.r_[0:4], "t")
+        dataset.set_axis("t", np.r_[0:4]).name("test_data")
+        dataset.set_prop("log", original.__getstate__())
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = "log_roundtrip.h5"
+            dataset.hdf5_write(filename + "/group", directory=tmpdir)
+            recovered_dataset = pyspecdata.nddata_hdf5(
+                filename + "/group/test_data", directory=tmpdir
+            )
+
+        self.assertIn("log", recovered_dataset.get_prop())
+        recovered_dataset.set_prop(
+            "log", logobj.from_group(recovered_dataset.get_prop("log"))
+        )
+        self.assertEqual(
+            recovered_dataset.get_prop("log").log_dict, original.log_dict
+        )
+        np.testing.assert_array_equal(
+            recovered_dataset.get_prop("log").total_log, original.total_log
+        )
 
     def test_legacy_hdf_layout_still_loads(self):
         """Legacy files with dict metadata on the group should still load."""
@@ -107,9 +130,11 @@ class TestLogobjSerialization(unittest.TestCase):
                 log_group = h5file.create_group("log")
                 log_group.attrs["dictkeys"] = list(original.log_dict.keys())
                 log_group.attrs["dictvalues"] = [
-                    thisval.encode("utf-8")
-                    if isinstance(thisval, str)
-                    else thisval
+                    (
+                        thisval.encode("utf-8")
+                        if isinstance(thisval, str)
+                        else thisval
+                    )
                     for thisval in original.log_dict.values()
                 ]
                 log_group.create_dataset(

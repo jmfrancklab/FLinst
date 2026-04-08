@@ -2,18 +2,19 @@
 Y shim sweep
 ============
 
-Acquire a series of spin echoes while stepping the Y shim current.
+Acquire a series of spin echoes while stepping the Y shim voltage.
 The saved dataset can then be processed to determine the best Y shim.
 """
 
 import pyspecdata as psd
+import numpy as np
 from numpy import r_
 import os
 import time
 import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
-from Instruments import HP6623A, prologix_connection, power_control
+from Instruments import power_control
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
@@ -21,13 +22,11 @@ assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 config_dict = SpinCore_pp.configuration("active.ini")
 
 # {{{ user settings
-Y_channel = config_dict["shim_address"]["Y"][1]
-y_current_max = (
-    1.5  # this is set only in this script, since it doesn't pertain
-)
-#                     to anything else
 settle_s = config_dict["magnet_settle_medium"]
 set_B_field = False  # this is also particular to this script
+V_min = 1.32
+V_max = 2.63
+step = 0.1
 # }}}
 
 # {{{ importing acquisition parameters
@@ -76,33 +75,27 @@ if set_B_field:
 # }}}
 
 data = None
-with (
-    prologix_connection(
-        ip=config_dict["prologix_ip"],
-        port=config_dict["prologix_port"],
-    ) as p,
-    HP6623A(
-        prologix_instance=p,
-        address=config_dict["shim_address"]["Y"][0],
-    ) as HP1,
-):
-    HP1.safe_current = 1.6
-    initial_current = HP1.I_limit[Y_channel]
-    y_current_list = HP1.allowed_I[Y_channel]
-    y_current_list = y_current_list[y_current_list <= y_current_max]
-    assert len(y_current_list) > 0, (
-        "No allowed Y currents are less than or equal to y_current_max"
-    )
-    print("acquiring at Y currents:", y_current_list)
-    HP1.V_limit[Y_channel] = config_dict["shim_voltage_limit_V"]
-    HP1.I_limit[Y_channel] = 0
-    HP1.output[Y_channel] = 1
-    for idx, this_current in enumerate(y_current_list):
-        HP1.I_limit[Y_channel] = this_current
+
+with power_control() as p:
+    # TODO ☐: as in another module, replaced a very complicated
+    #         construction with something that you should be able to make work.
+    y_voltage_array = p.round_shim_voltage("Y", np.arange(V_min, V_max, step))
+    print("requested Y voltages:", requested_y_voltage_list)
+    print("allowed Y voltages:", y_voltage_array)
+    for idx, requested_voltage in enumerate(y_voltage_array):
+        # TODO ☐: as we had discussed, the power control object should
+        #         have inst dict properties, so that the following is
+        #         possible.  The point of this is because your
+        #         algorithms will use *this*, so this is the thing you
+        #         want to be able to treat as a vector, etc, etc.
+        #         (I only make this comment here, but it's true
+        #         everywhere you're setting the shims):
+        p.shim["Y"] = requested_voltage
+        applied_voltage = p.shim["Y"]
         print(
             "set Y shim to",
-            HP1.I_limit[Y_channel],
-            "A and waiting",
+            applied_voltage,
+            "V and waiting",
             settle_s,
             "s",
         )
@@ -112,7 +105,7 @@ with (
             deblank_us=config_dict["deblank_us"],
             nScans=config_dict["nScans"],
             indirect_idx=idx,
-            indirect_len=len(y_current_list),
+            indirect_len=len(y_voltage_array),
             ph1_cyc=ph1_cyc,
             amplitude=config_dict["amplitude"],
             adcOffset=config_dict["adc_offset"],
@@ -125,20 +118,18 @@ with (
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    HP1.V_limit[Y_channel] = 0
-    HP1.I_limit[Y_channel] = 0
-    HP1.output[Y_channel] = 0
+    p.set_shim_voltage("Y", 0.0)
     print("Y shim is turned off")
 
-data.rename("indirect", "y_current")
-data.setaxis("y_current", y_current_list).set_units("y_current", "A")
+data.rename("indirect", "y_voltage")
+data.setaxis("y_voltage", y_voltage_array).set_units("y_voltage", "V")
 
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
 if config_dict["nScans"] > 1:
     data.setaxis("nScans", r_[0 : config_dict["nScans"]])
-data.reorder(["nScans", "ph1", "y_current", "t2"])
+data.reorder(["nScans", "ph1", "y_voltage", "t2"])
 data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
