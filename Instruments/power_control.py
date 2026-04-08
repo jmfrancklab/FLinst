@@ -15,6 +15,8 @@ import time
 import pickle
 from collections.abc import Iterable
 
+from .inst_dict_property import inst_dict_property
+
 IP = "127.0.0.1"
 # IP = "jmfrancklab-bruker.syr.edu"
 # IP = "128.230.29.95"
@@ -39,6 +41,10 @@ class power_control(object):
         print("target port:", port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((ip, port))
+        self._shim_dict = {}
+        self._shim_voltage_cache = {}
+        self._shim_current_cache = {}
+        self._refresh_shim_cache()
 
     def __enter__(self):
         return self
@@ -135,27 +141,52 @@ class power_control(object):
         self.send("SET_FREQ %f" % freq)
         return
 
-    # TODO ☐: as noted elsewhere, it's important for THESE to be inst dict properties.
-    # TODO ☐: furthermore, b/c talking to the server is expensive, it's
-    #         smart to have a cache (just a dict attribute of this
-    #         object) that you test against, and only actually send
-    #         commands if you're asking for a change
-    def set_shim_current(self, shim_name, current_A):
-        """Sets the shim current of the specified shim channel.  The shim_name
-        should be one of the keys in the config_dict["shim_channels"] dict, and
-        the current_A should be a float specifying the current in Amps."""
+    def _refresh_shim_cache(self):
+        """Populate shim-name lookup state and local readback caches."""
+        shim_state = self.get_shim()
+        self._shim_dict = {shim_name: None for shim_name in shim_state}
+        self._shim_voltage_cache = {
+            shim_name: voltage_current[0]
+            for shim_name, voltage_current in shim_state.items()
+        }
+        self._shim_current_cache = {
+            shim_name: voltage_current[1]
+            for shim_name, voltage_current in shim_state.items()
+        }
+        return
+
+    @inst_dict_property
+    def shim_current(self, shim_name):
+        """Return the cached current readback for one shim channel."""
+        return self._shim_current_cache[shim_name]
+
+    @shim_current.setter
+    def shim_current(self, shim_name, current_A):
+        """Set one shim current and skip the server call if unchanged."""
+        cached_current = self._shim_current_cache.get(shim_name)
+        if cached_current == current_A:
+            return cached_current
         self.send("SET_SHIM_CURRENT %s %f" % (shim_name, current_A))
         retval = self.get()
         retval = float(retval)
+        self._shim_current_cache[shim_name] = retval
         return retval
 
-    def set_shim_voltage(self, shim_name, voltage_V):
-        """Sets the shim voltage of the specified shim channel.  The shim_name
-        should be one of the keys in the config_dict["shim_channels"] dict, and
-        the voltage_V should be a float specifying the voltage in Volts."""
+    @inst_dict_property
+    def shim(self, shim_name):
+        """Return the cached voltage readback for one shim channel."""
+        return self._shim_voltage_cache[shim_name]
+
+    @shim.setter
+    def shim(self, shim_name, voltage_V):
+        """Set one shim voltage and skip the server call if unchanged."""
+        cached_voltage = self._shim_voltage_cache.get(shim_name)
+        if cached_voltage == voltage_V:
+            return cached_voltage
         self.send("SET_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
         retval = self.get()
         retval = float(retval)
+        self._shim_voltage_cache[shim_name] = retval
         return retval
 
     def round_shim_voltage(self, shim_name, voltage_V):
@@ -202,7 +233,17 @@ class power_control(object):
     def get_shim(self):
         self.send("GET_SHIM")
         retval = self.get_bytes(b"ENDTCPIPBLOCK")
-        return pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
+        retval = pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
+        self._shim_dict = {shim_name: None for shim_name in retval}
+        self._shim_voltage_cache = {
+            shim_name: voltage_current[0]
+            for shim_name, voltage_current in retval.items()
+        }
+        self._shim_current_cache = {
+            shim_name: voltage_current[1]
+            for shim_name, voltage_current in retval.items()
+        }
+        return retval
 
     def get_power_setting(self):
         self.send("GET_POWER")
