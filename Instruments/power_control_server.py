@@ -103,10 +103,7 @@ def main():
                         min_f = float(b.freq_int()) * 1e3
                         conn.send(("%0.6f" % min_f).encode("ASCII"))
                         this_logobj.wg_has_been_flipped = True
-                    case b"SET_SHIM_CURRENT":
-                        # TODO ☐: this is the ONLY place in this module where
-                        #         you are doing a decode.  Why is that? (seems
-                        #         unlikely that this is justified)
+                    case b"SET_SHIM_CURRENT"
                         shim_name = args[1].decode("ASCII")
                         # TODO ☐: this set_shim_limit definition decreases
                         #         readability, and it seems very unlikely that
@@ -123,7 +120,6 @@ def main():
                         )
                         conn.send(("%0.3f" % voltage_V).encode("ASCII"))
                     case b"ROUND_SHIM_VOLTAGES":
-                        # TODO ☐: same comments
                         shim_name = args[1].decode("ASCII")
                         rounded_voltages = sh_map.round_to_allowed(
                             "V",
