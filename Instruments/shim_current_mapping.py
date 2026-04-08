@@ -14,13 +14,32 @@ class ShimDictMapping:
         overvoltage=15.0,
         safe_current=None,
     ):
-        # TODO ☐: standard numpy-style docstring
         """Create a named shim-to-channel mapping.
 
-        `shim_dict` must map shim names to `(instrument_or_address, channel)`
-        pairs. `instrument_or_address` may be either a live `HP6623A`
-        instance or an integer GPIB address. Keys are sorted alphabetically
-        and stored in an `OrderedDict`.
+        Parameters
+        ----------
+        shim_dict : mapping
+            Mapping from shim names to ``(instrument_or_address, channel)``
+            pairs. ``instrument_or_address`` may be either a live
+            :class:`HP6623A` instance or an integer GPIB address. Keys are
+            sorted alphabetically and stored in an ``OrderedDict``.
+        prologix_instance : object, optional
+            Prologix controller used to construct :class:`HP6623A` instances
+            when ``shim_dict`` contains integer GPIB addresses.
+        overvoltage : float or None, optional
+            Per-channel overvoltage limit applied in :meth:`__enter__`. Use
+            ``None`` to leave the instrument setting unchanged.
+        safe_current : float or None, optional
+            Safe current limit applied to owned instruments in :meth:`__enter__`.
+            Use ``None`` to leave the instrument setting unchanged.
+
+        Raises
+        ------
+        ValueError
+            If any ``shim_dict`` entry is not a two-item tuple.
+        TypeError
+            If an instrument specifier is neither an integer GPIB address nor
+            an :class:`HP6623A` instance, or if a channel is not an integer.
         """
         shim_dict = OrderedDict(sorted(dict(shim_dict).items(), key=lambda x: x[0]))
         for shim_name, connection in shim_dict.items():
