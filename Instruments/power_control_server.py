@@ -15,15 +15,14 @@ import SpinCore_pp
 IP = "0.0.0.0"
 PORT = 6002
 
-def round_and_set_shim_quant(sh_map, input_string, I_or_V, which_prop):
+def round_and_set_shim_quant(
+    sh_map, shim_name, input_string, I_or_V, which_prop
+):
     current_or_voltage = float(input_string)
     current_or_voltage = sh_map.round_to_allowed(
         I_or_V, shim_name, current_or_voltage
     )
-    if (
-        not sh_map.output[shim_name]
-        and current_or_voltage != 0
-    ):
+    if not sh_map.output[shim_name] and current_or_voltage != 0:
         which_prop[shim_name] = 0
         sh_map.output[shim_name] = 1
     which_prop[shim_name] = current_or_voltage
@@ -106,11 +105,23 @@ def main():
                         this_logobj.wg_has_been_flipped = True
                     case b"SET_SHIM_CURRENT":
                         shim_name = args[1].decode("ASCII")
-                        retval = round_and_set_shim_quant(sh_map, args[2], "I", sh_map.I_limit)
+                        retval = round_and_set_shim_quant(
+                            sh_map,
+                            shim_name,
+                            args[2],
+                            "I",
+                            sh_map.I_limit,
+                        )
                         conn.send(("%0.4f" % retval).encode("ASCII"))
                     case b"SET_SHIM_VOLTAGE":
                         shim_name = args[1].decode("ASCII")
-                        retval = round_and_set_shim_quant(sh_map, args[2], "V", sh_map.V_limit)
+                        retval = round_and_set_shim_quant(
+                            sh_map,
+                            shim_name,
+                            args[2],
+                            "V",
+                            sh_map.V_limit,
+                        )
                         conn.send(("%0.4f" % retval).encode("ASCII"))
                     case b"ROUND_SHIM_VOLTAGES":
                         shim_name = args[1].decode("ASCII")
