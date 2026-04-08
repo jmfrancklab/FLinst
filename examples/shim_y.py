@@ -77,19 +77,11 @@ if set_B_field:
 data = None
 
 with power_control() as p:
-    # TODO ☐: as in another module, replaced a very complicated
-    #         construction with something that you should be able to make work.
-    y_voltage_array = p.round_shim_voltage("Y", np.arange(V_min, V_max, step))
+    requested_y_voltage_list = np.arange(V_min, V_max, step)
+    y_voltage_array = p.round_shim_voltage("Y", requested_y_voltage_list)
     print("requested Y voltages:", requested_y_voltage_list)
     print("allowed Y voltages:", y_voltage_array)
     for idx, requested_voltage in enumerate(y_voltage_array):
-        # TODO ☐: as we had discussed, the power control object should
-        #         have inst dict properties, so that the following is
-        #         possible.  The point of this is because your
-        #         algorithms will use *this*, so this is the thing you
-        #         want to be able to treat as a vector, etc, etc.
-        #         (I only make this comment here, but it's true
-        #         everywhere you're setting the shims):
         p.shim["Y"] = requested_voltage
         applied_voltage = p.shim["Y"]
         print(
