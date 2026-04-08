@@ -1,9 +1,6 @@
 from pyspecdata import *
 import os, sys, time
 import SpinCore_pp
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
 import h5py
 from datetime import datetime
 

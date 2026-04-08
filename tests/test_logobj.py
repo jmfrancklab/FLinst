@@ -81,19 +81,17 @@ class TestLogobjSerialization(unittest.TestCase):
         original = self.build_log()
         state = original.__getstate__()
         self.assertEqual(
-            set(state["array"].keys()),
+            set(state.keys()),
             {"NUMPY_DATA", "dictkeys", "dictvalues"},
         )
         recovered = logobj()
         with tempfile.NamedTemporaryFile(suffix=".h5") as tmpfile:
             with h5py.File(tmpfile.name, "w") as h5file:
-                log_group = h5file.create_group("log")
-                hdf_save_dict_to_group(log_group, state)
+                hdf_save_dict_to_group(h5file, {"log": state})
             with h5py.File(tmpfile.name, "r") as h5file:
                 log_group = h5file["log"]
-                self.assertEqual(list(log_group.keys()), ["array"])
-                self.assertIn("dictkeys", log_group["array"].attrs)
-                self.assertIn("dictvalues", log_group["array"].attrs)
+                self.assertIn("dictkeys", log_group.attrs)
+                self.assertIn("dictvalues", log_group.attrs)
                 recovered.__setstate__(log_group)
         self.assertEqual(recovered.log_dict, original.log_dict)
         np.testing.assert_array_equal(recovered.total_log, original.total_log)
@@ -107,9 +105,11 @@ class TestLogobjSerialization(unittest.TestCase):
                 log_group = h5file.create_group("log")
                 log_group.attrs["dictkeys"] = list(original.log_dict.keys())
                 log_group.attrs["dictvalues"] = [
-                    thisval.encode("utf-8")
-                    if isinstance(thisval, str)
-                    else thisval
+                    (
+                        thisval.encode("utf-8")
+                        if isinstance(thisval, str)
+                        else thisval
+                    )
                     for thisval in original.log_dict.values()
                 ]
                 log_group.create_dataset(
