@@ -197,7 +197,7 @@ class NMRWindow(QMainWindow):
         return
 
     def on_mw_checkbox_changed(self, state):
-        enabled = state == Qt.Checked
+        enabled = self.mw_checkbox.isChecked()
         self.mw_power_spinbox.lineEdit().setReadOnly(not enabled)
         if enabled and not self._mw_output_enabled:
             req_power_dBm = self.mw_power_spinbox.value()
