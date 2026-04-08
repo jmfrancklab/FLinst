@@ -12,11 +12,8 @@ average over each power step in a later post processing step.
 from numpy import r_
 import numpy as np
 from pyspecdata import ndshape, getDATADIR
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
 from Instruments import power_control
-import os, time, h5py
+import os, time
 from datetime import datetime
 
 filename = datetime.now().strftime("%y%m%d") + "_" + "test_B12_log.h5"
@@ -112,6 +109,7 @@ with power_control() as p:
         time_axis_coords[j]["stop_times"] = DNP_done
     DNP_data.name("nodename_test")
     DNP_data.set_prop("power_settings", power_settings_dBm)
+    DNP_data.set_prop("log", p.stop_log().__getstate__())
     nodename = DNP_data.name()
     try:
         DNP_data.hdf5_write(filename, directory=target_directory)
@@ -124,8 +122,3 @@ with power_control() as p:
         if os.path.exists("temp.h5"):
             os.remove("temp.h5")
             DNP_data.hdf5_write("temp.h5")
-    this_log = p.stop_log()
-with h5py.File(
-    os.path.normpath(os.path.join(target_directory, filename)), "a"
-) as f:
-    hdf_save_dict_to_group(f, {"log":this_log.__getstate__()})
