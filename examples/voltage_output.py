@@ -1,4 +1,10 @@
 # TODO ☐: not reviewed
+"""
+Characterize the discrete output voltages supported by selected HP6623A
+channels by stepping each channel through a voltage range and reporting the
+observed setpoints.
+"""
+
 from Instruments import HP6623A, prologix_connection
 import numpy as np
 
