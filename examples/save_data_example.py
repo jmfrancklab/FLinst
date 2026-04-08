@@ -33,7 +33,7 @@ nPoints = 2048
 nScans = 1
 # }}}
 # {{{ params for Bridge 12/power
-dB_settings = np.unique(np.round(np.linspace(0, 35, 5) / 0.5) * 0.5)
+dB_settings = np.unique(np.round(np.linspace(0, 10, 5) / 0.5) * 0.5)
 powers = 1e-3 * 10 ** (dB_settings / 10.0)
 # }}}
 # {{{ delays used in test
