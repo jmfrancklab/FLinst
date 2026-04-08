@@ -158,19 +158,6 @@ class HP6623A(gpib_eth):
         """Convert 0-based channel index to 1-based for GPIB commands."""
         return channel + 1
 
-    # TODO ☐: this function is only used once, so the code should just be inlined
-    def _round_voltage_to_allowed(self, channel, value):
-        offset = self._voltage_rounding_offset[channel]
-        interval = self._voltage_rounding_interval[channel]
-        if offset is None or interval is None:
-            raise ValueError(
-                "Voltage rounding parameters not set for channel %d" % channel
-            )
-        return np.round(
-            np.round((value - offset) / interval) * interval + offset,
-            3,
-        )
-
     def check_id(self):
         self.write("ID?")
         retval = self.read()
@@ -621,7 +608,17 @@ class HP6623A(gpib_eth):
         if which == "V" and channel in [0, 1]:
             if value == 0:
                 return 0.0
-            return self._round_voltage_to_allowed(channel, value)
+            offset = self._voltage_rounding_offset[channel]
+            interval = self._voltage_rounding_interval[channel]
+            if offset is None or interval is None:
+                raise ValueError(
+                    "Voltage rounding parameters not set for channel %d"
+                    % channel
+                )
+            return np.round(
+                np.round((value - offset) / interval) * interval + offset,
+                3,
+            )
         the_values = getattr(self, "allowed_" + which)[channel]
         return the_values[np.argmin(abs(value - the_values))]
 
