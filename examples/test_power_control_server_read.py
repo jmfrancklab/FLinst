@@ -2,11 +2,10 @@
 
 import time, h5py
 import pylab as plt
-from numpy import empty
 from matplotlib.ticker import FuncFormatter
 import matplotlib.transforms as transforms
 from Instruments.logobj import logobj
-import Instruments.pyspecdata_search as psd
+import pyspecdata as psd
 
 
 @FuncFormatter
@@ -28,23 +27,25 @@ with h5py.File(fname, "r") as f:
     read_dict = thislog.log_dict
 print(read_array)
 for j in range(len(read_array)):
-    thistime, thisrx, thispower, thiscmd = read_array[j]
-    thistime, thisrx, thispower, thiscmd = read_array[j]
+    thistime, thisrx, thispower, thisfield, thiscmd = read_array[j]
     print(
         "%-04d" % j,
         time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(thistime)),
         thisrx,
         thispower,
+        thisfield,
         read_dict[thiscmd],
     )
-
 fig, (ax_Rx, ax_power, ax_field) = plt.subplots(3, 1, figsize=(10, 8))
 ax_Rx.xaxis.set_major_formatter(thetime)
 ax_power.xaxis.set_major_formatter(thetime)
+ax_field.xaxis.set_major_formatter(thetime)
 ax_Rx.set_ylabel("Rx / mV")
 ax_Rx.plot(read_array["time"], read_array["Rx"], ".")
 ax_power.set_ylabel("power / dBm")
 ax_power.plot(read_array["time"], read_array["power"], ".")
+ax_field.set_ylabel("field / G")
+ax_field.plot(read_array["time"], read_array["field"], ".")
 mask = read_array["cmd"] != 0
 n_events = len(read_array["time"][mask])
 trans_power = transforms.blended_transform_factory(
@@ -53,9 +54,13 @@ trans_power = transforms.blended_transform_factory(
 trans_Rx = transforms.blended_transform_factory(
     ax_Rx.transData, ax_Rx.transAxes
 )
+trans_field = transforms.blended_transform_factory(
+    ax_field.transData, ax_field.transAxes
+)
 for j, thisevent in enumerate(read_array[mask]):
     ax_Rx.axvline(x=thisevent["time"])
     ax_power.axvline(x=thisevent["time"])
+    ax_field.axvline(x=thisevent["time"])
     y_pos = j / n_events
     ax_Rx.text(
         thisevent["time"],
@@ -68,6 +73,12 @@ for j, thisevent in enumerate(read_array[mask]):
         y_pos,
         read_dict[thisevent["cmd"]],
         transform=trans_power,
+    )
+    ax_field.text(
+        thisevent["time"],
+        y_pos,
+        read_dict[thisevent["cmd"]],
+        transform=trans_field,
     )
 ax_power.legend(**dict(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0))
 plt.tight_layout()
