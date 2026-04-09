@@ -43,11 +43,11 @@ def ramp_field(
     config_dict,
     h,
     gen,
-    HP1,
+    shims,
     settling_attempts=60,
     main_field_threshold_G=2.0,
-    Z0_min_current_A=0,
-    Z0_max_current_A=1.5,
+    Z0_min_voltage_V=0.0,
+    Z0_max_voltage_V=6,
 ):
     """Ramp the field from where we are to where we want to be.
 
@@ -67,20 +67,24 @@ def ramp_field(
     gen : object
         Genesys power supply object with output, V_limit, I_limit, and I_meas
         properties.
+    shims : ShimDictMapping
+        Shim mapping object used to access the Z0 shim by name.
     settling_attempts: int (default 60)
         How many times should we attempt to observe a stable field.
     main_field_threshold_G: float (default 2.0)
         If the field discrepancy is above this threshold, we consider it a
         "main field" discrepancy and adjust the main field.  Otherwise, we
         consider it a "Z0" discrepancy and adjust Z0.
-    Z0_min_current_A: float (default 0)
-        The minimum current we allow for the Z0 shim coil (right now limited by
-        unipolar source).  If the desired Z0 current is outside this range, we
-        adjust the main field instead.
-    Z0_max_current_A: float (default 1.5)
-        The maximum current we allow for the Z0 shim coil.  If the desired Z0
-        current is outside this range, we adjust the main field instead.
+    Z0_min_voltage_V: float (default 0)
+        The minimum voltage we allow for the Z0 shim coil.
+    Z0_max_voltage_V: float or None
+        The maximum voltage we allow for the Z0 shim coil. If None, use the
+        hardware maximum for the mapped Z0 channel.
     """
+    z0_inst = shims.instrument("Z0")
+    z0_channel = shims.channel("Z0")
+    if Z0_max_voltage_V is None:
+        Z0_max_voltage_V = z0_inst.max_V[z0_channel]
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     # {{{ First, we ramp from whatever
     #     our current is (zero or not)
@@ -109,9 +113,8 @@ def ramp_field(
         gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
     if B0_des_G == 0:
-        # The second element is the channel -- the first is the GPIB addr
-        HP1.I_limit[config_dict["shim_address"]["Z0"][1]] = 0
-        HP1.output[config_dict["shim_address"]["Z0"][1]] = 0
+        shims.V_limit["Z0"] = 0
+        shims.output["Z0"] = 0
         logging.info("Z0 Shim is off")
         gen.I_limit = 0
         gen.output = False
@@ -160,43 +163,28 @@ def ramp_field(
             # {{{ if it's not within tolerance, and it's not asking for a big
             #     step, then it's asking for an intermediate step
             #     so we need to adjust the Z0 field.
-            assert (
-                HP1.V_limit[config_dict["shim_address"]["Z0"][1]] > 14.0
-                and hasattr(HP1, "safe_current")
-                and HP1.safe_current < 1.81
-            ), (
-                "The Z0 channel wasn't properly set up!!."
-                "  This is the fault of the containing program"
-            )
-            # {{{ the desired current is the combination of the change we want
-            #     to make and the current that's running through Z0 before the
+            # {{{ the desired voltage is the combination of the change we want
+            #     to make and the voltage that's running through Z0 before the
             #     change (and we want to save the latter)
-            desired_Z0_current_A = (B0_des_G - h.field_in_G) / config_dict[
-                "z0_field_v_current_G_A"
+            desired_Z0_voltage_V = (B0_des_G - h.field_in_G) / config_dict[
+                "z0_field_v_voltage_G_V"
             ]
-            Z0_initial_current_A = HP1.I_read[
-                config_dict["shim_address"]["Z0"][1]
-            ]
-            desired_Z0_current_A += Z0_initial_current_A
+            Z0_initial_voltage_V = shims.V_read["Z0"]
+            desired_Z0_voltage_V += Z0_initial_voltage_V
             # }}}
-            # {{{ we can only use Z0 to increase the current, and we don't want
-            #     to ask for an unreasonable current
-            if desired_Z0_current_A < Z0_min_current_A:
+            # {{{ we can only use Z0 to increase the voltage, and we don't want
+            #     to ask for an unreasonable voltage
+            if desired_Z0_voltage_V < Z0_min_voltage_V:
                 adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
-            elif desired_Z0_current_A > Z0_max_current_A:
+            elif desired_Z0_voltage_V > Z0_max_voltage_V:
                 adjust_main_field(B0_des_G, config_dict, h, gen)
             # }}}
-            HP1.I_limit[config_dict["shim_address"]["Z0"][1]] = (
-                HP1.round_to_allowed(
-                    "I",
-                    config_dict["shim_address"]["Z0"][1],
-                    desired_Z0_current_A,
-                )
+            shims.V_limit["Z0"] = shims.round_to_allowed(
+                "V",
+                "Z0",
+                desired_Z0_voltage_V,
             )
-            if (
-                HP1.I_read[config_dict["shim_address"]["Z0"][1]]
-                - Z0_initial_current_A
-            ) != 0:
+            if (shims.V_read["Z0"] - Z0_initial_voltage_V) != 0:
                 # {{{ Check if the field is stabilizing
                 num_field_matches = 0
                 B0_last_G = 0

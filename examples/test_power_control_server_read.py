@@ -1,6 +1,6 @@
 "Reads the output from test_power_control_server.py"
 
-import os, time, h5py
+import time, h5py
 import pylab as plt
 from numpy import empty
 from matplotlib.ticker import FuncFormatter

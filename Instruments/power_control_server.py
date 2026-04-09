@@ -1,5 +1,5 @@
 # To be run from the computer connected to the EPR spectrometer
-import time, socket, pickle, os, logging, sys
+import ast, time, socket, pickle, os, logging, sys
 from Instruments import (
     Bridge12,
     prologix_connection,
@@ -7,13 +7,26 @@ from Instruments import (
     logobj,
     LakeShore475,
     genesys,
-    HP6623A,
+    ShimDictMapping,
 )
 from Instruments.field_feedback import ramp_field
 import SpinCore_pp
 
 IP = "0.0.0.0"
 PORT = 6002
+
+def round_and_set_shim_quant(
+    sh_map, shim_name, input_string, I_or_V, which_prop
+):
+    current_or_voltage = float(input_string)
+    current_or_voltage = sh_map.round_to_allowed(
+        I_or_V, shim_name, current_or_voltage
+    )
+    if not sh_map.output[shim_name] and current_or_voltage != 0:
+        which_prop[shim_name] = 0
+        sh_map.output[shim_name] = 1
+    which_prop[shim_name] = current_or_voltage
+    return current_or_voltage
 
 
 def main():
@@ -48,15 +61,14 @@ def main():
         ) as g,
         Bridge12() as b,
         LakeShore475(p) as h,
-        HP6623A(
+        ShimDictMapping(
+            config_dict["shim_address"],
             prologix_instance=p,
-            # the first element is the GPIB address
-            # -- the second is the channel
-            address=config_dict["shim_address"]["Z0"][0],
-        ) as HP1,
+            safe_current=1.8,
+            overvoltage=16.0,
+        ) as sh_map,
     ):
-        HP1.V_limit[config_dict["shim_address"]["Z0"][1]] = 15.0
-        HP1.safe_current = 1.8
+        sh_map.I_limit[:] = 1.5
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))
         this_logobj = logobj()
@@ -72,25 +84,59 @@ def main():
                     cmd=cmd,
                 )
             args = cmd.split(b" ")
+            if len(args) > 3 and args[2].startswith(b"["):
+                # this appears to be a list
+                args = [args[0], args[1], b" ".join(args[2:])]
             print("I split it to ", args)
             if len(args) == 3:
-                if args[0] == b"DIP_LOCK":
-                    freq1 = float(args[1])
-                    freq2 = float(args[2])
-                    _, _, min_f = b.lock_on_dip(
-                        ini_range=(
-                            freq1 * 1e9,
-                            freq2 * 1e9,
+                match args[0]:
+                    case b"DIP_LOCK":
+                        freq1 = float(args[1])
+                        freq2 = float(args[2])
+                        _, _, min_f = b.lock_on_dip(
+                            ini_range=(
+                                freq1 * 1e9,
+                                freq2 * 1e9,
+                            )
                         )
-                    )
-                    b.set_freq(min_f)
-                    min_f = float(b.freq_int()) * 1e3
-                    conn.send(("%0.6f" % min_f).encode("ASCII"))
-                    this_logobj.wg_has_been_flipped = True
-                else:
-                    raise ValueError(
-                        "I don't understand this 3 component command"
-                    )
+                        b.set_freq(min_f)
+                        min_f = float(b.freq_int()) * 1e3
+                        conn.send(("%0.6f" % min_f).encode("ASCII"))
+                        this_logobj.wg_has_been_flipped = True
+                    case b"SET_SHIM_CURRENT":
+                        shim_name = args[1].decode("ASCII")
+                        retval = round_and_set_shim_quant(
+                            sh_map,
+                            shim_name,
+                            args[2],
+                            "I",
+                            sh_map.I_limit,
+                        )
+                        conn.send(("%0.4f" % retval).encode("ASCII"))
+                    case b"SET_SHIM_VOLTAGE":
+                        shim_name = args[1].decode("ASCII")
+                        retval = round_and_set_shim_quant(
+                            sh_map,
+                            shim_name,
+                            args[2],
+                            "V",
+                            sh_map.V_limit,
+                        )
+                        conn.send(("%0.4f" % retval).encode("ASCII"))
+                    case b"ROUND_SHIM_VOLTAGES":
+                        shim_name = args[1].decode("ASCII")
+                        rounded_voltages = sh_map.round_to_allowed(
+                            "V",
+                            shim_name,
+                            ast.literal_eval(args[2].decode("ASCII")),
+                        )
+                        conn.send(
+                            pickle.dumps(rounded_voltages) + b"ENDTCPIPBLOCK"
+                        )
+                    case _:
+                        raise ValueError(
+                            "I don't understand this 3 component command"
+                        )
             if len(args) == 2:
                 match args[0]:
                     case b"SET_POWER":
@@ -178,7 +224,7 @@ def main():
                             config_dict,
                             h,
                             gen,
-                            HP1,
+                            sh_map,
                         )
                         conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case _:
@@ -217,6 +263,20 @@ def main():
                     case b"GET_FIELD":
                         result = h.field_in_G
                         conn.send(("%0.2f" % result).encode("ASCII"))
+                    case b"GET_SHIM":
+                        retval = (
+                            pickle.dumps(
+                                {
+                                    shim_name: (
+                                        sh_map.V_read[shim_name],
+                                        sh_map.I_read[shim_name],
+                                    )
+                                    for shim_name in sh_map
+                                }
+                            )
+                            + b"ENDTCPIPBLOCK"
+                        )
+                        conn.send(retval)
                     case _:
                         raise ValueError(
                             "I don't understand this 1"

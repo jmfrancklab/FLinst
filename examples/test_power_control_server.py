@@ -49,7 +49,6 @@ logger.debug(f"log array shape {log_array.shape}")
 log_dict = this_log.log_dict
 logger.debug("log dict:\n" + repr(log_dict))
 with h5py.File("output.h5", "a") as f:
-    log_grp = f.create_group(
-        "log"
+    hdf_save_dict_to_group(
+        f, {"log": this_log.__getstate__()}
     )  # normally, I would actually put this under the node with the data
-    hdf_save_dict_to_group(log_grp, this_log.__getstate__())
