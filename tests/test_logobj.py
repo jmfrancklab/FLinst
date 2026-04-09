@@ -52,6 +52,11 @@ def socket_log_server(port_queue):
                             pickle.dumps(this_logobj) + b"ENDTCPIPBLOCK"
                         )
                         this_logobj.reset()
+                    elif cmd == b"GET_SHIM":
+                        conn.sendall(
+                            pickle.dumps({"Z0": (0.0, 0.0)})
+                            + b"ENDTCPIPBLOCK"
+                        )
                     elif cmd.startswith(b"SET_POWER "):
                         continue
                     elif cmd == b"CLOSE":
