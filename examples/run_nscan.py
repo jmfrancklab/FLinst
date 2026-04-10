@@ -120,7 +120,7 @@ if config_dict["nScans"] > 1:
 data.reorder(["nScans", "ph1", "indirect", "t2"])
 data.squeeze()
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "stability_test_v3")
+data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, counter_type="n_scan")
