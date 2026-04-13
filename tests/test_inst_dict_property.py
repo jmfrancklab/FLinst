@@ -70,6 +70,21 @@ class FakeHP(StubHP6623A):
         return value
 
 
+class FakePowerControl:
+    def __init__(self):
+        self._shim_voltage_cache = {"Y": 0.0, "Z0": 0.0}
+        self._shim_current_cache = {"Y": 0.0, "Z0": 0.0}
+
+    @inst_dict_property_module.inst_dict_property
+    def shim_voltage(self, shim_name):
+        return self._shim_voltage_cache[shim_name]
+
+    @shim_voltage.setter
+    def shim_voltage(self, shim_name, voltage_V):
+        self._shim_voltage_cache[shim_name] = voltage_V
+        return voltage_V
+
+
 class TestInstDictProperty(unittest.TestCase):
     def test_init_sorts_keys_alphabetically(self):
         shims = ShimDictMapping(
@@ -116,6 +131,14 @@ class TestInstDictProperty(unittest.TestCase):
         self.assertEqual(shims.V_limit[:], [5.0, 6.0])
         self.assertEqual(shims.V_limit["Y"], 5.0)
         self.assertEqual(shims.V_limit["Z0"], 6.0)
+
+    def test_cache_backed_owner_supports_named_and_slice_assignment(self):
+        p = FakePowerControl()
+        p.shim_voltage["Y"] = 1.5
+        self.assertEqual(p.shim_voltage["Y"], 1.5)
+        p.shim_voltage[:] = [2.0, 3.0]
+        self.assertEqual(p.shim_voltage[:], [2.0, 3.0])
+        self.assertEqual(p._shim_voltage_cache, {"Y": 2.0, "Z0": 3.0})
 
 
 if __name__ == "__main__":

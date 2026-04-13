@@ -18,11 +18,22 @@ class inst_dict_proxy:
     def __init__(self, owner, prop):
         self._owner = owner
         self._prop = prop
-        self._keys = list(owner._shim_dict)
+        self._keys = self._resolve_keys()
+
+    def _resolve_keys(self):
+        if hasattr(self._owner, "_shim_dict"):
+            return list(self._owner._shim_dict)
+        if hasattr(self._owner, "_shim_voltage_cache"):
+            return list(self._owner._shim_voltage_cache)
+        if hasattr(self._owner, "_shim_current_cache"):
+            return list(self._owner._shim_current_cache)
+        raise AttributeError(
+            f"{type(self._owner).__name__!r} object has no shim key source"
+        )
 
     def _normalize_scalar(self, idx):
         if isinstance(idx, str):
-            if idx not in self._owner._shim_dict:
+            if idx not in self._keys:
                 raise KeyError(idx)
             return idx
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
