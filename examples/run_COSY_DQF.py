@@ -1,14 +1,20 @@
-from pyspecdata import *
-import os, sys, time
-import SpinCore_pp
-import h5py
+import os
 from datetime import datetime
+
+import h5py
+import numpy as np
+import SpinCore_pp
+from numpy import r_
+from pyspecdata import figlist_var, getDATADIR, nddata, ndshape
 
 target_directory = getDATADIR(exp_type="ODNP_NMR_comp/COSY")
 raise RuntimeError(
-    "This pulse proram has not been updated.  Before running again, it should be possible to replace a lot of the code below with a call to the function provided by the 'generic' pulse program inside the ppg directory!"
+    "This pulse proram has not been updated. Before running again, it "
+    "should be possible to replace much of the code below with a call "
+    "to the function provided by the generic pulse program in `ppg`."
 )
 fl = figlist_var()
+phase_cycling = True
 # {{{importing acquisition parameters
 config_dict = SpinCore_pp.configuration("active.ini")
 nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
@@ -19,7 +25,10 @@ date = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "COSY_DQF"
 config_dict["date"] = date
 config_dict["cosy_counter"] += 1
-filename = f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}_{config_dict['cosy_counter']}"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_"
+    f"{config_dict['type']}_{config_dict['cosy_counter']}"
+)
 # }}}
 # {{{ phase cycling, tx phases
 tx_phases = r_[0.0, 90.0, 180.0, 270.0]
@@ -105,7 +114,7 @@ for index, val in enumerate(t1_list):
         SpinCore_pp.stop_ppg()
         SpinCore_pp.runBoard()
         raw_data = SpinCore_pp.getData(
-            data_length, nPoints, config_data["nEchoes"], nPhaseSteps
+            data_length, nPoints, config_dict["nEchoes"], nPhaseSteps
         )
         raw_data.astype(float)
         data = []
@@ -137,7 +146,7 @@ SpinCore_pp.stopBoard()
 config_dict.write()
 # }}}
 # {{{ save data
-nodename = config_dict["type"] + "_" + congi_dict["cpmg_counter"]
+nodename = config_dict["type"] + "_" + str(config_dict["cosy_counter"])
 filename_out = filename + ".h5"
 if phase_cycling:
     COSY_data.chunk("t", ["ph3", "ph1", "t2"], [4, 4, -1])
@@ -157,7 +166,7 @@ with h5py.File(
         nodename = "temp_CPMG_DQF_%d" % config_dict["cpmg_counter"]
         COSY_data.hdf5_write(f"{filename_out}", directory=target_directory)
     else:
-        COSYd_data.hdf5_write(f"{filename_out}", directory=target_directory)
+        COSY_data.hdf5_write(f"{filename_out}", directory=target_directory)
     print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(("Name of saved data", COSY_data.name()))
     print(("Shape of saved data", ndshape(COSY_data)))

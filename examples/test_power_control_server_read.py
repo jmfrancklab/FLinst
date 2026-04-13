@@ -2,7 +2,6 @@
 
 import time, h5py
 import pylab as plt
-from numpy import empty
 from matplotlib.ticker import FuncFormatter
 import matplotlib.transforms as transforms
 from Instruments.logobj import logobj
