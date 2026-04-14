@@ -12,8 +12,12 @@ import time
 import numpy as np
 import pyspecdata as psd
 import SpinCore_pp
+import h5py
 from numpy import r_
 from pyspecdata import strm
+from pyspecdata.file_saving.hdf_save_dict_to_group import (
+    hdf_save_dict_to_group,
+)
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 
@@ -74,6 +78,7 @@ if (
 # {{{ run n-scan
 data = None
 with power_control() as p:
+    p.start_log()
     true_B0_G = p.set_field(B0_G)
     print("field set to", true_B0_G, "G")
     print("waiting", settle_s, "s for the magnet to settle")
@@ -109,6 +114,7 @@ with power_control() as p:
             x_axis = data.getaxis("indirect")
         x_axis[idx]["field"] = true_B0_G
         x_axis[idx]["time"] = time.time()
+    this_log = p.stop_log()
 data.set_prop("acq_params", config_dict.asdict())
 # }}}
 
@@ -124,5 +130,13 @@ data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(data, my_exp_type, config_dict, counter_type="n_scan")
+filename_out = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
+)
+target_directory = psd.getDATADIR(exp_type=my_exp_type)
+with h5py.File(
+    os.path.normpath(os.path.join(target_directory, filename_out)), "a"
+) as fp:
+    hdf_save_dict_to_group(fp, {"log": this_log.__getstate__()})
 config_dict.write()
 # }}}
