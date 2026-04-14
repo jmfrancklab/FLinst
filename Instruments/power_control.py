@@ -183,7 +183,7 @@ class power_control(object):
         if isinstance(voltage_V, Iterable) and not isinstance(
             voltage_V, (str, bytes)
         ):
-            voltage_V = list(voltage_V)
+            voltage_V = [float(j) for j in voltage_V]
         self.send("ROUND_SHIM_VOLTAGES %s %r" % (shim_name, voltage_V))
         retval = self.get_bytes(b"ENDTCPIPBLOCK")
         return pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
