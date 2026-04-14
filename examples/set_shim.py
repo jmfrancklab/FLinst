@@ -1,16 +1,22 @@
-# TODO ☐: not reviewed
+# TODO ☐: needs a docstring at the top.  All examples actually need a
+#         docstring.  We are not actually building a sphinx gallery, but sphinx
+#         gallery will actually fail if you don't have one.  (I think it
+#         actually needs a title, as indicated by rst header.) So you could say
+#         that all examples are *required* to have a docstring.
 
 import sys
 from Instruments import power_control
 from SpinCore_pp import configuration
 
 config_dict = configuration("active.ini")
+# TODO ☐: especially since you can just gpt it, I would encourage you to use
+#         argparser with named arguments here; this makes it more flexible.
 with power_control() as p:
     if len(sys.argv) == 2:
         shim_name = str(sys.argv[1])
         shim_voltage_V = config_dict["shim_y_voltage_V"]
         print(
-            "Your optimal shim voltage is "
+            "Your previous optimal shim voltage is "
             f"{config_dict['shim_y_voltage_V']} "
             f"and I am setting shim {shim_name} to "
             f"{shim_voltage_V}.\n\n"

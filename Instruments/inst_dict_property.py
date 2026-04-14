@@ -1,4 +1,3 @@
-# TODO ☐: not reviewed yet
 class inst_dict_proxy:
     r"""
     Per-instance bound view returned by inst_dict_property.__get__.
@@ -12,26 +11,27 @@ class inst_dict_proxy:
     captures `owner` so __getitem__/__setitem__ can call fget/fset with the
     correct instance.
     """
-
     __slots__ = ("_owner", "_prop", "_keys")
 
     def __init__(self, owner, prop):
+    # TODO ☐: needs a numpy-style docstring -- what type is owner, etc
         self._owner = owner
         self._prop = prop
-        self._keys = self._resolve_keys()
-
-    def _resolve_keys(self):
+        # TODO ☐: this needs an explanation -- when are
+        #         _owner._shim_dict.keys() and
+        #         _owner._shim_voltage.keys() ever out of sync? and/or
+        #         why isn't one always the complete list of keys???
         if hasattr(self._owner, "_shim_dict"):
-            return list(self._owner._shim_dict)
+            self._keys = list(self._owner._shim_dict.keys())
         if hasattr(self._owner, "_shim_voltage_cache"):
-            return list(self._owner._shim_voltage_cache)
+            self._keys =  list(self._owner._shim_voltage_cache.keys())
         if hasattr(self._owner, "_shim_current_cache"):
-            return list(self._owner._shim_current_cache)
+            self._keys = list(self._owner._shim_current_cache)
         raise AttributeError(
             f"{type(self._owner).__name__!r} object has no shim key source"
         )
 
-    def _normalize_scalar(self, idx):
+    def _verify_iskey(self, idx):
         if isinstance(idx, str):
             if idx not in self._keys:
                 raise KeyError(idx)
@@ -39,14 +39,17 @@ class inst_dict_proxy:
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
 
     def _indices(self, idx):
+        # TODO ☐: docstring
         if isinstance(idx, str):
-            return [self._normalize_scalar(idx)], True
+            return [self._verify_iskey(idx)], True
         if isinstance(idx, slice):
             return self._keys[idx], False
         if isinstance(idx, (list, tuple)):
-            return [self._normalize_scalar(x) for x in idx], False
+            return [self._verify_iskey(x) for x in idx], False
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
 
+    # TODO ☐: not reviewed from here down -- missing docstrings make it
+    #         hard to understand what's going on
     def __getitem__(self, idx):
         inds, is_scalar = self._indices(idx)
         if is_scalar:

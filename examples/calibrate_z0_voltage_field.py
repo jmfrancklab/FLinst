@@ -1,12 +1,14 @@
-# TODO ☐: not reviewed yet
 """
-Measure magnetic field versus Z0 shim voltage through the power control server.
+Measure magnetic field versus Z0 shim voltage
+through the power control server (*i.e.* the
+"lock coil").
+This allows us to determine the Gauss/Volts
+constant for our Z0 shim.
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-
 from Instruments import power_control
 
 
@@ -26,6 +28,10 @@ with power_control() as p:
     fields_G = np.zeros_like(voltages_V)
     print("requested voltages:", requested_voltages_V)
     print("allowed voltages:", voltages_V)
+    # TODO ☐: the following is a very large
+    #         amount of code to wrap in a try
+    #         block. The rationale for doing
+    #         so is not apparent.
     try:
         for idx, voltage_V in enumerate(voltages_V):
             p.shim[shim_name] = voltage_V
