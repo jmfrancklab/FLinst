@@ -151,7 +151,9 @@ class inst_dict_proxy:
         return list(self) == list(other)
 
     def __repr__(self):
-        r"""Return a debug representation with values, name, and bound owner."""
+        r"""
+        Return a debug representation with values, name, and bound owner.
+        """
         name = self._prop._name or "<unnamed>"
         return (
             f"{str(list(self))} <inst_dict_proxy {name}"
@@ -190,7 +192,8 @@ class inst_dict_property:
 
     def __get__(self, owner, owner_type=None):
         r"""
-        Return the descriptor itself on the class, or a bound proxy on instances.
+        Return the descriptor itself on the class, or a bound proxy on
+        instances.
         """
         if owner is None:
             return self

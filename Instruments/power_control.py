@@ -141,12 +141,6 @@ class power_control(object):
         self.send("SET_FREQ %f" % freq)
         return
 
-    # TODO ☐: can we have a test that tests these *with* the instrument attached, as well?
-    #         (as before, such real/"live" tests should be in a different module)
-    #         pcontrolinst.shim_current['Z0'] as well as
-    #         pcontrolinst.shim_current[:] (or
-    #         pcontrolinst.shim_current, I forget which is supported)
-    #         and the same for shim_voltage
     @inst_dict_property
     def shim_current(self, shim_name):
         """Return the current for one or more shims."""

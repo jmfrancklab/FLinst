@@ -109,7 +109,9 @@ class TestInstDictProperty(unittest.TestCase):
         shims.V_limit[:] = 3.25
         np.testing.assert_array_equal(shims.V_limit[:], np.array([3.25, 3.25]))
 
-    def test_direct_vector_assignment_updates_all_shims_and_validates_length(self):
+    def test_direct_vector_assignment_updates_all_shims_and_validates_length(
+        self,
+    ):
         hp = FakeHP()
         shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
         shims.V_limit = np.array([5.0, 6.0])
