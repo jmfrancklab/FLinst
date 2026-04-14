@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class inst_dict_proxy:
     r"""
     Per-instance bound view returned by inst_dict_property.__get__.
@@ -90,14 +93,16 @@ class inst_dict_proxy:
 
         Returns
         -------
-        object | list[object]
-            A scalar when ``idx`` names one shim, otherwise a list ordered to
-            match the expanded shim-name sequence.
+        object | np.ndarray
+            A scalar when ``idx`` names one shim, otherwise a NumPy array
+            ordered to match the expanded shim-name sequence.
         """
         inds, is_scalar = self._indices(idx)
         if is_scalar:
             return self._prop._fget(self._owner, inds[0])
-        return [self._prop._fget(self._owner, shim_name) for shim_name in inds]
+        return np.array(
+            [self._prop._fget(self._owner, shim_name) for shim_name in inds]
+        )
 
     def __setitem__(self, idx, value):
         r"""
