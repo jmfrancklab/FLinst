@@ -28,23 +28,17 @@ with power_control() as p:
     fields_G = np.zeros_like(voltages_V)
     print("requested voltages:", requested_voltages_V)
     print("allowed voltages:", voltages_V)
-    # TODO ☐: the following is a very large
-    #         amount of code to wrap in a try
-    #         block. The rationale for doing
-    #         so is not apparent.
-    try:
-        for idx, voltage_V in enumerate(voltages_V):
-            p.shim[shim_name] = voltage_V
-            applied_voltage_V = p.shim[shim_name]
-            time.sleep(settle_s)
-            fields_G[idx] = p.get_field()
-            print(
-                f"{shim_name} set to {applied_voltage_V:0.3f} V,"
-                f" field = {fields_G[idx]:0.3f} G"
-            )
-    finally:
-        p.shim[shim_name] = initial_voltage_V
-        print(f"Restored {shim_name} to {initial_voltage_V:0.3f} V")
+    for idx, voltage_V in enumerate(voltages_V):
+        p.shim[shim_name] = voltage_V
+        applied_voltage_V = p.shim[shim_name]
+        time.sleep(settle_s)
+        fields_G[idx] = p.get_field()
+        print(
+            f"{shim_name} set to {applied_voltage_V:0.3f} V,"
+            f" field = {fields_G[idx]:0.3f} G"
+        )
+    p.shim[shim_name] = initial_voltage_V
+    print(f"Restored {shim_name} to {initial_voltage_V:0.3f} V")
 
 fields_G = fields_G - fields_G[0]
 slope_G_per_V, intercept_G = np.polyfit(voltages_V, fields_G, 1)
