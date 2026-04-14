@@ -1,19 +1,32 @@
-# TODO ☐: needs a docstring at the top.  All examples actually need a
-#         docstring.  We are not actually building a sphinx gallery, but sphinx
-#         gallery will actually fail if you don't have one.  (I think it
-#         actually needs a title, as indicated by rst header.) So you could say
-#         that all examples are *required* to have a docstring.
+"""Set a shim channel to its configured or user-specified voltage.
 
-import sys
+Usage in a terminal:
+    python examples/set_shim.py SHIM_NAME
+    python examples/set_shim.py SHIM_NAME --voltage VOLTAGE
+
+Examples:
+    python examples/set_shim.py y
+    python examples/set_shim.py y --voltage 0.25
+"""
+
+import argparse
 from Instruments import power_control
 from SpinCore_pp import configuration
 
 config_dict = configuration("active.ini")
-# TODO ☐: especially since you can just gpt it, I would encourage you to use
-#         argparser with named arguments here; this makes it more flexible.
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("shim_name", help="Shim channel name to set.")
+parser.add_argument(
+    "-v",
+    "--voltage",
+    type=float,
+    help="Explicit shim voltage in volts. Defaults to the configured value.",
+)
+args = parser.parse_args()
+
 with power_control() as p:
-    if len(sys.argv) == 2:
-        shim_name = str(sys.argv[1])
+    shim_name = str(args.shim_name)
+    if args.voltage is None:
         shim_voltage_V = config_dict["shim_y_voltage_V"]
         print(
             "Your previous optimal shim voltage is "
@@ -25,10 +38,7 @@ with power_control() as p:
             "as an argument on the command line)"
         )
         p.shim_voltage[shim_name] = shim_voltage_V
-    elif len(sys.argv) == 3:
-        shim_name = str(sys.argv[1])
-        shim_voltage_V = float(sys.argv[2])
-        p.shim_voltage[shim_name] = shim_voltage_V
     else:
-        raise ValueError("You entered an extra argument.")
+        shim_voltage_V = args.voltage
+        p.shim_voltage[shim_name] = shim_voltage_V
     print(f"{shim_name}: {p.get_shims()[shim_name]}")
