@@ -1,18 +1,17 @@
-# TODO ☐: docstring needs a title (rst-style header)
-# TODO ☐: my question here is why are we doing this in an example, rather than
-#         in a "live" (hooked up to the instrument) test?  I think that the
-#         answer to this is that this is something that you actually want to
-#         run in order to determine the allowed voltages, which are then
-#         entered at a particular location in the code.  If that's the case,
-#         your docstring needs to explain that.
-# TODO ☐: This applies to this and other files -- if there are multiple
-#         examples that you are adding that pertain to calibrating and setting
-#         up the shims, then those should go into a shim_calibration subdir
 """
+Voltage Output Characterization
+===============================
+
 Characterize the discrete output voltages supported by selected HP6623A
 channels by stepping each channel through a voltage range and reporting the
 observed setpoints.
+
+This is provided as an example rather than an automated live test because it
+is meant to be run intentionally against attached hardware to characterize the
+allowed output voltages for a specific setup. The reported values can then be
+used to update the corresponding limits or lookup values in the main code.
 """
+
 from Instruments import HP6623A, prologix_connection
 import numpy as np
 
