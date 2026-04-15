@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 
 
 class inst_dict_proxy:
@@ -43,13 +44,19 @@ class inst_dict_proxy:
         #     In a future PR, it would be good to clean this up by
         #     passing the name of the relevant attribute to
         #     inst_dict_property decorator
-        if hasattr(self._owner, "_shim_dict"):
-            key_source = self._owner._shim_dict
-        elif hasattr(self._owner, "_shim_voltage_cache"):
-            key_source = self._owner._shim_voltage_cache
-        elif hasattr(self._owner, "_shim_current_cache"):
-            key_source = self._owner._shim_current_cache
-        else:
+        key_source = None
+        for testname in [
+            "_shim_dict",
+            "_shim_voltage_cache",
+            "_shim_current_cache",
+        ]:
+            if hasattr(self._owner, testname):
+                key_source = getattr(self._owner, testname)
+                assert isinstance(
+                    key_source, OrderedDict
+                ), f"The {testname} attribute of {self._owner} must be an ordered dict!!!!"
+                break
+        if key_source is None:
             raise AttributeError(
                 f"{type(self._owner).__name__!r} object has no channel key source"
             )
@@ -62,19 +69,6 @@ class inst_dict_proxy:
                 raise KeyError(idx)
             return idx
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
-
-    def _norm_int_index(self, idx):
-        r"""Normalize an integer position into the stored shim-key order."""
-        if not isinstance(idx, int):
-            raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
-        nkeys = len(self._keys)
-        if idx < 0:
-            idx += nkeys
-        if not (0 <= idx < nkeys):
-            raise IndexError(
-                f"shim index {idx} out of range for size {nkeys}"
-            )
-        return idx
 
     def _indices(self, idx):
         r"""
@@ -95,12 +89,15 @@ class inst_dict_proxy:
         """
         if isinstance(idx, str):
             return [self._verify_iskey(idx)], True
-        if isinstance(idx, int):
-            return [self._keys[self._norm_int_index(idx)]], True
-        if isinstance(idx, slice):
+        elif isinstance(idx, int):
+            return [self._keys[idx]], True
+        elif isinstance(idx, slice):
             return self._keys[idx], False
-        if isinstance(idx, (list, tuple)):
-            return [self._indices(x)[0][0] for x in idx], False
+        elif isinstance(idx, (list, tuple)):
+            if type(idx[0]) is str:
+                return [self._indices(x)[0][0] for x in idx], False
+            elif type(idx[0]) is int:
+                return [self._keys[x] for x in idx], False
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
 
     def __getitem__(self, idx):
@@ -160,6 +157,9 @@ class inst_dict_proxy:
     def __len__(self):
         r"""Return the number of addressable channel entries."""
         return len(self._keys)
+
+    def keys(self):
+        return (j for j in self._keys)
 
     def __iter__(self):
         r"""Iterate over shim values in the proxy's stored key order."""

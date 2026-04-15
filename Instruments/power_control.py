@@ -14,7 +14,6 @@ import socket
 import time
 import pickle
 from collections.abc import Iterable
-
 from .inst_dict_property import inst_dict_property
 
 IP = "127.0.0.1"
@@ -219,8 +218,18 @@ class power_control(object):
         retval = pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
         # {{{ we pull retval apart into its sensible parts, so we don't need to
         #     keep it around
-        self._shim_voltage_cache = {j: k[0] for j, k in retval.items()}
-        self._shim_current_cache = {j: k[1] for j, k in retval.items()}
+        self._shim_voltage_cache = OrderedDict(
+            sorted(
+                {j: k[0] for j, k in retval.items()}.items(),
+                key=lambda x: x[0],
+            )
+        )
+        self._shim_current_cache = OrderedDict(
+            sorted(
+                {j: k[1] for j, k in retval.items()}.items(),
+                key=lambda x: x[0],
+            )
+        )
         # }}}
         return retval
 
