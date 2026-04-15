@@ -27,18 +27,22 @@ class inst_dict_proxy:
             Instance that owns the descriptor. It must expose one of
             ``_shim_dict``, ``_shim_voltage_cache``, or
             ``_shim_current_cache`` so the proxy can determine shim names.
+            (See PR note below, however)
         prop : inst_dict_property
             Descriptor supplying the bound getter and optional setter used
-            to read and write values by shim name.
+            to read and write values by channel name
+            (most immediately, here "channel" is a shim, though in the
+            future, it could be any named instrument channel).
         """
         self._owner = owner
         self._prop = prop
-        # Different owner classes expose the same canonical shim-name set
-        # through different attributes. In our setup these key sets are
-        # expected to agree whenever more than one exists, so they are not
-        # meant to get out of sync. We branch only because ShimDictMapping
-        # stores shim names in `_shim_dict`, while power_control stores them
-        # in the shim caches.
+        # {{{ the power_control instance uses _shim_voltage_cache and
+        #     _shim_current_cache while the shim_current_dict uses
+        #     _shim_dict to store the relevant properties, so we need to
+        #     consider all of them.
+        #     In a future PR, it would be good to clean this up by
+        #     passing the name of the relevant attribute to
+        #     inst_dict_property decorator
         if hasattr(self._owner, "_shim_dict"):
             key_source = self._owner._shim_dict
         elif hasattr(self._owner, "_shim_voltage_cache"):
@@ -47,8 +51,9 @@ class inst_dict_proxy:
             key_source = self._owner._shim_current_cache
         else:
             raise AttributeError(
-                f"{type(self._owner).__name__!r} object has no shim key source"
+                f"{type(self._owner).__name__!r} object has no channel key source"
             )
+        # }}}
         self._keys = list(key_source.keys())
 
     def _verify_iskey(self, idx):
@@ -60,19 +65,20 @@ class inst_dict_proxy:
 
     def _indices(self, idx):
         r"""
-        Normalize a shim selector into explicit shim names.
+        Check that we have a valid key, an note whether it refers to one
+        or more channels.
 
         Parameters
         ----------
         idx : str | slice | sequence[str]
-            Selector naming one shim, a slice over the stored shim order, or
-            an explicit sequence of shim names.
+            Selector naming one channel, a slice over the stored channel order, or
+            an explicit sequence of channel names.
 
         Returns
         -------
         tuple[list[str], bool]
-            The expanded shim-name list and a flag indicating whether the
-            original selector addressed exactly one shim.
+            The expanded channel-name list and a flag indicating whether
+            the original selector addressed exactly one channel.
         """
         if isinstance(idx, str):
             return [self._verify_iskey(idx)], True
@@ -84,24 +90,25 @@ class inst_dict_proxy:
 
     def __getitem__(self, idx):
         r"""
-        Read one or more shim values through the bound descriptor.
+        Use the _fget function from the inst_dict_property definition to
+        retrieve the current value of the relevant channel(s).
 
         Parameters
         ----------
         idx : str | slice | sequence[str]
-            Shim selector accepted by :meth:`_indices`.
+            Channel selector accepted by :meth:`_indices`.
 
         Returns
         -------
         object | np.ndarray
-            A scalar when ``idx`` names one shim, otherwise a NumPy array
-            ordered to match the expanded shim-name sequence.
+            A scalar when ``idx`` names one channel, otherwise a NumPy array
+            ordered to match the expanded channel-name sequence.
         """
         inds, is_scalar = self._indices(idx)
         if is_scalar:
             return self._prop._fget(self._owner, inds[0])
         return np.array(
-            [self._prop._fget(self._owner, shim_name) for shim_name in inds]
+            [self._prop._fget(self._owner, ch_name) for ch_name in inds]
         )
 
     def __setitem__(self, idx, value):
@@ -136,13 +143,13 @@ class inst_dict_proxy:
             fset(self._owner, shim_name, val)
 
     def __len__(self):
-        r"""Return the number of addressable shim entries."""
+        r"""Return the number of addressable channel entries."""
         return len(self._keys)
 
     def __iter__(self):
         r"""Iterate over shim values in the proxy's stored key order."""
-        for shim_name in self._keys:
-            yield self[shim_name]
+        for ch_name in self._keys:
+            yield self[ch_name]
 
     def __eq__(self, other):
         r"""Compare the proxy by value against another non-string iterable."""
@@ -173,12 +180,13 @@ class inst_dict_property:
 
     def __init__(self, fget):
         r"""
-        Initialize the descriptor from its getter function.
+        Store the _fget function from the inst_dict_property decorator call.
+        (This function is the property's getter.)
 
         Parameters
         ----------
         fget : callable
-            Function called as ``fget(owner, shim_name)`` by the bound proxy.
+            Function that is decorated with @inst_dict_property.
             Its name and docstring seed the descriptor metadata.
         """
         self._fget = fget
@@ -192,8 +200,8 @@ class inst_dict_property:
 
     def __get__(self, owner, owner_type=None):
         r"""
-        Return the descriptor itself on the class, or a bound proxy on
-        instances.
+        when we ask for an property of the class, assume that the
+        property is the "owner" instance, and pass it to the proxy class.
         """
         if owner is None:
             return self
@@ -201,10 +209,9 @@ class inst_dict_property:
 
     def __set__(self, owner, value):
         r"""
-        Support whole-vector assignment for iterable values.
-
-        Direct scalar assignment is rejected so callers use indexed writes for
-        individual shims.
+        When we try to set a property, again assume the property is the
+        owner instance, then create a proxy class, and activate vector
+        assignment.
         """
         is_iterable = hasattr(value, "__iter__") and not isinstance(
             value, (str, bytes)
@@ -219,6 +226,10 @@ class inst_dict_property:
         return
 
     def setter(self, fset):
-        r"""Register the write handler and return this descriptor."""
+        r"""
+        Store the function that we decorate with @propertyname.setter in
+        _fset.
+        (This function is the property's setter.)
+        """
         self._fset = fset
         return self

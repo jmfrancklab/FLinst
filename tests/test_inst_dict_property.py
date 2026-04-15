@@ -5,10 +5,9 @@ import types
 import unittest
 import numpy as np
 
-instruments_dir = pathlib.Path(__file__).resolve().parents[1] / "Instruments"
-
 # {{{ Provide a minimal Instruments package so the descriptor and shim mapping
 #     can be loaded in isolation from optional runtime dependencies.
+instruments_dir = pathlib.Path(__file__).resolve().parents[1] / "Instruments"
 instruments_pkg = types.ModuleType("Instruments")
 instruments_pkg.__path__ = [str(instruments_dir)]
 sys.modules["Instruments"] = instruments_pkg
@@ -93,6 +92,7 @@ class TestInstDictProperty(unittest.TestCase):
         hp.V_limit[0] = 4.0
         hp.V_limit[1] = 8.0
         shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
+        assert type(shims.V_limit[:]) is np.ndarray
         np.testing.assert_array_equal(shims.V_limit[:], np.array([8.0, 4.0]))
 
     def test_integer_indexing_raises_type_error_for_get_and_set(self):
@@ -107,6 +107,7 @@ class TestInstDictProperty(unittest.TestCase):
         hp = FakeHP()
         shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
         shims.V_limit[:] = 3.25
+        assert type(shims.V_limit[:]) is np.ndarray
         np.testing.assert_array_equal(shims.V_limit[:], np.array([3.25, 3.25]))
 
     def test_direct_vector_assignment_updates_all_shims_and_validates_length(
@@ -115,11 +116,12 @@ class TestInstDictProperty(unittest.TestCase):
         hp = FakeHP()
         shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
         shims.V_limit = np.array([5.0, 6.0])
+        assert type(shims.V_limit[:]) is np.ndarray
         np.testing.assert_array_equal(shims.V_limit[:], np.array([5.0, 6.0]))
         self.assertEqual(shims.V_limit["Y"], 5.0)
         self.assertEqual(shims.V_limit["Z0"], 6.0)
         # {{{ if we try to assign to the wrong length of array, that should
-        # cause an error
+        #     cause an error
         with self.assertRaises(ValueError):
             shims.V_limit = np.array([5.0])
         with self.assertRaises(ValueError):
@@ -131,8 +133,19 @@ class TestInstDictProperty(unittest.TestCase):
         p.shim_voltage["Y"] = 1.5
         self.assertEqual(p.shim_voltage["Y"], 1.5)
         p.shim_voltage[:] = [2.0, 3.0]
+        assert type(p.shim_voltage[:]) is np.ndarray
         np.testing.assert_array_equal(p.shim_voltage[:], np.array([2.0, 3.0]))
         self.assertEqual(p._shim_voltage_cache, {"Y": 2.0, "Z0": 3.0})
+
+    def test_limited_slice_assignment(self):
+        hp = FakeHP()
+        shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1), "A": (hp,3)})
+        print("length is",len(shims.V_limit))
+        # TODO ☐: it seems to be objecting to the following, in general, and it should not be.  This hsould be fixed.
+        print("length is",len(shims.V_limit[0:2]))
+        shims.V_limit[0:2] = [1,2]
+        shims.V_limit[2] = 3
+        self.assertEqual(p.V_limit[:], np.array([1.0, 2.0, 3.0]))
 
 
 if __name__ == "__main__":
