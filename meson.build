@@ -96,6 +96,8 @@ py.install_sources(files([
     'Instruments/hall_probe.py',
     'Instruments/field_feedback.py',
     'Instruments/genesys.py',
+    'Instruments/inst_dict_property.py',
+    'Instruments/shim_current_mapping.py',
 ]), subdir: 'Instruments')
 
 scripts = [['calc_tempol_vd', 'SpinCore_pp.calc_vdlist', 'print_tempo_vdlist'], 

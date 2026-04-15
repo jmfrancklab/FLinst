@@ -122,12 +122,11 @@ class HP6623A(gpib_eth):
             ],
             np.r_[0],
         ]
+        self._voltage_rounding_offset = [-7.8e-05, 7451 / 1365000, None]
+        self._voltage_rounding_interval = [0.00545861, 101 / 52500, None]
         # }}}
         self.min_V = [0.000, 0.002, 0.018]
-        self.res_V = [0.0055, 0.0055, 0.0125]
-        self.max_V = [20.2, 20.2, 50.5]
-        self.min_I = [0.072, 0.110, 0.053]
-        self.res_I = [0.025, 0.050, 0.010]
+        self.max_V = [6, 10.5, 50.5]
         self.max_I = [5.15, 10.30, 2.06]
         idstring = self.read()
         if idstring[0:2] == "HP":
@@ -599,6 +598,13 @@ class HP6623A(gpib_eth):
         """
         if len(args) == 2:
             channel, value = args
+            if hasattr(value, "__iter__") and not isinstance(
+                value, (str, bytes)
+            ):
+                return [
+                    self.round_to_allowed(which, channel, this_value)
+                    for this_value in value
+                ]
         elif len(args) == 1 and hasattr(args[0], "__iter__"):
             return [
                 self.round_to_allowed(which, j, args[0][j])
@@ -606,6 +612,22 @@ class HP6623A(gpib_eth):
             ]
         else:
             raise ValueError("I don't understand the arguments!")
+        if which == "V" and channel in [0, 1]:
+            if value == 0:
+                return 0.0
+            # {{{ round to an allowed voltage
+            offset = self._voltage_rounding_offset[channel]
+            interval = self._voltage_rounding_interval[channel]
+            if offset is None or interval is None:
+                raise ValueError(
+                    "Voltage rounding parameters not set for channel %d"
+                    % channel
+                )
+            return np.round(
+                np.round((value - offset) / interval) * interval + offset,
+                3,
+            )
+            # }}}
         the_values = getattr(self, "allowed_" + which)[channel]
         return the_values[np.argmin(abs(value - the_values))]
 
