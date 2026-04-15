@@ -9,25 +9,16 @@ constant for our Z0 shim.
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-<<<<<<< HEAD:examples/calibrate_z0_voltage_field.py
 
 from Instruments import instrument_control
-=======
-from Instruments import power_control
->>>>>>> origin/master:examples/shim_calibration/calibrate_z0_voltage_field.py
 
 
 shim_name = "Z0"
 requested_voltages_V = np.arange(0.0, 4.0 + 0.25 / 2, 0.25)
 settle_s = 1.0
 
-<<<<<<< HEAD:examples/calibrate_z0_voltage_field.py
 with instrument_control() as p:
     initial_voltage_V = p.get_shim()[shim_name][0]
-=======
-with power_control() as p:
-    initial_voltage_V = p.get_shims()[shim_name][0]
->>>>>>> origin/master:examples/shim_calibration/calibrate_z0_voltage_field.py
     voltages_V = np.array(
         list(
             dict.fromkeys(
