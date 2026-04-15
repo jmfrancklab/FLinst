@@ -1,12 +1,12 @@
 """Set a shim channel to its configured or user-specified voltage.
 
 Usage in a terminal:
-    python examples/set_shim.py SHIM_NAME
-    python examples/set_shim.py SHIM_NAME --voltage VOLTAGE
+    python set_shim.py SHIM_NAME
+    python set_shim.py SHIM_NAME --voltage VOLTAGE
 
 Examples:
-    python examples/set_shim.py y
-    python examples/set_shim.py y --voltage 0.25
+    python set_shim.py y
+    python set_shim.py y --voltage 0.25
 """
 
 import argparse
