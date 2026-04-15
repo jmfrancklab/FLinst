@@ -117,13 +117,6 @@ def main():
                             "V", shim_name, float(args[2])
                         )
                         conn.send(("%0.3f" % voltage_V).encode("ASCII"))
-                    case b"SET_SHIM_OUTPUT":
-                        shim_name = args[1].decode("ASCII")
-                        output_state = int(float(args[2]))
-                        sh_map.output[shim_name] = output_state
-                        conn.send(
-                            str(int(sh_map.output[shim_name])).encode("ASCII")
-                        )
                     case _:
                         raise ValueError(
                             "I don't understand this 3 component command"
@@ -251,11 +244,6 @@ def main():
                     case b"GET_FIELD":
                         result = h.field_in_G
                         conn.send(("%0.2f" % result).encode("ASCII"))
-                    case b"GET_SHIM_OUTPUT":
-                        shim_name = args[1].decode("ASCII")
-                        conn.send(
-                            str(int(sh_map.output[shim_name])).encode("ASCII")
-                        )
                     case b"GET_SHIM":
                         retval = (
                             pickle.dumps(
