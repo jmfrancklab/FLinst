@@ -1,5 +1,3 @@
-# TODO ☐: review not complete in most recent round
-
 import importlib
 import pathlib
 import sys
@@ -16,10 +14,8 @@ instruments_pkg.__path__ = [str(instruments_dir)]
 sys.modules["Instruments"] = instruments_pkg
 hp_module = types.ModuleType("Instruments.HP6623A")
 
-
 class StubHP6623A:
     pass
-
 
 hp_module.HP6623A = StubHP6623A
 sys.modules["Instruments.HP6623A"] = hp_module
@@ -104,6 +100,9 @@ class TestInstDictProperty(unittest.TestCase):
         self.assertEqual(shims.V_limit[0], 0.0)
         shims.V_limit[0] = 3.25
         self.assertEqual(shims.V_limit["Y"], 3.25)
+        shims.V_limit[1] = 3.75
+        self.assertEqual(shims.V_limit["Y"], 3.25)
+        self.assertEqual(shims.V_limit["Z0"], 3.75)
         self.assertEqual(hp.V_limit[1], 3.25)
 
     def test_slice_assignment_broadcasts_scalar_to_all_shims(self):
