@@ -3,7 +3,7 @@ from .serial_instrument import SerialInstrument
 from .gds import GDS_scope
 from .afg import AFG
 from .bridge12 import Bridge12
-from .instrument_control import instrument_control, power_control
+from .instrument_control import instrument_control
 
 __all__ = [
     "SerialInstrument",
@@ -11,7 +11,6 @@ __all__ = [
     "AFG",
     "Bridge12",
     "instrument_control",
-    "power_control",
 ]
 # except:
 #    print "warning! serial (USB) instruments not available!"

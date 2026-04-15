@@ -87,7 +87,7 @@ py.install_sources(files([
     'Instruments/cmd.py',
     'Instruments/HP6623A.py',
     'Instruments/gpib_eth.py',
-    'Instruments/power_control_server_dummy.py',
+    'Instruments/instrument_control_server_dummy.py',
     'Instruments/channel_property.py',
     'Instruments/gpib_legacy.py',
     'Instruments/instrument_control.py',
@@ -102,9 +102,7 @@ py.install_sources(files([
 
 scripts = [['calc_tempol_vd', 'SpinCore_pp.calc_vdlist', 'print_tempo_vdlist'], 
         ['instrument_control_server', 'Instruments.instrument_control_server', 'main'], 
-        ['power_control_server', 'Instruments.instrument_control_server', 'main'], 
         ['quit_instrument_control', 'Instruments.just_quit', 'main'], 
-        ['quit_power_control', 'Instruments.just_quit', 'main'], 
         ['FLInst', 'Instruments.cmd', 'cmd']]
 
 foreach script : scripts

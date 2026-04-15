@@ -221,6 +221,3 @@ class instrument_control(object):
         """power down rf and amp"""
         self.send("MW_OFF")
         return
-
-
-power_control = instrument_control

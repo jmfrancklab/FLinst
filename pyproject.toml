@@ -25,9 +25,7 @@ SpinCore_pp = ["config_params.yaml"]
 [project.scripts]
 calc_tempol_vd = "SpinCore_pp.calc_vdlist:print_tempo_vdlist"
 instrument_control_server = "Instruments.instrument_control_server:main"
-power_control_server = "Instruments.instrument_control_server:main"
 quit_instrument_control = "Instruments.just_quit:main"
-quit_power_control = "Instruments.just_quit:main"
 FLInst = "Instruments.cmd:cmd"
 
 [tool.black]
