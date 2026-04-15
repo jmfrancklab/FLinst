@@ -14,6 +14,8 @@ import socket
 import time
 import pickle
 from collections.abc import Iterable
+from collections import OrderedDict
+from .inst_dict_property import inst_dict_property
 
 IP = "127.0.0.1"
 # IP = "jmfrancklab-bruker.syr.edu"
@@ -39,6 +41,10 @@ class instrument_control(object):
         print("target port:", port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((ip, port))
+        self.get_shims()  # load _shim_voltage_cache and
+        #                  _shim_current_cache so that we only talk to
+        #                  the the server when we want to change our
+        #                  shims
 
     def __enter__(self):
         return self
@@ -135,23 +141,41 @@ class instrument_control(object):
         self.send("SET_FREQ %f" % freq)
         return
 
-    def set_shim_current(self, shim_name, current_A):
-        """Sets the shim current of the specified shim channel.  The shim_name
-        should be one of the keys in the config_dict["shim_channels"] dict, and
-        the current_A should be a float specifying the current in Amps."""
-        self.send("SET_SHIM_CURRENT %s %f" % (shim_name, current_A))
-        retval = self.get()
-        retval = float(retval)
-        return retval
+    @inst_dict_property
+    def shim_current(self, shim_name):
+        """Return the current for one or more shims."""
+        return self._shim_current_cache[shim_name]
 
-    def set_shim_voltage(self, shim_name, voltage_V):
-        """Sets the shim voltage of the specified shim channel.  The shim_name
-        should be one of the keys in the config_dict["shim_channels"] dict, and
-        the voltage_V should be a float specifying the voltage in Volts."""
-        self.send("SET_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
-        retval = self.get()
-        retval = float(retval)
-        return retval
+    @shim_current.setter
+    def shim_current(self, shim_name, current_V):
+        """Set one shim current and skip the server call if unchanged."""
+        cached_current = self._shim_current_cache[shim_name]
+        if cached_current == current_V:
+            return cached_current
+        else:
+            self.send("SET_SHIM_CURRENT %s %f" % (shim_name, current_V))
+            retval = self.get()
+            retval = float(retval)
+            self._shim_current_cache[shim_name] = retval
+            return retval
+
+    @inst_dict_property
+    def shim_voltage(self, shim_name):
+        """Return the voltage for one or more shims."""
+        return self._shim_voltage_cache[shim_name]
+
+    @shim_voltage.setter
+    def shim_voltage(self, shim_name, voltage_V):
+        """Set one shim voltage and skip the server call if unchanged."""
+        cached_voltage = self._shim_voltage_cache[shim_name]
+        if cached_voltage == voltage_V:
+            return cached_voltage
+        else:
+            self.send("SET_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
+            retval = self.get()
+            retval = float(retval)
+            self._shim_voltage_cache[shim_name] = retval
+            return retval
 
     def round_shim_voltage(self, shim_name, voltage_V):
         """Round a requested shim voltage or a list of shim voltages
@@ -159,14 +183,10 @@ class instrument_control(object):
         if isinstance(voltage_V, Iterable) and not isinstance(
             voltage_V, (str, bytes)
         ):
-            return [
-                self.round_shim_voltage(shim_name, this_voltage)
-                for this_voltage in voltage_V
-            ]
-        self.send("ROUND_SHIM_VOLTAGE %s %f" % (shim_name, voltage_V))
-        retval = self.get()
-        retval = float(retval)
-        return retval
+            voltage_V = [float(j) for j in voltage_V]
+        self.send("ROUND_SHIM_VOLTAGES %s %r" % (shim_name, voltage_V))
+        retval = self.get_bytes(b"ENDTCPIPBLOCK")
+        return pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
 
     def set_power(self, dBm):
         "Sets the power of the Bridge12"
@@ -192,10 +212,27 @@ class instrument_control(object):
         retval = float(retval)
         return retval
 
-    def get_shim(self):
+    def get_shims(self):
+        """Return shim readbacks from the server and refresh local caches."""
         self.send("GET_SHIM")
         retval = self.get_bytes(b"ENDTCPIPBLOCK")
-        return pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
+        retval = pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
+        # {{{ we pull retval apart into its sensible parts, so we don't need to
+        #     keep it around
+        self._shim_voltage_cache = OrderedDict(
+            sorted(
+                {j: k[0] for j, k in retval.items()}.items(),
+                key=lambda x: x[0],
+            )
+        )
+        self._shim_current_cache = OrderedDict(
+            sorted(
+                {j: k[1] for j, k in retval.items()}.items(),
+                key=lambda x: x[0],
+            )
+        )
+        # }}}
+        return retval
 
     def get_power_setting(self):
         self.send("GET_POWER")

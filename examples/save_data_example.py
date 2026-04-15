@@ -2,11 +2,12 @@
 test save_data with fake power stepping
 ======================================
 
-This keeps the original fake-data profile: step through a list of powers,
-generate dummy data with indirect start/stop timestamps, and retain the
-instrument-control logging block. The final dataset is saved using
-``SpinCore_pp.save_data`` so the script can be used to test updates to
-``save_data.py``.
+This is roughly derived from the combined_ODNP.py example in SpinCore.
+Similar in fashion, the script generates a power list, and loops through
+each power generating fake data using the run_scans function defined
+below. At each power the "data" records the start and stop times that
+will correspond to the times and powers inside the log allowing one to
+average over each power step in a later post processing step.
 """
 
 from numpy import r_
@@ -35,6 +36,15 @@ nScans = 1
 # {{{ params for Bridge 12/power
 dB_settings = np.unique(np.round(np.linspace(0, 10, 5) / 0.5) * 0.5)
 powers = 1e-3 * 10 ** (dB_settings / 10.0)
+uw_dip_center_GHz = 9.818061
+uw_dip_width_GHz = 0.008
+result = input(
+    "to keep this example minimal, it doesn't read from the config file!!"
+    "\nThe dip frequency is currently set to %0.6f GHz\nIs that correct???"
+    % uw_dip_center_GHz
+)
+if not result.lower().startswith("y"):
+    raise ValueError("Incorrect dip frequency")
 # }}}
 # {{{ delays used in test
 short_delay = 0.5
@@ -49,13 +59,17 @@ def run_scans(
     "this is a dummy replacement to run_scans that generates random data"
     data_length = 2 * nPoints
     for nScans_idx in range(nScans):
-        data_array = np.random.random(2 * data_length).view(np.complex128)
+        data_array = np.random.random(2 * data_length).view(
+            np.complex128
+        )  # enough random numbers for both real and imaginary, then use view
+        # to alternate real,imag
         if ret_data is None:
             times_dtype = np.dtype(
                 [
                     (indirect_fields[0], np.double),
                     (indirect_fields[1], np.double),
-                ]
+                ]  # typically, the two columns/fields give start and
+                # stop times
             )
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
             direct_time_axis = r_[0 : np.shape(data_array)[0]] / 3.9e3
@@ -100,6 +114,20 @@ with instrument_control() as p:
             time_axis_coords = DNP_data.getaxis("indirect")
         time_axis_coords[j]["start_times"] = DNP_ini_time
         time_axis_coords[j]["stop_times"] = DNP_done
+    DNP_data.name("nodename_test")
+    DNP_data.set_prop("power_settings", power_settings_dBm)
+    nodename = DNP_data.name()
+    try:
+        DNP_data.hdf5_write(filename, directory=target_directory)
+    except Exception:
+        print(
+            "***Warning*** Writing to",
+            filename,
+            " failed, so saving to temp.h5",
+        )
+        if os.path.exists("temp.h5"):
+            os.remove("temp.h5")
+            DNP_data.hdf5_write("temp.h5")
     this_log = p.stop_log()
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
@@ -116,5 +144,4 @@ target_directory = getDATADIR(exp_type=my_exp_type)
 with h5py.File(
     os.path.normpath(os.path.join(target_directory, filename)), "a"
 ) as f:
-    log_grp = f.require_group("log")
-    hdf_save_dict_to_group(log_grp, this_log.__getstate__())
+    hdf_save_dict_to_group(f, {"log": this_log.__getstate__()})

@@ -412,6 +412,5 @@ config_dict.write()
 with h5py.File(
     os.path.normpath(os.path.join(target_directory, filename)), "a"
 ) as f:
-    log_grp = f.create_group("log")
-    hdf_save_dict_to_group(log_grp, this_log.__getstate__())
+    hdf_save_dict_to_group(f, {"log": this_log.__getstate__()})
 print("*" * 30 + "\n" + "\n".join(final_log))
