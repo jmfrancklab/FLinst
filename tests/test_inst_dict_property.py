@@ -55,6 +55,7 @@ class FakePowerControl:
     def __init__(self):
         self._shim_voltage_cache = OrderedDict([("Y", 0.0), ("Z0", 0.0)])
         self._shim_current_cache = OrderedDict([("Y", 0.0), ("Z0", 0.0)])
+
     @inst_dict_property_module.inst_dict_property
     def shim_voltage(self, shim_name):
         return self._shim_voltage_cache[shim_name]

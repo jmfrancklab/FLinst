@@ -52,13 +52,15 @@ class inst_dict_proxy:
         ]:
             if hasattr(self._owner, testname):
                 key_source = getattr(self._owner, testname)
-                assert isinstance(
-                    key_source, OrderedDict
-                ), f"The {testname} attribute of {self._owner} must be an ordered dict!!!!"
+                assert isinstance(key_source, OrderedDict), (
+                    f"The {testname} attribute of {self._owner} must be an"
+                    "ordered dict!!!!"
+                )
                 break
         if key_source is None:
             raise AttributeError(
-                f"{type(self._owner).__name__!r} object has no channel key source"
+                f"{type(self._owner).__name__!r} object has no "
+                "channel key source"
             )
         # }}}
         self._keys = list(key_source.keys())
@@ -78,8 +80,8 @@ class inst_dict_proxy:
         Parameters
         ----------
         idx : str | slice | sequence[str]
-            Selector naming one channel, a slice over the stored channel order, or
-            an explicit sequence of channel names.
+            Selector naming one channel, a slice over the stored channel order,
+            or an explicit sequence of channel names.
 
         Returns
         -------
