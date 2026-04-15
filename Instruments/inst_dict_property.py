@@ -63,6 +63,19 @@ class inst_dict_proxy:
             return idx
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
 
+    def _norm_int_index(self, idx):
+        r"""Normalize an integer position into the stored shim-key order."""
+        if not isinstance(idx, int):
+            raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
+        nkeys = len(self._keys)
+        if idx < 0:
+            idx += nkeys
+        if not (0 <= idx < nkeys):
+            raise IndexError(
+                f"shim index {idx} out of range for size {nkeys}"
+            )
+        return idx
+
     def _indices(self, idx):
         r"""
         Check that we have a valid key, an note whether it refers to one
@@ -82,10 +95,12 @@ class inst_dict_proxy:
         """
         if isinstance(idx, str):
             return [self._verify_iskey(idx)], True
+        if isinstance(idx, int):
+            return [self._keys[self._norm_int_index(idx)]], True
         if isinstance(idx, slice):
             return self._keys[idx], False
         if isinstance(idx, (list, tuple)):
-            return [self._verify_iskey(x) for x in idx], False
+            return [self._indices(x)[0][0] for x in idx], False
         raise TypeError(f"unsupported shim index type: {type(idx).__name__}")
 
     def __getitem__(self, idx):

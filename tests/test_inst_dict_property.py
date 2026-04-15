@@ -95,13 +95,13 @@ class TestInstDictProperty(unittest.TestCase):
         assert type(shims.V_limit[:]) is np.ndarray
         np.testing.assert_array_equal(shims.V_limit[:], np.array([8.0, 4.0]))
 
-    def test_integer_indexing_raises_type_error_for_get_and_set(self):
+    def test_integer_indexing_reads_and_writes_by_sorted_position(self):
         hp = FakeHP()
         shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1)})
-        with self.assertRaises(TypeError):
-            _ = shims.V_limit[0]
-        with self.assertRaises(TypeError):
-            shims.V_limit[0] = 3.25
+        self.assertEqual(shims.V_limit[0], 0.0)
+        shims.V_limit[0] = 3.25
+        self.assertEqual(shims.V_limit["Y"], 3.25)
+        self.assertEqual(hp.V_limit[1], 3.25)
 
     def test_slice_assignment_broadcasts_scalar_to_all_shims(self):
         hp = FakeHP()
@@ -139,13 +139,14 @@ class TestInstDictProperty(unittest.TestCase):
 
     def test_limited_slice_assignment(self):
         hp = FakeHP()
-        shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1), "A": (hp,3)})
-        print("length is",len(shims.V_limit))
-        # TODO ☐: it seems to be objecting to the following, in general, and it should not be.  This hsould be fixed.
-        print("length is",len(shims.V_limit[0:2]))
-        shims.V_limit[0:2] = [1,2]
+        shims = ShimDictMapping({"Z0": (hp, 0), "Y": (hp, 1), "A": (hp, 2)})
+        print("length is", len(shims.V_limit))
+        print("length is", len(shims.V_limit[0:2]))
+        shims.V_limit[0:2] = [1, 2]
         shims.V_limit[2] = 3
-        self.assertEqual(p.V_limit[:], np.array([1.0, 2.0, 3.0]))
+        np.testing.assert_array_equal(
+            shims.V_limit[:], np.array([1.0, 2.0, 3.0])
+        )
 
 
 if __name__ == "__main__":
