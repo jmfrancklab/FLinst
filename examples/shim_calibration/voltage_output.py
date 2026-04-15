@@ -1,4 +1,3 @@
-# TODO ☐: not reviewed: think just moved -- check
 """
 Voltage Output Characterization
 ===============================
