@@ -8,8 +8,6 @@ Repeated echo signal according to `indirect_pts` in `active.ini`.
 import logging
 import os
 import time
-
-import numpy as np
 import pyspecdata as psd
 import SpinCore_pp
 import h5py
