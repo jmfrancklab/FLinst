@@ -109,6 +109,9 @@ with power_control() as p:
         time_axis_coords[j]["stop_times"] = DNP_done
     DNP_data.name("nodename_test")
     DNP_data.set_prop("power_settings", power_settings_dBm)
+    # note that the validity of saving the log data in this way (rather
+    # than manually creating the HDF5 node) is already tested as part of
+    # the test suite (test_logobj.py)
     DNP_data.set_prop("log", p.stop_log().__getstate__())
     nodename = DNP_data.name()
     try:
