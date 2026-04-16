@@ -23,6 +23,10 @@ assert not os.path.exists("output.h5"), (
     " we're writing a fresh h5 file"
 )
 with power_control() as p:
+    # since part of what we're doing is testing the field logging,
+    # and this is a test, rather than something where we might expect
+    # we've already set ourselves to a calibrated field, we
+    # initialize to a reasonable field
     p.set_field(
         config_dict["carrierfreq_mhz"] / config_dict["gamma_eff_MHz_G"]
     )

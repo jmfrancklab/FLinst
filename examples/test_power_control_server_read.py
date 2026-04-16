@@ -1,6 +1,13 @@
-"Reads the output from test_power_control_server.py"
+# TODO ☐: still need to update the file for "pull old data"
+"
+Reads the output from test_power_control_server.py
+==================================================
 
-import time, h5py
+Note that you can set pull_old_data to either read old data (stored on Box) or
+new data that was just generated using test_power_control_server.py in the local directory.
+"
+
+import time, h5py, os
 import pylab as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.transforms as transforms
@@ -14,13 +21,16 @@ def thetime(x, position):
     return time.strftime("%I:%M:%S %p", result)
 
 
-pull_old_data = False
+# am I pulling previously stored data, or something I just ran
+pull_old_data = True
 if pull_old_data:
     fname = psd.search_filename(
         "output.h5", exp_type="ODNP_NMR_comp/test_equipment", unique=True
     )
 else:
     fname = "output.h5"
+if not os.path.exists(fname):
+    raise IOError(f"{fname} not found.  Check that you've set the pull_old_data flag as you intend")
 with h5py.File(fname, "r") as f:
     thislog = logobj.from_group(f["log"])
     read_array = thislog.total_log
@@ -36,10 +46,10 @@ for j in range(len(read_array)):
         thisfield,
         read_dict[thiscmd],
     )
-fig, (ax_Rx, ax_power, ax_field) = plt.subplots(3, 1, figsize=(10, 8))
-ax_Rx.xaxis.set_major_formatter(thetime)
-ax_power.xaxis.set_major_formatter(thetime)
-ax_field.xaxis.set_major_formatter(thetime)
+fig, ax_list = plt.subplots(3, 1, figsize=(10, 8))
+(ax_Rx, ax_power, ax_field) = ax_list
+for thisax in ax_list:
+    thisax.xaxis.set_major_formatter(thetime)
 ax_Rx.set_ylabel("Rx / mV")
 ax_Rx.plot(read_array["time"], read_array["Rx"], ".")
 ax_power.set_ylabel("power / dBm")
@@ -48,38 +58,22 @@ ax_field.set_ylabel("field / G")
 ax_field.plot(read_array["time"], read_array["field"], ".")
 mask = read_array["cmd"] != 0
 n_events = len(read_array["time"][mask])
-trans_power = transforms.blended_transform_factory(
-    ax_power.transData, ax_power.transAxes
-)
-trans_Rx = transforms.blended_transform_factory(
-    ax_Rx.transData, ax_Rx.transAxes
-)
-trans_field = transforms.blended_transform_factory(
-    ax_field.transData, ax_field.transAxes
-)
+trans_list = []
+for thisax in ax_list:
+    trans_list.append( transforms.blended_transform_factory(
+        thisax.transData, thisax.transAxes
+    ))
 for j, thisevent in enumerate(read_array[mask]):
-    ax_Rx.axvline(x=thisevent["time"])
-    ax_power.axvline(x=thisevent["time"])
-    ax_field.axvline(x=thisevent["time"])
+    for thisax in ax_list:
+        thisax.axvline(x=thisevent["time"])
     y_pos = j / n_events
-    ax_Rx.text(
-        thisevent["time"],
-        y_pos,
-        read_dict[thisevent["cmd"]],
-        transform=trans_Rx,
-    )
-    ax_power.text(
-        thisevent["time"],
-        y_pos,
-        read_dict[thisevent["cmd"]],
-        transform=trans_power,
-    )
-    ax_field.text(
-        thisevent["time"],
-        y_pos,
-        read_dict[thisevent["cmd"]],
-        transform=trans_field,
-    )
+    for j, thisax in enumerate(ax_list):
+        thisax.text(
+            thisevent["time"],
+            y_pos,
+            read_dict[thisevent["cmd"]],
+            transform=trans_list[j],
+        )
 ax_power.legend(**dict(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0))
 plt.tight_layout()
 plt.show()

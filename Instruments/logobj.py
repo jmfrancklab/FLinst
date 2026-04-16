@@ -1,19 +1,15 @@
-from numpy import dtype, empty, concatenate, generic
+# TODO ☐: Please re-run the basic log test to make sure I didn't mess anything up when trying to tighten this up
+from numpy import dtype, empty, concatenate, generic, nan
 import time as timemodule
 
 
 class logobj(object):
     def __init__(self, array_len=1000):  # just the size of the buffer
         self.log_list = []
+        self.data_fields = ["Rx", "power", "field"]
         # {{{ this is a structured array
         self.log_dtype = dtype(
-            [
-                ("time", "f8"),
-                ("Rx", "f8"),
-                ("power", "f8"),
-                ("field", "f8"),
-                ("cmd", "i8"),
-            ]
+            [(j, "f8") for j in ["time"] + self.data_fields] + [("cmd", "i8")]
         )
         self.log_array = empty(array_len, dtype=self.log_dtype)
         self.log_dict = {
@@ -49,7 +45,11 @@ class logobj(object):
             del self._totallog
         return
 
-    def add(self, time=None, Rx=None, power=None, field=None, cmd=None):
+    def add(self, time=None, cmd=None, **kwargs):
+        """add a log entry.  Must contain time and cmd.  All other data
+        fields are also given as keyword arguments, but can now be
+        omitted -- if they are, we assume they are nan (which in this
+        context we interpret as "no valid data")"""
         if time is None:
             time = timemodule.time()
         self.log_array[self.log_pos]["time"] = time
@@ -59,12 +59,11 @@ class logobj(object):
             thehash = hash(cmd)
             self.log_dict[thehash] = cmd
             self.log_array[self.log_pos]["cmd"] = thehash
-        assert Rx is not None
-        self.log_array[self.log_pos]["Rx"] = Rx
-        assert power is not None
-        self.log_array[self.log_pos]["power"] = power
-        assert field is not None
-        self.log_array[self.log_pos]["field"] = field
+        for k in self.data_fields:
+            if k in kwargs:
+                self.log_array[self.log_pos][k] = kwargs[k]
+            else:
+                self.log_array[self.log_pos][k] = nan
         # {{{ done for all additions
         self.log_pos += 1
         if self.log_pos == self.array_len:
