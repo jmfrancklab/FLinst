@@ -138,7 +138,7 @@ DNP_data.set_prop("power_settings", power_settings_dBm)
 DNP_data.set_prop("postproc_type", "synthetic_test")
 DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
-    DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=False
+    DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
 )
 
 
