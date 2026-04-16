@@ -144,21 +144,13 @@ class NMRWindow(QMainWindow):
     def _format_shim_voltage(self, voltage_V):
         return f"{voltage_V:.3g}"
 
-    def text_is_float(self, value):
-        return (
-            re.fullmatch(
-                r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?",
-                value.strip(),
-            )
-            is not None
-        )
-
     def on_y_shim_voltage_edit(self):
         requested_voltage = self.textbox_y_shim_voltage.text()
         try:
-            # rather than a more elaborate regex search, we test if it's a valid float by tring to convert
+            # rather than a more elaborate regex search, we test if it's
+            # a valid float by tring to convert
             requested_voltage = float(requested_voltage.strip())
-        except:
+        except Exception:
             QMessageBox.warning(
                 self,
                 "Invalid Y Shim Voltage",
@@ -166,16 +158,16 @@ class NMRWindow(QMainWindow):
             )
             return None
         rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
-        self.textbox_y_shim_voltage.setText(
-            f"{rounded_voltage:.4g}"
-        )
-        # TODO ☐: I don't think previous code would have worked! re-test!
-        p.shim_voltage_V["Y"] = rounded_voltage
-        print(f"Y shim is set to {p.shim_voltage_V["Y"]} V.")
+        self.textbox_y_shim_voltage.setText(f"{rounded_voltage:.4g}")
+        self.p.shim_voltage_V["Y"] = rounded_voltage
+        # AG NOTE to JF: rather than using self.p.shim_voltage_V["Y"] here
+        # I brought back the variable applied_voltage since storing it once
+        # seemed a faster computation time.
+        applied_voltage = self.p.shim_voltage_V["Y"]
+        print(f"Y shim is set to {applied_voltage} V.")
         self.myconfig["shim_y_voltage_V"] = applied_voltage
         self.myconfig.write()
         return applied_voltage
-
 
     def on_mw_power_edit(self):
         req_power_dBm = self.mw_power_spinbox.value()
@@ -200,7 +192,6 @@ class NMRWindow(QMainWindow):
             self._mw_output_enabled = False
             print("MW is turned off")
         return
-
 
     def on_center_press(self, event):
         """
