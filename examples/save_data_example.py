@@ -28,6 +28,10 @@ my_exp_type = "ODNP_NMR_comp/test_equipment"
 config_dict = SpinCore_pp.configuration("active.ini")
 config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "save_data_test"
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
+)
+target_directory = getDATADIR(exp_type=my_exp_type)
 
 # {{{ data properties
 nPoints = 2048
@@ -36,7 +40,7 @@ nScans = 1
 # {{{ params for Bridge 12/power
 dB_settings = np.unique(np.round(np.linspace(0, 10, 5) / 0.5) * 0.5)
 powers = 1e-3 * 10 ** (dB_settings / 10.0)
-uw_dip_center_GHz = 9.818061
+uw_dip_center_GHz = 9.707295
 uw_dip_width_GHz = 0.008
 result = input(
     "to keep this example minimal, it doesn't read from the config file!!"
@@ -137,10 +141,7 @@ config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=False
 )
 
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
-)
-target_directory = getDATADIR(exp_type=my_exp_type)
+
 with h5py.File(
     os.path.normpath(os.path.join(target_directory, filename)), "a"
 ) as f:
