@@ -126,6 +126,10 @@ DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
 )
+filename = (
+    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
+)
+target_directory = getDATADIR(exp_type=my_exp_type)
 with h5py.File(
     os.path.normpath(os.path.join(target_directory, filename)), "a"
 ) as f:
