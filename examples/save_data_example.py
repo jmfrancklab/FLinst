@@ -24,15 +24,11 @@ from datetime import datetime
 import SpinCore_pp
 from SpinCore_pp import save_data
 
+# TODO ☐: re-test -- a bunch of stuff is redundant with what save_data does, so I deleted it
+
 my_exp_type = "ODNP_NMR_comp/test_equipment"
 config_dict = SpinCore_pp.configuration("active.ini")
-config_dict["date"] = datetime.now().strftime("%y%m%d")
 config_dict["type"] = "save_data_test"
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
-)
-target_directory = getDATADIR(exp_type=my_exp_type)
-
 # {{{ data properties
 nPoints = 2048
 nScans = 1
@@ -121,27 +117,15 @@ with instrument_control() as p:
     DNP_data.name("nodename_test")
     DNP_data.set_prop("power_settings", power_settings_dBm)
     nodename = DNP_data.name()
-    try:
-        DNP_data.hdf5_write(filename, directory=target_directory)
-    except Exception:
-        print(
-            "***Warning*** Writing to",
-            filename,
-            " failed, so saving to temp.h5",
-        )
-        if os.path.exists("temp.h5"):
-            os.remove("temp.h5")
-            DNP_data.hdf5_write("temp.h5")
+    # TODO ☐: re-test -- a bunch of stuff is redundant with what save_data does, so I deleted it
     this_log = p.stop_log()
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
-DNP_data.set_prop("postproc_type", "synthetic_test")
+DNP_data.set_prop("postproc_type", "spincore_SE_v1")
 DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
 )
-
-
 with h5py.File(
     os.path.normpath(os.path.join(target_directory, filename)), "a"
 ) as f:

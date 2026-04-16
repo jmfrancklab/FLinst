@@ -84,33 +84,20 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
         filename_out,
         my_exp_type,
     )
+    # TODO ☐: be sure you re-run the save file test to make sure this works
     if proc:
-        env = os.environ.copy()
-        # Avoid matplotlib cache warnings when post-processing is launched
-        # from restricted environments.
-        env.setdefault(
-            "MPLCONFIGDIR",
-            os.path.join(tempfile.gettempdir(), "matplotlib"),
-        )
-        result = subprocess.run(
+        env = os.environ
+        cmd = " ".join(
             [
-                sys.executable,
-                "-c",
-                (
-                    "from pyspecProcScripts.raw import run_raw; "
-                    "import sys; "
-                    "run_raw(sys.argv[1], sys.argv[2], sys.argv[3])"
-                ),
+                "pyspecProcScripts",
+                "raw",
                 my_exp_type,
                 filename_out,
                 dataset.name(),
-            ],
-            env=env,
-            check=False,
+            ]
         )
-        if result.returncode != 0:
-            print(
-                "\n*** WARNING: automatic post-processing failed, "
-                "but the dataset was saved successfully. ***\n"
-            )
+        subprocess.call(
+            cmd,
+            env=env,
+        )
     return config_dict

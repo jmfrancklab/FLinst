@@ -67,23 +67,23 @@ if set_B_field:
         "Based on that, and the gamma_eff_MHz_G you have in your .ini"
         " file, I'm setting the field to %f" % field_G
     )
-    with instrument_control() as p:
+    with instrument_control() as ic:
         assert field_G < 3700, "are you crazy??? field is too high!"
         assert field_G > 3300, "are you crazy?? field is too low!"
-        field_G = p.set_field(field_G)
+        field_G = ic.set_field(field_G)
         print("field set to ", field_G)
 # }}}
 
 data = None
 
-with instrument_control() as p:
+with instrument_control() as ic:
     requested_y_voltage_list = np.arange(V_min, V_max, step)
-    y_voltage_array = p.round_shim_voltage("Y", requested_y_voltage_list)
+    y_voltage_array = ic.round_shim_voltage("Y", requested_y_voltage_list)
     print("requested Y voltages:", requested_y_voltage_list)
     print("allowed Y voltages:", y_voltage_array)
     for idx, requested_voltage in enumerate(y_voltage_array):
-        p.shim["Y"] = requested_voltage
-        applied_voltage = p.shim["Y"]
+        ic.shim["Y"] = requested_voltage
+        applied_voltage = ic.shim["Y"]
         print(
             "set Y shim to",
             applied_voltage,
@@ -110,7 +110,7 @@ with instrument_control() as p:
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    p.shim["Y"] = 0.0
+    ic.shim["Y"] = 0.0
     print("Y shim is turned off")
 
 data.rename("indirect", "y_voltage")

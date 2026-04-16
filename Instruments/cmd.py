@@ -21,8 +21,9 @@ def cmd():
         "NMRsignal": Instruments.nmr_signal_gui.main,
         "MWtune": Instruments.microwave_tuning_gui.main,
         "server": Instruments.instrument_control_server.main,
-        "quitServer": Instruments.instrument_control_server.main,
+        "quitServer": Instruments.just_quit.main,
         "setField": set_field,
+        "calcVD": SpinCore_pp.calc_vdlist.print_tempo_vdlist,
     }
     if len(sys.argv) < 2 or sys.argv[1] not in cmds.keys():
         raise ValueError(

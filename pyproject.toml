@@ -23,9 +23,8 @@ dependencies = [
 SpinCore_pp = ["config_params.yaml"]
 
 [project.scripts]
-calc_tempol_vd = "SpinCore_pp.calc_vdlist:print_tempo_vdlist"
-instrument_control_server = "Instruments.instrument_control_server:main"
-quit_instrument_control = "Instruments.just_quit:main"
+# the power_control_server and quit_power_control were artefacts -- at
+# some point we moved to the sub-command structure
 FLInst = "Instruments.cmd:cmd"
 
 [tool.black]

@@ -220,13 +220,13 @@ if os.path.exists(filename):
 # SEPERATELY serves as a control to compare the thermal of Ep to ensure no
 # microwaves were leaking call A to run spin echo
 # {{{run enhancement
-with instrument_control() as p:
+with instrument_control() as ic:
     # we do not dip lock or anything here, because we assume
     # uw_dip_center_GHz stores the frequency of the center of the cavity
     # resonance, which was set from the microwave tuning gui
-    p.mw_off()
+    ic.mw_off()
     time.sleep(16.0)  # give some time for the power source to "settle"
-    p.start_log()
+    ic.start_log()
     DNP_data = None  # initially, there is no data, and run_spin_echo knows how
     #                  to deal with this
     # Run the actual thermal where the power log is recording. This will be
@@ -279,7 +279,7 @@ with instrument_control() as p:
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
             strm(
-                "setting this power for E(p)",
+                "setting this power for E(ic)",
                 this_dB,
                 "(",
                 dB_settings[j - 1],
@@ -294,21 +294,21 @@ with instrument_control() as p:
             # This is not only faster, but it ensures that the
             # uw_dip_center_GHz stores the ACTUAL B12 frequency that we
             # use
-            p.set_power(10)  # set to 10 dBm
-            p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
-        p.set_power(this_dB)
+            ic.set_power(10)  # set to 10 dBm
+            ic.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
+        ic.set_power(this_dB)
         for k in range(10):
             time.sleep(0.5)
-            if abs(p.get_power_setting() - this_dB) < 1:
+            if abs(ic.get_power_setting() - this_dB) < 1:
                 break
-        if abs(p.get_power_setting() - this_dB) > 1:
+        if abs(ic.get_power_setting() - this_dB) > 1:
             raise ValueError(
                 "After 10 tries, B12 is still not reporting "
                 "that the correct power has been set"
-                f"I want {p.get_power_setting()} and am getting {this_dB}"
+                f"I want {ic.get_power_setting()} and am getting {this_dB}"
             )
         time.sleep(5)
-        power_settings_dBm[j] = p.get_power_setting()
+        power_settings_dBm[j] = ic.get_power_setting()
         time_axis_coords[j + n_thermal_scans]["start_times"] = time.time()
         # call D to run spin echo
         # Now that the thermal is collected we increment our powers and collect
@@ -373,11 +373,11 @@ with instrument_control() as p:
         # server handles this for us
         logger.debug(
             strm(
-                "setting this power for T1(p)",
+                "setting this power for T1(ic)",
                 this_dB,
             )
         )
-        p.set_power(this_dB)
+        ic.set_power(this_dB)
         for k in range(10):
             time.sleep(0.5)
             # JF notes that the following works for powers going up, but not
@@ -386,12 +386,12 @@ with instrument_control() as p:
             # implementation, but we should PR and fix this in the future.
             # (Just say whether we're closer to the newer setting or the older
             # setting.)
-            if p.get_power_setting() >= this_dB:
+            if ic.get_power_setting() >= this_dB:
                 break
-        if p.get_power_setting() < this_dB:
+        if ic.get_power_setting() < this_dB:
             raise ValueError("After 10 tries, the power has still not settled")
         time.sleep(5)
-        meter_power = p.get_power_setting()
+        meter_power = ic.get_power_setting()
         IR_measurement(
             vd_list_us=vd_list_us,
             nPoints=nPoints,
@@ -406,7 +406,7 @@ with instrument_control() as p:
             filename=filename,
             final_log=final_log,
         )
-    this_log = p.stop_log()
+    this_log = ic.stop_log()
 # }}}
 config_dict.write()
 with h5py.File(

@@ -36,7 +36,7 @@ class inst_dict_proxy:
         """
         self._owner = owner
         self._prop = prop
-        # {{{ the power_control instance uses _shim_voltage_cache and
+        # {{{ the instrument_control instance uses _shim_voltage_cache and
         #     _shim_current_cache while the shim_current_dict uses
         #     _shim_dict to store the relevant properties, so we need to
         #     consider all of them.

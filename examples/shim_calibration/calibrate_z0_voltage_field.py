@@ -9,7 +9,6 @@ constant for our Z0 shim.
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-
 from Instruments import instrument_control
 
 
@@ -18,7 +17,7 @@ requested_voltages_V = np.arange(0.0, 4.0 + 0.25 / 2, 0.25)
 settle_s = 1.0
 
 with instrument_control() as p:
-    initial_voltage_V = p.get_shim()[shim_name][0]
+    initial_voltage_V = p.get_shims()[shim_name][0]
     voltages_V = np.array(
         list(
             dict.fromkeys(
