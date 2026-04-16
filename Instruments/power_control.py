@@ -14,7 +14,7 @@ import socket
 import time
 import pickle
 from collections.abc import Iterable
-
+from collections import OrderedDict
 from .inst_dict_property import inst_dict_property
 
 IP = "127.0.0.1"
@@ -141,12 +141,6 @@ class power_control(object):
         self.send("SET_FREQ %f" % freq)
         return
 
-    # TODO ☐: make sure that you have a test that tests this, both for a
-    #         single shim, and for all:
-    #         pcontrolinst.shim_current['Z0'] as well as
-    #         pcontrolinst.shim_current[:] (or
-    #         pcontrolinst.shim_current, I forget which is supported)
-    #         restored: A test, not an example.
     @inst_dict_property
     def shim_current(self, shim_name):
         """Return the current for one or more shims."""
@@ -165,11 +159,6 @@ class power_control(object):
             self._shim_current_cache[shim_name] = retval
             return retval
 
-    # TODO ☐: make sure that you have a test that tests this, both for a
-    #         single shim, and for all:
-    #         pcontrolinst.shim_voltage['Z0'] as well as
-    #         pcontrolinst.shim_voltage[:] (or
-    #         pcontrolinst.shim_voltage, I forget which is supported)
     @inst_dict_property
     def shim_voltage(self, shim_name):
         """Return the voltage for one or more shims."""
@@ -194,7 +183,7 @@ class power_control(object):
         if isinstance(voltage_V, Iterable) and not isinstance(
             voltage_V, (str, bytes)
         ):
-            voltage_V = list(voltage_V)
+            voltage_V = [float(j) for j in voltage_V]
         self.send("ROUND_SHIM_VOLTAGES %s %r" % (shim_name, voltage_V))
         retval = self.get_bytes(b"ENDTCPIPBLOCK")
         return pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
@@ -230,14 +219,18 @@ class power_control(object):
         retval = pickle.loads(retval[: -len("ENDTCPIPBLOCK")])
         # {{{ we pull retval apart into its sensible parts, so we don't need to
         #     keep it around
-        self._shim_voltage_cache = {
-            j: k[0]
-            for j, k in retval.items()
-        }
-        self._shim_current_cache = {
-            j: k[1]
-            for j, k in retval.items()
-        }
+        self._shim_voltage_cache = OrderedDict(
+            sorted(
+                {j: k[0] for j, k in retval.items()}.items(),
+                key=lambda x: x[0],
+            )
+        )
+        self._shim_current_cache = OrderedDict(
+            sorted(
+                {j: k[1] for j, k in retval.items()}.items(),
+                key=lambda x: x[0],
+            )
+        )
         # }}}
         return retval
 

@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 from .HP6623A import HP6623A
 from .inst_dict_property import inst_dict_property
 
@@ -137,6 +136,9 @@ class ShimDictMapping:
 
     def __len__(self):
         return len(self._shim_dict)
+
+    def keys(self):
+        return (j for j in self._shim_dict.keys())
 
     def __iter__(self):
         return iter(self._shim_dict)
