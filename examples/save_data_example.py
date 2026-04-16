@@ -75,10 +75,10 @@ def run_scans(
             direct_time_axis = r_[0 : np.shape(data_array)[0]] / 3.9e3
             ret_data = ndshape(
                 [indirect_len, nScans, len(direct_time_axis)],
-                ["indirect", "nScans", "t"],
+                ["indirect", "nScans", "t2"],
             ).alloc(dtype=np.complex128)
             ret_data.setaxis("indirect", mytimes)
-            ret_data.setaxis("t", direct_time_axis).set_units("t", "s")
+            ret_data.setaxis("t2", direct_time_axis).set_units("t2", "s")
             ret_data.setaxis("nScans", r_[0:nScans])
         ret_data["indirect", indirect_idx]["nScans", nScans_idx] = data_array
     return ret_data
