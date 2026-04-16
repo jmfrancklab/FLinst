@@ -5,10 +5,10 @@ HP Shim Power Supply
 Test control over the shims via the server.
 """
 
-from Instruments import power_control
+from Instruments import instrument_control
 
 
-with power_control() as p:
+with instrument_control() as p:
     shim_names = list(p.get_shims().keys())
     print("initial shim readback:", p.get_shims())
     print("\nVoltage test")
