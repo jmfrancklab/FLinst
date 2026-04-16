@@ -1,11 +1,10 @@
-# TODO ☐: still need to update the file for "pull old data"
-"
+"""
 Reads the output from test_power_control_server.py
 ==================================================
 
 Note that you can set pull_old_data to either read old data (stored on Box) or
 new data that was just generated using test_power_control_server.py in the local directory.
-"
+"""
 
 import time, h5py, os
 import pylab as plt
@@ -25,7 +24,7 @@ def thetime(x, position):
 pull_old_data = True
 if pull_old_data:
     fname = psd.search_filename(
-        "output.h5", exp_type="ODNP_NMR_comp/test_equipment", unique=True
+        "260409_power_control_server_test.h5", exp_type="B27/Test", unique=True
     )
 else:
     fname = "output.h5"

@@ -29,5 +29,6 @@ examples/active.ini.bak
 examples/data_files.csv
 Instruments/.DS_Store
 .DS_Store
+.codex
 examples/magnet_control/data_files.csv
 data_files.csv
