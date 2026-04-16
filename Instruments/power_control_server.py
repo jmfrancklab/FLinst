@@ -243,6 +243,8 @@ def main():
                     case b"GET_POWER":
                         result = b.power_float()
                         conn.send(("%0.1f" % result).encode("ASCII"))
+                    case b"MW_OFF":
+                        b.soft_shutdown()
                     case b"QUIT":
                         print("closing connection")
                         conn.close()

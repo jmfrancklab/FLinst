@@ -1,3 +1,4 @@
+# TODO ☐: only partially reviewed -- needs testing at AG review
 """
 started from Eli Bendersky (eliben@gmail.com), updated
 by Ondrej Holesovsky.  License: this code is in the
@@ -14,7 +15,6 @@ from numpy import r_
 import numpy as np
 import time
 import sys
-import re
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -141,7 +141,7 @@ class NMRWindow(QMainWindow):
         self.set_gamma_value(float(thetext), update_centerline=True)
         return
 
-    def format_y_shim_voltage(self, voltage_V):
+    def _format_shim_voltage(self, voltage_V):
         return f"{voltage_V:.3g}"
 
     def text_is_float(self, value):
@@ -153,41 +153,29 @@ class NMRWindow(QMainWindow):
             is not None
         )
 
-    def apply_y_shim_voltage(self):
-        if not self.text_is_float(self.textbox_y_shim_voltage.text()):
+    def on_y_shim_voltage_edit(self):
+        requested_voltage = self.textbox_y_shim_voltage.text()
+        try:
+            # rather than a more elaborate regex search, we test if it's a valid float by tring to convert
+            requested_voltage = float(requested_voltage.strip())
+        except:
             QMessageBox.warning(
                 self,
                 "Invalid Y Shim Voltage",
                 "Enter a numeric voltage for the Y shim.",
             )
             return None
-        requested_voltage = float(self.textbox_y_shim_voltage.text())
-        requested_voltage = float(
-            self.format_y_shim_voltage(requested_voltage)
-        )
         rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
         self.textbox_y_shim_voltage.setText(
-            self.format_y_shim_voltage(rounded_voltage)
+            f"{rounded_voltage:.4g}"
         )
-        applied_voltage = self.p.set_shim_voltage("Y", rounded_voltage)
-        print(f"Y shim is set to {applied_voltage} V.")
-        self.textbox_y_shim_voltage.setText(
-            self.format_y_shim_voltage(applied_voltage)
-        )
+        # TODO ☐: I don't think previous code would have worked! re-test!
+        p.shim_voltage_V["Y"] = rounded_voltage
+        print(f"Y shim is set to {p.shim_voltage_V["Y"]} V.")
         self.myconfig["shim_y_voltage_V"] = applied_voltage
         self.myconfig.write()
         return applied_voltage
 
-    def on_y_shim_voltage_edit(self):
-        self.apply_y_shim_voltage()
-        return
-
-    def initialize_y_shim_controls(self):
-        y_voltage = self.myconfig["shim_y_voltage_V"]
-        self.textbox_y_shim_voltage.setText(
-            self.format_y_shim_voltage(y_voltage)
-        )
-        return
 
     def on_mw_power_edit(self):
         req_power_dBm = self.mw_power_spinbox.value()
@@ -213,13 +201,6 @@ class NMRWindow(QMainWindow):
             print("MW is turned off")
         return
 
-    def initialize_mw_controls(self):
-        self.mw_power_spinbox.setValue(10.0)
-        self.mw_power_spinbox.lineEdit().setReadOnly(True)
-        self.mw_checkbox.setChecked(False)
-        self._mw_output_enabled = False
-        self.p.mw_off()
-        return
 
     def on_center_press(self, event):
         """
@@ -566,8 +547,20 @@ class NMRWindow(QMainWindow):
         self.mw_checkbox = QCheckBox("MW Output")
         self.mw_checkbox.stateChanged.connect(self.on_mw_checkbox_changed)
         self.boxes_vbox.addWidget(self.mw_checkbox)
-        self.initialize_y_shim_controls()
-        self.initialize_mw_controls()
+        # {{{ initialize y shim controls
+        y_voltage = self.myconfig["shim_y_voltage_V"]
+        # TODO ☐: why is this a text box? why not a slider?
+        self.textbox_y_shim_voltage.setText(
+            self._format_shim_voltage(y_voltage)
+        )
+        # }}}
+        # {{{ initialize microwave controls
+        self.mw_power_spinbox.setValue(10.0)
+        self.mw_power_spinbox.lineEdit().setReadOnly(True)
+        self.mw_checkbox.setChecked(False)
+        self._mw_output_enabled = False
+        self.p.mw_off()
+        # }}}
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
