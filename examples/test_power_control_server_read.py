@@ -21,7 +21,7 @@ def thetime(x, position):
 
 
 # am I pulling previously stored data, or something I just ran
-pull_old_data = True
+pull_old_data = False
 if pull_old_data:
     fname = psd.search_filename(
         "260409_power_control_server_test.h5", exp_type="B27/Test", unique=True
