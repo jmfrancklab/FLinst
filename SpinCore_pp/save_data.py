@@ -75,7 +75,7 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
                 )
             dataset.name(nodename)
     with instrument_control() as p:
-        dataset.set_prop("shim_readback", p.get_shim())
+        dataset.set_prop("shim_readback", p.get_shims())
     dataset.hdf5_write(f"{filename_out}", directory=target_directory)
     print("\n** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(
