@@ -159,11 +159,11 @@ class NMRWindow(QMainWindow):
             return None
         rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
         self.textbox_y_shim_voltage.setText(f"{rounded_voltage:.4g}")
-        self.p.shim_voltage_V["Y"] = rounded_voltage
-        # AG NOTE to JF: rather than using self.p.shim_voltage_V["Y"] here
+        self.p.shim_voltage["Y"] = rounded_voltage
+        # AG NOTE to JF: rather than using self.p.shim_voltage["Y"] here
         # I brought back the variable applied_voltage since storing it once
         # seemed a faster computation time.
-        applied_voltage = self.p.shim_voltage_V["Y"]
+        applied_voltage = self.p.shim_voltage["Y"]
         print(f"Y shim is set to {applied_voltage} V.")
         self.myconfig["shim_y_voltage_V"] = applied_voltage
         self.myconfig.write()
