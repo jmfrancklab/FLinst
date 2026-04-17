@@ -1,7 +1,7 @@
 """test the power control server
 
 run this while running `python -m Instruments.power_control_server`
-(or `power_control_server` as a command)
+(or `FLInst server` as a command)
 on the same computer
 
 generates hdf output to be read by test_power_control_server_read.py"""
@@ -23,9 +23,15 @@ assert not os.path.exists("output.h5"), (
     " we're writing a fresh h5 file"
 )
 with power_control() as p:
+    # since part of what we're doing is testing the field logging,
+    # and this is a test, rather than something where we might expect
+    # we've already set ourselves to a calibrated field, we
+    # initialize to a reasonable field
+    p.set_field(
+        config_dict["carrierfreq_mhz"] / config_dict["gamma_eff_MHz_G"]
+    )
     p.set_power(10)
     p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
-    input("press enter once the waveguide has switched")
     # {{{ run a loop that should take about 50s + execution time.  Step through
     #     3 powers -- unmodified (0 dB?), 10.5 dBm and 12 dBm
     for j in range(100):
@@ -34,12 +40,17 @@ with power_control() as p:
         if j == 0:
             logger.info("starting the log")
             p.start_log()
+            p.set_field(
+                config_dict["carrierfreq_mhz"] / config_dict["gamma_eff_MHz_G"]
+            )
         elif j == 30:
             logger.info("set first power")
             p.set_power(10.5)
+            p.set_field(3000)
         elif j == 60:
             logger.info("set second power")
             p.set_power(12)
+            p.set_field(2900)
     this_log = p.stop_log()
     # }}}
     # p.arrange_quit()
