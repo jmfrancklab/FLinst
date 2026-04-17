@@ -1,5 +1,7 @@
 import Instruments
 import Instruments.instrument_control_server
+import Instruments.just_quit
+import SpinCore_pp
 import Instruments.microwave_tuning_gui
 import Instruments.nmr_signal_gui
 from Instruments.XEPR_eth import xepr

@@ -87,17 +87,16 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
     # TODO ☐: be sure you re-run the save file test to make sure this works
     if proc:
         env = os.environ
-        cmd = " ".join(
-            [
+        cmd = [
                 "pyspecProcScripts",
                 "raw",
                 my_exp_type,
                 filename_out,
                 dataset.name(),
             ]
-        )
-        subprocess.call(
+        subprocess.run(
             cmd,
             env=env,
+            check = True
         )
     return config_dict

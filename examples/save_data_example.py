@@ -50,7 +50,7 @@ if not result.lower().startswith("y"):
 short_delay = 0.5
 long_delay = 10
 
-
+ph1_cyc = r_[0,1,2,3]
 # }}}
 # {{{ function that generates fake data with two indirect dimensions
 def run_scans(
@@ -61,8 +61,8 @@ def run_scans(
     for nScans_idx in range(nScans):
         data_array = np.random.random(2 * data_length).view(
             np.complex128
-        )  # enough random numbers for both real and imaginary, then use view
-        # to alternate real,imag
+        )  # enough random numbers for both real and imaginary, then 
+        # use view to alternate real,imag
         if ret_data is None:
             times_dtype = np.dtype(
                 [
@@ -74,13 +74,17 @@ def run_scans(
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
             direct_time_axis = r_[0 : np.shape(data_array)[0]] / 3.9e3
             ret_data = ndshape(
-                [indirect_len, nScans, len(direct_time_axis)],
-                ["indirect", "nScans", "t2"],
+                [indirect_len, nScans, len(ph1_cyc), len(direct_time_axis)],
+                ["indirect", "nScans", "ph1", "t2"],
             ).alloc(dtype=np.complex128)
             ret_data.setaxis("indirect", mytimes)
             ret_data.setaxis("t2", direct_time_axis).set_units("t2", "s")
+            ret_data.setaxis("ph1", ph1_cyc / 4)
             ret_data.setaxis("nScans", r_[0:nScans])
-        ret_data["indirect", indirect_idx]["nScans", nScans_idx] = data_array
+            for ph1_idx in range(len(ph1_cyc)):
+                ret_data["indirect", indirect_idx]["nScans", nScans_idx][
+                    "ph1", ph1_idx
+                ] = data_array
     return ret_data
 
 
@@ -122,6 +126,7 @@ with instrument_control() as p:
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
 DNP_data.set_prop("postproc_type", "spincore_SE_v1")
+DNP_data.set_prop("coherence_pathway", {"ph1":1})
 DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
