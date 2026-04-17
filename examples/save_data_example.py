@@ -20,7 +20,6 @@ from Instruments import instrument_control
 import os
 import time
 import h5py
-from datetime import datetime
 import SpinCore_pp
 from SpinCore_pp import save_data
 

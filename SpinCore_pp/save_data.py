@@ -2,8 +2,6 @@ import h5py
 import os
 import pyspecdata as psd
 import subprocess
-import sys
-import tempfile
 from datetime import datetime
 from Instruments import instrument_control
 
