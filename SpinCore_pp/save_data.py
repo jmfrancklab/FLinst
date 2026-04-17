@@ -84,19 +84,16 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
         filename_out,
         my_exp_type,
     )
-    # TODO ☐: be sure you re-run the save file test to make sure this works
     if proc:
         env = os.environ
         cmd = [
-                "pyspecProcScripts",
-                "raw",
-                my_exp_type,
-                filename_out,
-                dataset.name(),
-            ]
-        subprocess.run(
-            cmd,
-            env=env,
-            check = True
-        )
+            "pyspecProcScripts",
+            "raw",
+            my_exp_type,
+            filename_out,
+            dataset.name(),
+        ]
+        # AG NOTE to JF: .run() function also returns the
+        # errors if occur so I replaced .call() with run()
+        subprocess.run(cmd, env=env, check=True)
     return config_dict

@@ -24,7 +24,6 @@ from datetime import datetime
 import SpinCore_pp
 from SpinCore_pp import save_data
 
-# TODO ☐: re-test -- a bunch of stuff is redundant with what save_data does, so I deleted it
 
 my_exp_type = "ODNP_NMR_comp/test_equipment"
 config_dict = SpinCore_pp.configuration("active.ini")
@@ -50,7 +49,9 @@ if not result.lower().startswith("y"):
 short_delay = 0.5
 long_delay = 10
 
-ph1_cyc = r_[0,1,2,3]
+ph1_cyc = r_[0, 1, 2, 3]
+
+
 # }}}
 # {{{ function that generates fake data with two indirect dimensions
 def run_scans(
@@ -61,7 +62,7 @@ def run_scans(
     for nScans_idx in range(nScans):
         data_array = np.random.random(2 * data_length).view(
             np.complex128
-        )  # enough random numbers for both real and imaginary, then 
+        )  # enough random numbers for both real and imaginary, then
         # use view to alternate real,imag
         if ret_data is None:
             times_dtype = np.dtype(
@@ -121,12 +122,11 @@ with instrument_control() as p:
     DNP_data.name("nodename_test")
     DNP_data.set_prop("power_settings", power_settings_dBm)
     nodename = DNP_data.name()
-    # TODO ☐: re-test -- a bunch of stuff is redundant with what save_data does, so I deleted it
     this_log = p.stop_log()
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
 DNP_data.set_prop("postproc_type", "spincore_SE_v1")
-DNP_data.set_prop("coherence_pathway", {"ph1":1})
+DNP_data.set_prop("coherence_pathway", {"ph1": 1})
 DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
