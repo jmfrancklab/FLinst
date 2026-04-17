@@ -1,4 +1,3 @@
-# TODO ☐: only partially reviewed
 """
 started from Eli Bendersky (eliben@gmail.com), updated
 by Ondrej Holesovsky.  License: this code is in the
@@ -141,9 +140,6 @@ class NMRWindow(QMainWindow):
         self.set_gamma_value(float(thetext), update_centerline=True)
         return
 
-    def _format_shim_voltage(self, voltage_V):
-        return f"{voltage_V:.3g}"
-
     def on_y_shim_voltage_edit(self):
         requested_voltage = self.textbox_y_shim_voltage.text()
         try:
@@ -160,13 +156,12 @@ class NMRWindow(QMainWindow):
         rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
         self.textbox_y_shim_voltage.setText(f"{rounded_voltage:.4g}")
         self.p.shim_voltage["Y"] = rounded_voltage
-        # AG NOTE to JF: rather than using self.p.shim_voltage["Y"] here
-        # I brought back the variable applied_voltage since storing it once
-        # seemed a faster computation time.
         applied_voltage = self.p.shim_voltage["Y"]
         print(f"Y shim is set to {applied_voltage} V.")
         self.myconfig["shim_y_voltage_V"] = applied_voltage
-        self.myconfig.write()
+        # we do not write the configuration here, because this is a
+        # simple GUI callback.  The configuration is written when we
+        # acquire data.
         return applied_voltage
 
     def on_mw_power_edit(self):
@@ -184,6 +179,8 @@ class NMRWindow(QMainWindow):
             self.p.set_power(min(req_power_dBm, 10.0))
             self.p.set_freq(self.myconfig["uw_dip_center_GHz"] * 1e9)
             if req_power_dBm > 10.0:
+                # we rely on the server to ratched up the power in
+                # reasonable step sizes
                 self.p.set_power(req_power_dBm)
             self._mw_output_enabled = True
             print(f"MW is turned on with power {req_power_dBm} dBm")
@@ -291,7 +288,7 @@ class NMRWindow(QMainWindow):
         else:
             drag_final_x = event.xdata
         self.centerfrq_Hz = drag_final_x
-        if self.constant_field_checkbox.isChecked():
+        if not self.auto_field_checkbox.isChecked():
             return
         new_gamma = self.update_gamma_from_center_offset()
         if new_gamma is not None:
@@ -313,11 +310,11 @@ class NMRWindow(QMainWindow):
         )
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
-        if self.constant_field_checkbox.isChecked():
-            print("Constant Field is checked, so I am not changing the field.")
-        else:
+        if self.auto_field_checkbox.isChecked():
             self.p.set_field(Field)
             print("Field is adjusted (using server) to", Field, "G")
+        else:
+            print("Constant Field is checked, so I am not changing the field.")
         # }}}
         # {{{acquire echo
         print("about to run_spin_echo")
@@ -403,7 +400,7 @@ class NMRWindow(QMainWindow):
         self.centerline.set_picker(5)
         # }}}
         self.regen_plots()
-        if not self.constant_field_checkbox.isChecked():
+        if not self.auto_field_checkbox.isChecked():
             self.update_gamma_from_center_offset()
         return
 
@@ -510,11 +507,13 @@ class NMRWindow(QMainWindow):
         self.textbox_y_shim_voltage.editingFinished.connect(
             self.on_y_shim_voltage_edit
         )
+        # {{{ microwave power control
         self.mw_power_spinbox.setDecimals(1)
         self.mw_power_spinbox.setRange(0, 35.0)
         self.mw_power_spinbox.setSingleStep(1.0)
         self.mw_power_spinbox.setValue(10.0)
         self.mw_power_spinbox.editingFinished.connect(self.on_mw_power_edit)
+        # }}}
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
         self.bottomleft_vbox.addWidget(self.textbox_gamma)
@@ -532,18 +531,19 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
-        self.constant_field_checkbox = QCheckBox("Constant Field")
-        self.constant_field_checkbox.setChecked(False)
-        self.boxes_vbox.addWidget(self.constant_field_checkbox)
+        # {{{ box to supress field auto-adjust
+        self.auto_field_checkbox = QCheckBox("Auto-adjust field?")
+        self.auto_field_checkbox.setChecked(True)
+        self.boxes_vbox.addWidget(self.auto_field_checkbox)
+        # }}}
+        # {{{ microwave on and off
         self.mw_checkbox = QCheckBox("MW Output")
         self.mw_checkbox.stateChanged.connect(self.on_mw_checkbox_changed)
         self.boxes_vbox.addWidget(self.mw_checkbox)
+        # }}}
         # {{{ initialize y shim controls
         y_voltage = self.myconfig["shim_y_voltage_V"]
-        # TODO ☐: why is this a text box? why not a slider?
-        self.textbox_y_shim_voltage.setText(
-            self._format_shim_voltage(y_voltage)
-        )
+        self.textbox_y_shim_voltage.setText(f"{y_voltage:.3g}")
         # }}}
         # {{{ initialize microwave controls
         self.mw_power_spinbox.setValue(10.0)
