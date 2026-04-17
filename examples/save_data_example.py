@@ -57,12 +57,12 @@ def run_scans(
     indirect_idx, indirect_len, nScans, indirect_fields=None, ret_data=None
 ):
     "this is a dummy replacement to run_scans that generates random data"
-    data_length = 2 * nPoints
+    data_length = 2 * nPoints * len(ph1_cyc)
     for nScans_idx in range(nScans):
         data_array = np.random.random(2 * data_length).view(
             np.complex128
         )  # enough random numbers for both real and imaginary, then
-        # use view to alternate real,imag
+        #    use view to alternate real,imag
         if ret_data is None:
             times_dtype = np.dtype(
                 [
@@ -72,9 +72,9 @@ def run_scans(
                 # stop times
             )
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
-            direct_time_axis = r_[0 : np.shape(data_array)[0]] / 3.9e3
+            direct_time_axis = r_[0 : nPoints] / 3.9e3
             ret_data = ndshape(
-                [indirect_len, nScans, len(ph1_cyc), len(direct_time_axis)],
+                [indirect_len, nScans, len(ph1_cyc), nPoints],
                 ["indirect", "nScans", "ph1", "t2"],
             ).alloc(dtype=np.complex128)
             ret_data.setaxis("indirect", mytimes)
@@ -130,6 +130,7 @@ DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
 )
+# all of the following will be auto-adjusted by save_data
 filename = (
     f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
 )

@@ -91,7 +91,5 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
             filename_out,
             dataset.name(),
         ]
-        # AG NOTE to JF: .run() function also returns the
-        # errors if occur so I replaced .call() with run()
         subprocess.run(cmd, env=env, check=True)
     return config_dict
