@@ -1,4 +1,4 @@
-# TODO ☐: only partially reviewed -- needs testing at AG review
+# TODO ☐: only partially reviewed
 """
 started from Eli Bendersky (eliben@gmail.com), updated
 by Ondrej Holesovsky.  License: this code is in the
