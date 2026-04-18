@@ -31,9 +31,9 @@ def round_and_set_shim_quant(
 
 
 def main():
-    # {{{ set up log at ~/power_control_server.log
+    # {{{ set up log at ~/instrument_control_server.log
     log_filename = os.path.join(
-        os.path.expanduser("~"), "power_control_server.log"
+        os.path.expanduser("~"), "instrument_control_server.log"
     )
     formatter = logging.Formatter(
         "--> %(filename)s(%(lineno)s):%(name)s %(funcName)20s"

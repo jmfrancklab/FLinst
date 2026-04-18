@@ -1,9 +1,9 @@
 import h5py
 import os
 import pyspecdata as psd
-import pyspecProcScripts
 import subprocess
 from datetime import datetime
+from Instruments import instrument_control
 
 
 def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
@@ -72,6 +72,8 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
                     + str(config_dict["%s_counter" % counter_type])
                 )
             dataset.name(nodename)
+    with instrument_control() as p:
+        dataset.set_prop("shim_readback", p.get_shims())
     dataset.hdf5_write(f"{filename_out}", directory=target_directory)
     print("\n** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(
@@ -82,24 +84,12 @@ def save_data(dataset, my_exp_type, config_dict, counter_type=None, proc=True):
     )
     if proc:
         env = os.environ
-        subprocess.call(
-            (
-                " ".join(
-                    [
-                        "python",
-                        os.path.join(
-                            os.path.split(
-                                os.path.split(pyspecProcScripts.__file__)[0]
-                            )[0],
-                            "examples",
-                            "proc_raw.py",
-                        ),
-                        dataset.name(),
-                        filename_out,
-                        my_exp_type,
-                    ]
-                )
-            ),
-            env=env,
-        )
+        cmd = [
+            "pyspecProcScripts",
+            "raw",
+            my_exp_type,
+            filename_out,
+            dataset.name(),
+        ]
+        subprocess.run(cmd, env=env, check=True)
     return config_dict

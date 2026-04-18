@@ -40,7 +40,7 @@ import SpinCore_pp  # just for config file, but whatever...
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
-from Instruments import power_control
+from Instruments import instrument_control
 
 # All power supply parameters are now controlled by the config_dict
 
@@ -53,7 +53,7 @@ class NMRWindow(QMainWindow):
         parent=None,
         ini_field=None,
     ):
-        assert isinstance(myPowerControl, power_control)
+        assert isinstance(myPowerControl, instrument_control)
         self.myconfig = myconfig
         self.p = myPowerControl
         if ini_field is not None:
@@ -661,7 +661,7 @@ def main():
     B0_from_carrier_G = (
         myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
     )
-    with power_control() as p:
+    with instrument_control() as p:
         p.set_field(B0_from_carrier_G)
         tunwin = NMRWindow(p, myconfig, ini_field=B0_from_carrier_G)
         tunwin.show()

@@ -10,7 +10,7 @@ Examples:
 """
 
 import argparse
-from Instruments import power_control
+from Instruments import instrument_control
 from SpinCore_pp import configuration
 
 config_dict = configuration("active.ini")
@@ -24,7 +24,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-with power_control() as p:
+with instrument_control() as ic:
     shim_name = str(args.shim_name)
     if args.voltage is None:
         shim_voltage_V = config_dict["shim_y_voltage_V"]
@@ -37,8 +37,8 @@ with power_control() as p:
             "(including 0 to turn off the shim) you can specify "
             "as an argument on the command line)"
         )
-        p.shim_voltage[shim_name] = shim_voltage_V
+        ic.shim_voltage[shim_name] = shim_voltage_V
     else:
         shim_voltage_V = args.voltage
-        p.shim_voltage[shim_name] = shim_voltage_V
-    print(f"{shim_name}: {p.get_shims()[shim_name]}")
+        ic.shim_voltage[shim_name] = shim_voltage_V
+    print(f"{shim_name}: {ic.get_shims()[shim_name]}")
