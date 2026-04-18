@@ -72,7 +72,7 @@ py.install_sources(files([
 py.install_sources(files([
     'Instruments/XEPR_eth.py',
     'Instruments/afg.py',
-    'Instruments/power_control_server.py',
+    'Instruments/instrument_control_server.py',
     'Instruments/gigatronics.py',
     'Instruments/temp.py',
     'Instruments/serial_instrument.py',
@@ -87,10 +87,10 @@ py.install_sources(files([
     'Instruments/cmd.py',
     'Instruments/HP6623A.py',
     'Instruments/gpib_eth.py',
-    'Instruments/power_control_server_dummy.py',
+    'Instruments/instrument_control_server_dummy.py',
     'Instruments/channel_property.py',
     'Instruments/gpib_legacy.py',
-    'Instruments/power_control.py',
+    'Instruments/instrument_control.py',
     'Instruments/microwave_tuning_gui.py',
     'Instruments/just_quit.py',
     'Instruments/hall_probe.py',
@@ -101,8 +101,8 @@ py.install_sources(files([
 ]), subdir: 'Instruments')
 
 scripts = [['calc_tempol_vd', 'SpinCore_pp.calc_vdlist', 'print_tempo_vdlist'], 
-        ['power_control_server', 'Instruments.power_control_server', 'main'], 
-        ['quit_power_control', 'Instruments.just_quit', 'main'], 
+        ['instrument_control_server', 'Instruments.instrument_control_server', 'main'], 
+        ['quit_instrument_control', 'Instruments.just_quit', 'main'], 
         ['FLInst', 'Instruments.cmd', 'cmd']]
 
 foreach script : scripts

@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import pyspecdata
 from Instruments.logobj import logobj
-from Instruments.power_control import power_control
+from Instruments.instrument_control import instrument_control
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
@@ -163,7 +163,7 @@ class TestLogobjSerialization(unittest.TestCase):
         server.start()
         try:
             port = port_queue.get(timeout=5)
-            with power_control(ip="127.0.0.1", port=port) as controller:
+            with instrument_control(ip="127.0.0.1", port=port) as controller:
                 controller.start_log()
                 controller.set_power(10)
                 recovered = controller.stop_log()

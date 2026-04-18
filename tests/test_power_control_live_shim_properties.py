@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from Instruments.power_control import power_control
+from Instruments.instrument_control import instrument_control
 
 
 class TestPowerControlLiveShimProperties(unittest.TestCase):
@@ -27,50 +27,50 @@ class TestPowerControlLiveShimProperties(unittest.TestCase):
         ]
 
     def test_named_voltage_getter_matches_live_readback(self):
-        with power_control() as p:
-            z0_voltage_V = p.round_shim_voltage("Z0", 1.501)
-            p.shim_voltage[:] = 0.0
-            p.shim_current[:] = 1.5
-            p.shim_voltage["Z0"] = z0_voltage_V
-            self.assertTrue(np.isclose(p.shim_voltage["Z0"], z0_voltage_V))
+        with instrument_control() as ic:
+            z0_voltage_V = ic.round_shim_voltage("Z0", 1.501)
+            ic.shim_voltage[:] = 0.0
+            ic.shim_current[:] = 1.5
+            ic.shim_voltage["Z0"] = z0_voltage_V
+            self.assertTrue(np.isclose(ic.shim_voltage["Z0"], z0_voltage_V))
 
     def test_slice_voltage_getter_matches_live_readback(self):
-        with power_control() as p:
-            shim_names = sorted(p.get_shims())
+        with instrument_control() as ic:
+            shim_names = sorted(ic.get_shims())
             requested_voltage_V = [2.0] * len(shim_names)
-            p.shim_voltage[:] = requested_voltage_V
-            shim_readback = p.get_shims()
+            ic.shim_voltage[:] = requested_voltage_V
+            shim_readback = ic.get_shims()
             np.testing.assert_allclose(
-                p.shim_voltage[:],
+                ic.shim_voltage[:],
                 # the voltage is given by the second element of the tuple
                 [shim_readback[shim_name][0] for shim_name in shim_names],
             )
 
     def test_named_current_getter_matches_live_readback(self):
-        with power_control() as p:
-            z0_current_A = p.round_shim_current("Z0", 0.508)
-            p.shim_current[:] = 0.0
-            p.shim_voltage[:] = 15.0
-            p.shim_current["Z0"] = z0_current_A
-            print("current set to:", p.shim_current["Z0"])
-            self.assertTrue(np.isclose(p.shim_current["Z0"], z0_current_A))
+        with instrument_control() as ic:
+            z0_current_A = ic.round_shim_current("Z0", 0.508)
+            ic.shim_current[:] = 0.0
+            ic.shim_voltage[:] = 15.0
+            ic.shim_current["Z0"] = z0_current_A
+            print("current set to:", ic.shim_current["Z0"])
+            self.assertTrue(np.isclose(ic.shim_current["Z0"], z0_current_A))
 
     def test_slice_current_getter_matches_live_readback(self):
-        with power_control() as p:
-            shim_names = sorted(p.get_shims())
+        with instrument_control() as ic:
+            shim_names = sorted(ic.get_shims())
             requested_current_A = [0.508] * len(shim_names)
-            p.shim_current[:] = requested_current_A
-            shim_readback = p.get_shims()
+            ic.shim_current[:] = requested_current_A
+            shim_readback = ic.get_shims()
             np.testing.assert_allclose(
-                p.shim_current[:],
+                ic.shim_current[:],
                 # the current is given by the second element of the tuple
                 [shim_readback[shim_name][1] for shim_name in shim_names],
             )
 
     def test_round_shim_voltage_accepts_list_and_array(self):
-        with power_control() as p:
-            rounded_from_list = p.round_shim_voltage("Z0", [0.0, 0.5, 1.0])
-            rounded_from_array = p.round_shim_voltage(
+        with instrument_control() as ic:
+            rounded_from_list = ic.round_shim_voltage("Z0", [0.0, 0.5, 1.0])
+            rounded_from_array = ic.round_shim_voltage(
                 "Z0", np.array([0.0, 0.5, 1.0])
             )
             self.assertEqual(len(rounded_from_list), 3)

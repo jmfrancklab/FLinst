@@ -16,7 +16,7 @@ from numpy import r_
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 
-from Instruments import power_control
+from Instruments import instrument_control
 
 # {{{ before wasting time running the experiment, make sure the output
 #     directory exists
@@ -52,16 +52,16 @@ assert total_pts < 2**14, (
 # }}}
 
 data = None
-with power_control() as p:
-    orig_voltage_V = p.get_shims()["Z0"][0]
+with instrument_control() as ic:
+    orig_voltage_V = ic.get_shims()["Z0"][0]
     requested_z0_voltage_list = orig_voltage_V + np.arange(0, max_V, stepsize)
-    z0_voltage_list = p.round_shim_voltage("Z0", requested_z0_voltage_list)
+    z0_voltage_list = ic.round_shim_voltage("Z0", requested_z0_voltage_list)
     print("current Z0 voltage:", orig_voltage_V)
     print("requested Z0 voltages:", requested_z0_voltage_list)
     print("allowed Z0 voltages:", z0_voltage_list)
     for idx, requested_voltage in enumerate(z0_voltage_list):
-        p.shim["Z0"] = requested_voltage
-        applied_voltage = p.shim["Z0"]
+        ic.shim["Z0"] = requested_voltage
+        applied_voltage = ic.shim["Z0"]
         print(
             "set Z0 shim to",
             applied_voltage,
@@ -89,7 +89,7 @@ with power_control() as p:
             ret_data=data,
         )
     # set back to the original voltage at the end
-    p.shim["Z0"] = orig_voltage_V
+    ic.shim["Z0"] = orig_voltage_V
     print("restored Z0 shim to", orig_voltage_V, "V")
 
 data.rename("indirect", "z0_voltage")

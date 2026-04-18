@@ -1,4 +1,4 @@
-"""Set the magnet field using the power_control client.
+"""Set the magnet field using the instrument_control client.
 
 Usage:
     1) "python set_field.py" sets the field according to
@@ -9,11 +9,11 @@ Usage:
 """
 
 import sys
-from Instruments import power_control
+from Instruments import instrument_control
 from SpinCore_pp import configuration
 
 config_dict = configuration("active.ini")
-with power_control() as p:
+with instrument_control() as ic:
     if len(sys.argv) == 1:
         B_field = (
             config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
@@ -27,9 +27,9 @@ with power_control() as p:
             "(including 0 to turn off the magnet) you can specify "
             "as an argument on the command line)"
         )
-        p.set_field(B_field)
+        ic.set_field(B_field)
     elif len(sys.argv) == 2:
         B_field = float(sys.argv[1])
-        p.set_field(B_field)
+        ic.set_field(B_field)
     else:
         raise ValueError("You entered an extra argument.")
