@@ -72,9 +72,9 @@ def run_scans(
                 # stop times
             )
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
-            direct_time_axis = r_[0 : nPoints] / 3.9e3
+            direct_time_axis = r_[0 : data_length] / 3.9e3
             ret_data = ndshape(
-                [indirect_len, nScans, len(ph1_cyc), nPoints],
+                [indirect_len, nScans, len(ph1_cyc), data_length],
                 ["indirect", "nScans", "ph1", "t2"],
             ).alloc(dtype=np.complex128)
             ret_data.setaxis("indirect", mytimes)
