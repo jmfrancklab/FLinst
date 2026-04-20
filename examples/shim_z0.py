@@ -16,7 +16,7 @@ from numpy import r_
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 
-from Instruments import power_control
+from Instruments import instrument_control
 
 # {{{ before wasting time running the experiment, make sure the output
 #     directory exists
@@ -51,26 +51,17 @@ assert total_pts < 2**14, (
 )
 # }}}
 
-# {{{ add file saving parameters to config dict
-# TODO ☐: it's unclear what this is for, or if it's needed.  Why are we
-#         storing the "type" of the current experiment in the config
-#         dict?
-config_dict["type"] = "shim_z0"
-# }}}
-
 data = None
-with power_control() as p:
-    orig_voltage_V = p.get_shim()["Z0"][0]
-    # TODO ☐: There was a very complicated construction here, which
-    #         seemed very unlikely to be justified.  You want to change
-    #         the power control module so that the following just works.
-    p.round_shim_voltage("Z0", orig_voltage_V + np.arange(0, max_V, stepsize)
+with instrument_control() as ic:
+    orig_voltage_V = ic.get_shims()["Z0"][0]
+    requested_z0_voltage_list = orig_voltage_V + np.arange(0, max_V, stepsize)
+    z0_voltage_list = ic.round_shim_voltage("Z0", requested_z0_voltage_list)
     print("current Z0 voltage:", orig_voltage_V)
     print("requested Z0 voltages:", requested_z0_voltage_list)
     print("allowed Z0 voltages:", z0_voltage_list)
     for idx, requested_voltage in enumerate(z0_voltage_list):
-        # TODO ☐: see comments elsewhere about need for inst dict property
-        applied_voltage = p.set_shim_voltage("Z0", requested_voltage)
+        ic.shim["Z0"] = requested_voltage
+        applied_voltage = ic.shim["Z0"]
         print(
             "set Z0 shim to",
             applied_voltage,
@@ -98,7 +89,7 @@ with power_control() as p:
             ret_data=data,
         )
     # set back to the original voltage at the end
-    p.set_shim_voltage("Z0", orig_voltage_V)
+    ic.shim["Z0"] = orig_voltage_V
     print("restored Z0 shim to", orig_voltage_V, "V")
 
 data.rename("indirect", "z0_voltage")
@@ -114,6 +105,6 @@ data.set_units("t2", "s")
 data.set_prop("postproc_type", "spincore_generalproc_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
-config_dict = save_data(data, my_exp_type, config_dict, "shim_z0")
+config_dict = save_data(data, my_exp_type, config_dict, counter_type="shim_z0")
 config_dict.write()
 # }}}

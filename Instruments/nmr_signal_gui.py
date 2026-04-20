@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QLineEdit,
     QComboBox,
+    QDoubleSpinBox,
     QPushButton,
     QCheckBox,
     QSlider,
@@ -39,7 +40,7 @@ import SpinCore_pp  # just for config file, but whatever...
 import pyspecdata as psp
 import matplotlib.backends.backend_qtagg as mplqt6
 from matplotlib.figure import Figure
-from Instruments import power_control
+from Instruments import instrument_control
 
 # All power supply parameters are now controlled by the config_dict
 
@@ -52,7 +53,7 @@ class NMRWindow(QMainWindow):
         parent=None,
         ini_field=None,
     ):
-        assert isinstance(myPowerControl, power_control)
+        assert isinstance(myPowerControl, instrument_control)
         self.myconfig = myconfig
         self.p = myPowerControl
         if ini_field is not None:
@@ -69,6 +70,7 @@ class NMRWindow(QMainWindow):
         # The axvline marks the expected zero-offset position based on gamma.
         self._dragging_center = False
         self._updating_gamma = False
+        self._mw_output_enabled = False
         self.create_status_bar()
         self.nPhaseSteps = 4
         self.npts = 2**14 // self.nPhaseSteps
@@ -136,6 +138,56 @@ class NMRWindow(QMainWindow):
         thetext = self.textbox_gamma.text()
         print("you changed gamma_eff_MHz_G to", thetext)
         self.set_gamma_value(float(thetext), update_centerline=True)
+        return
+
+    def on_y_shim_voltage_edit(self):
+        requested_voltage = self.textbox_y_shim_voltage.text()
+        try:
+            # rather than a more elaborate regex search, we test if it's
+            # a valid float by tring to convert
+            requested_voltage = float(requested_voltage.strip())
+        except Exception:
+            QMessageBox.warning(
+                self,
+                "Invalid Y Shim Voltage",
+                "Enter a numeric voltage for the Y shim.",
+            )
+            return None
+        rounded_voltage = self.p.round_shim_voltage("Y", requested_voltage)
+        self.textbox_y_shim_voltage.setText(f"{rounded_voltage:.4g}")
+        self.p.shim_voltage["Y"] = rounded_voltage
+        applied_voltage = self.p.shim_voltage["Y"]
+        print(f"Y shim is set to {applied_voltage} V.")
+        self.myconfig["shim_y_voltage_V"] = applied_voltage
+        # we do not write the configuration here, because this is a
+        # simple GUI callback.  The configuration is written when we
+        # acquire data.
+        return applied_voltage
+
+    def on_mw_power_edit(self):
+        req_power_dBm = self.mw_power_spinbox.value()
+        print(f"you changed MW power to {req_power_dBm} dBm")
+        if self._mw_output_enabled:
+            self.p.set_power(req_power_dBm)
+        return
+
+    def on_mw_checkbox_changed(self, state):
+        enabled = self.mw_checkbox.isChecked()
+        self.mw_power_spinbox.lineEdit().setReadOnly(not enabled)
+        if enabled and not self._mw_output_enabled:
+            req_power_dBm = self.mw_power_spinbox.value()
+            self.p.set_power(min(req_power_dBm, 10.0))
+            self.p.set_freq(self.myconfig["uw_dip_center_GHz"] * 1e9)
+            if req_power_dBm > 10.0:
+                # we rely on the server to ratched up the power in
+                # reasonable step sizes
+                self.p.set_power(req_power_dBm)
+            self._mw_output_enabled = True
+            print(f"MW is turned on with power {req_power_dBm} dBm")
+        elif not enabled and self._mw_output_enabled:
+            self.p.mw_off()
+            self._mw_output_enabled = False
+            print("MW is turned off")
         return
 
     def on_center_press(self, event):
@@ -236,6 +288,8 @@ class NMRWindow(QMainWindow):
         else:
             drag_final_x = event.xdata
         self.centerfrq_Hz = drag_final_x
+        if not self.auto_field_checkbox.isChecked():
+            return
         new_gamma = self.update_gamma_from_center_offset()
         if new_gamma is not None:
             self.textbox_gamma.setText("%g" % new_gamma)
@@ -256,8 +310,11 @@ class NMRWindow(QMainWindow):
         )
         assert Field < 3700, "are you crazy??? field is too high!"
         assert Field > 3300, "are you crazy?? field is too low!"
-        self.p.set_field(Field)
-        print("Field is adjusted (using server) to", Field, "G")
+        if self.auto_field_checkbox.isChecked():
+            self.p.set_field(Field)
+            print("Field is adjusted (using server) to", Field, "G")
+        else:
+            print("Constant Field is checked, so I am not changing the field.")
         # }}}
         # {{{acquire echo
         print("about to run_spin_echo")
@@ -343,7 +400,8 @@ class NMRWindow(QMainWindow):
         self.centerline.set_picker(5)
         # }}}
         self.regen_plots()
-        self.update_gamma_from_center_offset()
+        if not self.auto_field_checkbox.isChecked():
+            self.update_gamma_from_center_offset()
         return
 
     def regen_plots(self):
@@ -435,6 +493,8 @@ class NMRWindow(QMainWindow):
         self.textbox_apo = QLineEdit()
         self.textbox_plen = QLineEdit()
         self.textbox_gamma = QLineEdit()
+        self.textbox_y_shim_voltage = QLineEdit()
+        self.mw_power_spinbox = QDoubleSpinBox()
         self.combo_sw = QComboBox()
         for j in [200, 100, 50, 24, 16, 8, 6, 3.9]:
             self.combo_sw.addItem(str(j))
@@ -444,9 +504,23 @@ class NMRWindow(QMainWindow):
         self.textbox_apo.editingFinished.connect(self.on_apo_edit)
         self.textbox_plen.editingFinished.connect(self.on_plen_edit)
         self.textbox_gamma.editingFinished.connect(self.on_gamma_edit)
+        self.textbox_y_shim_voltage.editingFinished.connect(
+            self.on_y_shim_voltage_edit
+        )
+        # {{{ microwave power control
+        self.mw_power_spinbox.setDecimals(1)
+        self.mw_power_spinbox.setRange(0, 35.0)
+        self.mw_power_spinbox.setSingleStep(1.0)
+        self.mw_power_spinbox.setValue(10.0)
+        self.mw_power_spinbox.editingFinished.connect(self.on_mw_power_edit)
+        # }}}
         self.bottomleft_vbox.addWidget(self.textbox_apo)
         self.bottomleft_vbox.addWidget(self.textbox_plen)
         self.bottomleft_vbox.addWidget(self.textbox_gamma)
+        self.bottomleft_vbox.addWidget(QLabel("Y Shim Voltage (V):"))
+        self.bottomleft_vbox.addWidget(self.textbox_y_shim_voltage)
+        self.bottomleft_vbox.addWidget(QLabel("MW Power (dBm):"))
+        self.bottomleft_vbox.addWidget(self.mw_power_spinbox)
         self.acquire_button = QPushButton("&Acquire NMR")
         self.acquire_button.clicked.connect(self.acq_NMR)
         self.bottomleft_vbox.addWidget(self.acquire_button)
@@ -457,6 +531,27 @@ class NMRWindow(QMainWindow):
         self.grid_cb.setChecked(False)
         self.grid_cb.stateChanged.connect(self.regen_plots)
         self.boxes_vbox.addWidget(self.grid_cb)
+        # {{{ box to supress field auto-adjust
+        self.auto_field_checkbox = QCheckBox("Auto-adjust field?")
+        self.auto_field_checkbox.setChecked(True)
+        self.boxes_vbox.addWidget(self.auto_field_checkbox)
+        # }}}
+        # {{{ microwave on and off
+        self.mw_checkbox = QCheckBox("MW Output")
+        self.mw_checkbox.stateChanged.connect(self.on_mw_checkbox_changed)
+        self.boxes_vbox.addWidget(self.mw_checkbox)
+        # }}}
+        # {{{ initialize y shim controls
+        y_voltage = self.myconfig["shim_y_voltage_V"]
+        self.textbox_y_shim_voltage.setText(f"{y_voltage:.3g}")
+        # }}}
+        # {{{ initialize microwave controls
+        self.mw_power_spinbox.setValue(10.0)
+        self.mw_power_spinbox.lineEdit().setReadOnly(True)
+        self.mw_checkbox.setChecked(False)
+        self._mw_output_enabled = False
+        self.p.mw_off()
+        # }}}
         # }}}
         slider_label = QLabel("Bar width (%):")
         # {{{ box to stack sliders
@@ -566,7 +661,7 @@ def main():
     B0_from_carrier_G = (
         myconfig["carrierFreq_MHz"] / myconfig["gamma_eff_MHz_G"]
     )
-    with power_control() as p:
+    with instrument_control() as p:
         p.set_field(B0_from_carrier_G)
         tunwin = NMRWindow(p, myconfig, ini_field=B0_from_carrier_G)
         tunwin.show()

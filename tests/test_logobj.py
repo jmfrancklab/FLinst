@@ -8,14 +8,15 @@ import h5py
 import numpy as np
 import pyspecdata
 from Instruments.logobj import logobj
-from Instruments.power_control import power_control
+from Instruments.instrument_control import instrument_control
 from pyspecdata.file_saving.hdf_save_dict_to_group import (
     hdf_save_dict_to_group,
 )
 
 
 def socket_log_server(port_queue):
-    """Serve a minimal subset of the power control protocol for log transfer."""
+    """Serve a minimal subset of the power control protocol
+    for log transfer."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("127.0.0.1", 0))
@@ -51,6 +52,11 @@ def socket_log_server(port_queue):
                             pickle.dumps(this_logobj) + b"ENDTCPIPBLOCK"
                         )
                         this_logobj.reset()
+                    elif cmd == b"GET_SHIM":
+                        conn.sendall(
+                            pickle.dumps({"Z0": (0.0, 0.0)})
+                            + b"ENDTCPIPBLOCK"
+                        )
                     elif cmd.startswith(b"SET_POWER "):
                         continue
                     elif cmd == b"CLOSE":
@@ -65,7 +71,8 @@ def socket_log_server(port_queue):
 
 
 class TestLogobjSerialization(unittest.TestCase):
-    """Verify that logobj survives the HDF state round-trip it uses in practice."""
+    """Verify that logobj survives the HDF state round-trip it uses
+    in practice."""
 
     def build_log(self):
         """Create a small log with both blank and non-blank commands."""
@@ -76,7 +83,8 @@ class TestLogobjSerialization(unittest.TestCase):
         return result
 
     def test_hdf_helper_roundtrip_restores_logobj_from_hdf_group(self):
-        """Round-trip through the helper and restore directly from the HDF group."""
+        """Round-trip through the helper and restore directly from
+        the HDF group."""
         self.assertTrue(hasattr(pyspecdata, "__file__"))
         original = self.build_log()
         state = original.__getstate__()
@@ -155,7 +163,7 @@ class TestLogobjSerialization(unittest.TestCase):
         server.start()
         try:
             port = port_queue.get(timeout=5)
-            with power_control(ip="127.0.0.1", port=port) as controller:
+            with instrument_control(ip="127.0.0.1", port=port) as controller:
                 controller.start_log()
                 controller.set_power(10)
                 recovered = controller.stop_log()

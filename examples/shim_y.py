@@ -14,7 +14,7 @@ import time
 import SpinCore_pp
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
-from Instruments import power_control
+from Instruments import instrument_control
 
 my_exp_type = "ODNP_NMR_comp/Echoes"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
@@ -67,31 +67,23 @@ if set_B_field:
         "Based on that, and the gamma_eff_MHz_G you have in your .ini"
         " file, I'm setting the field to %f" % field_G
     )
-    with power_control() as p:
+    with instrument_control() as ic:
         assert field_G < 3700, "are you crazy??? field is too high!"
         assert field_G > 3300, "are you crazy?? field is too low!"
-        field_G = p.set_field(field_G)
+        field_G = ic.set_field(field_G)
         print("field set to ", field_G)
 # }}}
 
 data = None
 
-with power_control() as p:
-    # TODO ☐: as in another module, replaced a very complicated
-    #         construction with something that you should be able to make work.
-    y_voltage_array = p.round_shim_voltage("Y", np.arange(V_min, V_max, step))
+with instrument_control() as ic:
+    requested_y_voltage_list = np.arange(V_min, V_max, step)
+    y_voltage_array = ic.round_shim_voltage("Y", requested_y_voltage_list)
     print("requested Y voltages:", requested_y_voltage_list)
     print("allowed Y voltages:", y_voltage_array)
     for idx, requested_voltage in enumerate(y_voltage_array):
-        # TODO ☐: as we had discussed, the power control object should
-        #         have inst dict properties, so that the following is
-        #         possible.  The point of this is because your
-        #         algorithms will use *this*, so this is the thing you
-        #         want to be able to treat as a vector, etc, etc.
-        #         (I only make this comment here, but it's true
-        #         everywhere you're setting the shims):
-        p.shim["Y"] = requested_voltage
-        applied_voltage = p.shim["Y"]
+        ic.shim["Y"] = requested_voltage
+        applied_voltage = ic.shim["Y"]
         print(
             "set Y shim to",
             applied_voltage,
@@ -118,7 +110,7 @@ with power_control() as p:
             SW_kHz=config_dict["SW_kHz"],
             ret_data=data,
         )
-    p.set_shim_voltage("Y", 0.0)
+    ic.shim["Y"] = 0.0
     print("Y shim is turned off")
 
 data.rename("indirect", "y_voltage")
