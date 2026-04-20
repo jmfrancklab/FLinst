@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 from .HP6623A import HP6623A
 from .inst_dict_property import inst_dict_property
 
@@ -14,15 +13,37 @@ class ShimDictMapping:
         overvoltage=15.0,
         safe_current=None,
     ):
-        # TODO ☐: standard numpy-style docstring
         """Create a named shim-to-channel mapping.
 
-        `shim_dict` must map shim names to `(instrument_or_address, channel)`
-        pairs. `instrument_or_address` may be either a live `HP6623A`
-        instance or an integer GPIB address. Keys are sorted alphabetically
-        and stored in an `OrderedDict`.
+        Parameters
+        ----------
+        shim_dict : mapping
+            Mapping from shim names to ``(instrument_or_address, channel)``
+            pairs. ``instrument_or_address`` may be either a live
+            :class:`HP6623A` instance or an integer GPIB address. Keys are
+            sorted alphabetically and stored in an ``OrderedDict``.
+        prologix_instance : object, optional
+            Prologix controller used to construct :class:`HP6623A` instances
+            when ``shim_dict`` contains integer GPIB addresses.
+        overvoltage : float or None, optional
+            Per-channel overvoltage limit applied in :meth:`__enter__`. Use
+            ``None`` to leave the instrument setting unchanged.
+        safe_current : float or None, optional
+            Safe current limit applied to owned instruments in :meth:
+            `__enter__`.
+            Use ``None`` to leave the instrument setting unchanged.
+
+        Raises
+        ------
+        ValueError
+            If any ``shim_dict`` entry is not a two-item tuple.
+        TypeError
+            If an instrument specifier is neither an integer GPIB address nor
+            an :class:`HP6623A` instance, or if a channel is not an integer.
         """
-        shim_dict = OrderedDict(sorted(dict(shim_dict).items(), key=lambda x: x[0]))
+        shim_dict = OrderedDict(
+            sorted(dict(shim_dict).items(), key=lambda x: x[0])
+        )
         for shim_name, connection in shim_dict.items():
             if not isinstance(connection, tuple) or len(connection) != 2:
                 raise ValueError(
@@ -115,6 +136,9 @@ class ShimDictMapping:
 
     def __len__(self):
         return len(self._shim_dict)
+
+    def keys(self):
+        return (j for j in self._shim_dict.keys())
 
     def __iter__(self):
         return iter(self._shim_dict)

@@ -174,7 +174,7 @@ class logobj(object):
                 raise IOError(
                     "You fed me a state dictionary without a key called"
                     " 'array', so it seemed new-style, but the keys were"
-                    f" {list(inputdict.keys())}, which don't seem  to represent"
+                    f" {list(inputdict.keys())}, which don't seem to represent"
                     " a properly structured data node"
                 )
         dictkeys = [
