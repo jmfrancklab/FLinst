@@ -20,7 +20,7 @@ from pyspecdata.file_saving.hdf_save_dict_to_group import (
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 
-from Instruments import power_control
+from Instruments import instrument_control
 
 my_exp_type = "ODNP_NMR_comp/n_scans"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
@@ -76,14 +76,14 @@ if (
 
 # {{{ run n-scan
 data = None
-with power_control() as p:
-    p.start_log()
-    true_B0_G = p.set_field(B0_G)
+with instrument_control() as ic:
+    ic.start_log()
+    true_B0_G = ic.set_field(B0_G)
     print("field set to", true_B0_G, "G")
     print("waiting", settle_s, "s for the magnet to settle")
     time.sleep(settle_s)
     for idx in range(config_dict["indirect_pts"]):
-        true_B0_G = p.get_field()
+        true_B0_G = ic.get_field()
         logging.info(f"{idx + 1} of {config_dict['indirect_pts']}")
         logging.info(
             "The ratio of the field I want to the one I get is"
@@ -113,7 +113,7 @@ with power_control() as p:
             x_axis = data.getaxis("indirect")
         x_axis[idx]["field"] = true_B0_G
         x_axis[idx]["time"] = time.time()
-    this_log = p.stop_log()
+    this_log = ic.stop_log()
 data.set_prop("acq_params", config_dict.asdict())
 # }}}
 
