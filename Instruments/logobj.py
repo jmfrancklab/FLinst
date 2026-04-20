@@ -1,4 +1,3 @@
-# TODO ☐: Please re-run the basic log test to make sure I didn't mess anything up when trying to tighten this up
 from numpy import dtype, empty, concatenate, generic, nan
 import time as timemodule
 
