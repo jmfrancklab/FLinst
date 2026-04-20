@@ -5,7 +5,7 @@ Field Sweep at constant power
 A ppg that performs a series of echoes at a range of designated field
 values that are determined from the guessed_MHz_to_GHz value in your
 active.ini and the field width parameter. To run this in sync with
-the power_control_server, open a separate terminal on the NMR computer
+the instrument_control_server, open a separate terminal on the NMR computer
 in your user directory and running "FLInst server" and waiting for it to print
 "I am listening..."
 """
@@ -18,7 +18,7 @@ import SpinCore_pp
 from SpinCore_pp.ppg import run_spin_echo
 import numpy as np
 from numpy import r_
-from Instruments import power_control
+from Instruments import instrument_control
 from Instruments.XEPR_eth import xepr
 
 fl = psd.figlist_var()
@@ -80,7 +80,7 @@ assert total_pts < 2**14, (
 )
 # }}}
 # {{{Run field sweep
-with power_control() as p:
+with instrument_control() as p:
     p.set_power(10)
     p.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
     p.set_power(dB_settings)

@@ -1,10 +1,4 @@
-"""
-Reads the output from test_power_control_server.py
-==================================================
-
-Note that you can set pull_old_data to either read old data (stored on Box) or
-new data that was just generated using test_power_control_server.py in the local directory.
-"""
+"Reads the output from the instrument control server test."
 
 import time, h5py, os
 import pylab as plt
@@ -29,7 +23,10 @@ if pull_old_data:
 else:
     fname = "output.h5"
 if not os.path.exists(fname):
-    raise IOError(f"{fname} not found.  Check that you've set the pull_old_data flag as you intend")
+    raise IOError(
+        f"{fname} not found.  Check that you've set the pull_old_data flag as"
+        "you intend"
+    )
 with h5py.File(fname, "r") as f:
     thislog = logobj.from_group(f["log"])
     read_array = thislog.total_log
@@ -59,9 +56,11 @@ mask = read_array["cmd"] != 0
 n_events = len(read_array["time"][mask])
 trans_list = []
 for thisax in ax_list:
-    trans_list.append( transforms.blended_transform_factory(
-        thisax.transData, thisax.transAxes
-    ))
+    trans_list.append(
+        transforms.blended_transform_factory(
+            thisax.transData, thisax.transAxes
+        )
+    )
 for j, thisevent in enumerate(read_array[mask]):
     for thisax in ax_list:
         thisax.axvline(x=thisevent["time"])
