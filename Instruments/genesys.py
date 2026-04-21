@@ -1,5 +1,6 @@
 import vxi11
 import logging
+import numpy as np
 
 
 class genesys(vxi11.Instrument):
@@ -63,6 +64,7 @@ class genesys(vxi11.Instrument):
         assert retval.startswith("LAMBDA,GEN"), f"{host} responded {retval}"
         logging.debug(f"Connected: {retval}")
         self.status = {"CV": True}  # ignore CC, alert on CV mode only
+        self.current_step_offset = [0.003115, 0.0016]
 
     def __enter__(self):
         return self
@@ -260,9 +262,19 @@ class genesys(vxi11.Instrument):
         """
         return float(self.respond(":CURR?"))
 
+    def round_current_to_allowed(self, requested_current_A):
+        """Round the requested current to the calibrated current lattice."""
+        if np.isclose(requested_current_A, 0.0):
+            return 0.0
+        return self.current_step_offset[0] * np.round(
+            (requested_current_A - self.current_step_offset[1])
+            / self.current_step_offset[0]
+        )
+
     @I_limit.setter
     def I_limit(self, A):
-        self.write(f":CURR {A:.3f}")
+        rounded_current_A = self.round_current_to_allowed(A)
+        self.write(f":CURR {rounded_current_A:.6f}")
 
     # Output enable
     @property
