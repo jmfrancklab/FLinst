@@ -26,8 +26,8 @@ else:
     datafile = Path("Irounding.txt")
 if not os.path.exists(datafile):
     raise IOError(
-        f"{datafile} not found. Check that you've set the pull_old_file flag as "
-        "you intend"
+        f"{datafile} not found. Check that you've set the "
+        "pull_old_file flag as you intend"
     )
 table = np.genfromtxt(datafile, names=True)
 

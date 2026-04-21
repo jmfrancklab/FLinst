@@ -42,7 +42,8 @@ with (
         I_set = des_current + idx * SET_CURRENT_STEP_A
         g.I_limit = I_set
         print(
-            f"\n Set current step: {SET_CURRENT_STEP_A:.4f} A\n Current I set: {I_set}"
+            f"\n Set current step: {SET_CURRENT_STEP_A:.4f} A\n "
+            "Current I set: {I_set}"
         )
         time.sleep(15)
         true_B0_G = h.field.to("T").magnitude * 1e4
