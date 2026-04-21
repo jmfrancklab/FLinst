@@ -22,8 +22,6 @@ assert not os.path.exists("output.h5"), (
     "later we can just check that the node doesn't exist, but in this example,"
     " we're writing a fresh h5 file"
 )
-
-
 with instrument_control() as ic:
     # since part of what we're doing is testing the field logging,
     # and this is a test, rather than something where we might expect
@@ -55,7 +53,6 @@ with instrument_control() as ic:
             ic.set_field(2900)
     this_log = ic.stop_log()
     # }}}
-    # ic.arrange_quit()
 log_array = this_log.total_log
 logger.debug("log array:\n" + repr(log_array))
 logger.debug(f"log array shape {log_array.shape}")
