@@ -1,23 +1,34 @@
 from pathlib import Path
 import re
+import os
 import pyspecdata as psd
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-DEFAULT_DATA = "260420_Irounding.txt"
-DEFAULT_EXP_TYPE = "b27/Irounding"
 POINTS_TO_SKIP_FIRST_FIGURE = 3
 
-
-datafile = Path(
-    psd.search_filename(
-        re.escape(DEFAULT_DATA),
-        exp_type=DEFAULT_EXP_TYPE,
-        unique=True,
-        print_result=False,
+# am I pulling previously stored data, or something I just ran
+pull_old_file = False
+if pull_old_file:
+    DEFAULT_DATA = "260420_Irounding.txt"
+    DEFAULT_EXP_TYPE = "b27/Irounding"
+    datafile = Path(
+        psd.search_filename(
+            re.escape(DEFAULT_DATA),
+            exp_type=DEFAULT_EXP_TYPE,
+            unique=True,
+            print_result=False,
+        )
     )
-)
+
+else:
+    datafile = Path("Irounding.txt")
+if not os.path.exists(datafile):
+    raise IOError(
+        f"{datafile} not found. Check that you've set the pull_old_file flag as "
+        "you intend"
+    )
 table = np.genfromtxt(datafile, names=True)
 
 x_all = table["I_desiredA"]
