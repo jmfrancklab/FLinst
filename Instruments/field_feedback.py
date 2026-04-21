@@ -3,39 +3,48 @@ import logging
 import numpy as np
 import time
 
+FIELD_CURRENT_STEP_A = 0.003115
+FIELD_CURRENT_OFFSET_A = 0.0016
+FIELD_CURRENT_TO_FIELD_C0 = 178.66095
+FIELD_CURRENT_TO_FIELD_C1 = -358.56219
+
+
+def field_to_current_request(B0_des_G):
+    """Return the current request that best matches the desired field."""
+    if np.isclose(B0_des_G, 0.0):
+        return 0.0
+    field_step_G = FIELD_CURRENT_TO_FIELD_C0 * FIELD_CURRENT_STEP_A
+    lattice_index = np.round(
+        (B0_des_G - FIELD_CURRENT_TO_FIELD_C1) / field_step_G
+    )
+    return float(FIELD_CURRENT_STEP_A * lattice_index + FIELD_CURRENT_OFFSET_A)
+
 
 def adjust_main_field(B0_des_G, config_dict, h, gen):
     """Adjust the current setting to achieve the desired B0 field.
-
-    Use the actual measured field to scale the current_v_field_A_G
-    configuration parameter.
-
-    This is typically called *after* we've ramped to the field of interest.
 
     Parameters
     ----------
     B0_des_G : float
         Desired magnetic field in Gauss.
     config_dict : dict
-        Configuration dictionary containing 'current_v_field_A_G' parameter.
+        Unused configuration dictionary kept for API compatibility.
     h : object
         LakeShore Hall sensor instance.
     gen : object
         Genesys power supply instance with I_limit property.
     """
-    true_B0_G = h.field_in_G
+    I_req = field_to_current_request(B0_des_G)
     logging.debug(
         strm(
-            "adjusting current_v_field_A_G from",
-            config_dict["current_v_field_A_G"],
+            "adjusting main field to",
+            B0_des_G,
+            "G using requested current",
+            I_req,
+            "A",
         )
     )
-    # In order to get the A/G value, use the current flowing through the
-    # magnet NOW and the field NOW
-    config_dict["current_v_field_A_G"] = gen.I_meas / true_B0_G
-    logging.debug(strm("to", config_dict["current_v_field_A_G"]))
-    I_setting = B0_des_G * config_dict["current_v_field_A_G"]
-    gen.I_limit = I_setting
+    gen.I_limit = I_req
 
 
 def ramp_field(
@@ -60,8 +69,7 @@ def ramp_field(
     B0_des_G : float
         Desired magnetic field in Gauss.
     config_dict : dict
-        Configuration dictionary with magnet settling times and
-        current_v_field_A_G.
+        Configuration dictionary with magnet settling times.
     h : object
         LakeShore Hall sensor instance.
     gen : object
@@ -85,7 +93,7 @@ def ramp_field(
     z0_channel = shims.channel("Z0")
     if Z0_max_voltage_V is None:
         Z0_max_voltage_V = z0_inst.max_V[z0_channel]
-    I_setting = B0_des_G * config_dict["current_v_field_A_G"]
+    I_setting = field_to_current_request(B0_des_G)
     # {{{ First, we ramp from whatever
     #     our current is (zero or not)
     #     to where we think we want to
@@ -123,9 +131,6 @@ def ramp_field(
     if ramp_steps > 4:
         time.sleep(config_dict["magnet_settle_long"])
     # }}}
-    # {{{ now, adjust current_v_field_A_G
-    #     to get the field we want,
-    #     just once at the beginning
     # {{{ try to stabilize the field
     #     within 0.8 G of our desired
     #     value
