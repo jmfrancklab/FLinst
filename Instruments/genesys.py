@@ -266,9 +266,12 @@ class genesys(vxi11.Instrument):
         """Round the requested current to the calibrated current lattice."""
         if np.isclose(requested_current_A, 0.0):
             return 0.0
-        return self.current_step_offset[0] * np.round(
-            (requested_current_A - self.current_step_offset[1])
-            / self.current_step_offset[0]
+        return float(
+            self.current_step_offset[0]
+            * np.round(
+                (requested_current_A - self.current_step_offset[1])
+                / self.current_step_offset[0]
+            )
         )
 
     @I_limit.setter
