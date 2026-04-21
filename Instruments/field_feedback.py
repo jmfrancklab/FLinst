@@ -13,11 +13,12 @@ def field_to_current_request(B0_des_G):
     """Return the current request that best matches the desired field."""
     if np.isclose(B0_des_G, 0.0):
         return 0.0
-    field_step_G = FIELD_CURRENT_TO_FIELD_C0 * FIELD_CURRENT_STEP_A
-    lattice_index = np.round(
-        (B0_des_G - FIELD_CURRENT_TO_FIELD_C1) / field_step_G
+    n = np.round(
+        (B0_des_G - FIELD_CURRENT_TO_FIELD_C1)
+        / (FIELD_CURRENT_TO_FIELD_C0 * FIELD_CURRENT_STEP_A)
     )
-    return float(FIELD_CURRENT_STEP_A * lattice_index + FIELD_CURRENT_OFFSET_A)
+    I_req = n * FIELD_CURRENT_STEP_A + FIELD_CURRENT_OFFSET_A
+    return float(I_req)
 
 
 def adjust_main_field(B0_des_G, config_dict, h, gen):
