@@ -1,7 +1,6 @@
-# TODO ☐: not reviewing yet
 """
 Repeated Echo Experiment at Constant Magnetic Field
-==================================================
+===================================================
 
 Repeated echo signal according to `indirect_pts` in `active.ini`.
 """
@@ -45,7 +44,6 @@ nPhaseSteps = len(ph1_cyc)
 config_dict["type"] = "n_scan"
 settle_s = config_dict["magnet_settle_long"]
 # }}}
-
 # {{{ set magnetic field
 B0_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_mhz_g"]
 print(
@@ -58,7 +56,6 @@ myinput = input(strm("Your field is:", B0_G, "\nDoes this look okay?"))
 if myinput.lower().startswith("n"):
     raise ValueError("You said no!!!")
 # }}}
-
 # {{{ check total points and duty cycle
 total_pts = nPoints * nPhaseSteps
 assert total_pts < 2**14, (
@@ -73,7 +70,6 @@ if (
 ):
     raise RuntimeError("Warning! Your duty cycle is too high!!")
 # }}}
-
 # {{{ run n-scan
 data = None
 with instrument_control() as ic:
@@ -116,7 +112,6 @@ with instrument_control() as ic:
     this_log = ic.stop_log()
 data.set_prop("acq_params", config_dict.asdict())
 # }}}
-
 # {{{ chunk and save data
 data.chunk("t", ["ph1", "t2"], [len(ph1_cyc), -1])
 data.setaxis("ph1", ph1_cyc / 4)
