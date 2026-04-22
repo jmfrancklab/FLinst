@@ -6,7 +6,6 @@ from SpinCore_pp import configuration
 
 config_dict = configuration("active.ini")
 
-
 # {{{ changeable parameters
 SET_CURRENT_STEP_A = 0.1 * config_dict["current_v_field_A_G"]
 REPEATS_PER_STEP = 1
@@ -18,7 +17,7 @@ hold_secs = 20.0
 # }}}
 
 with (
-    genesys("192.168.0.199") as g,
+    genesys(config_dict["genesys_ip"]) as g,
     prologix_connection() as pro_log,
     LakeShore475(pro_log) as h,
 ):

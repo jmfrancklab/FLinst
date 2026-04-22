@@ -44,6 +44,7 @@ class ModuleAnalyzer(ast.NodeVisitor):
         self.class_depth = 0
         self.main_guard_depth = 0
         self.module_variable_definitions = defaultdict(list)
+        self.for_target_definitions = set()
         self.multi_name_lhs_definitions = set()
         self.with_alias_definitions = set()
         self.module_variable_uses = defaultdict(list)
@@ -54,6 +55,7 @@ class ModuleAnalyzer(ast.NodeVisitor):
     def _record_target(
         self,
         node: ast.AST,
+        allow_for_target_exception: bool = False,
         allow_multi_name_lhs_exception: bool = False,
         allow_with_alias_exception: bool = False,
     ):
@@ -71,6 +73,8 @@ class ModuleAnalyzer(ast.NodeVisitor):
                 nodes_to_visit.append(current_node.value)
         for name, lineno in target_names:
             self.module_variable_definitions[name].append(lineno)
+        if allow_for_target_exception:
+            self.for_target_definitions.update(target_names)
         if (
             allow_multi_name_lhs_exception
             and isinstance(node, (ast.Tuple, ast.List))
@@ -113,12 +117,12 @@ class ModuleAnalyzer(ast.NodeVisitor):
 
     def visit_For(self, node: ast.For):
         if self.scope_depth == 0 and self.class_depth == 0:
-            self._record_target(node.target)
+            self._record_target(node.target, allow_for_target_exception=True)
         self.generic_visit(node)
 
     def visit_AsyncFor(self, node: ast.AsyncFor):
         if self.scope_depth == 0 and self.class_depth == 0:
-            self._record_target(node.target)
+            self._record_target(node.target, allow_for_target_exception=True)
         self.generic_visit(node)
 
     def visit_With(self, node: ast.With):
@@ -293,6 +297,10 @@ def main(argv: list[str] | None = None) -> int:
             # multiple with-items or into the body, so allow single-use names
             # introduced by ``with ... as name``.
             if (name, definition_line) in analyzer.with_alias_definitions:
+                continue
+            # Loop targets are control-flow variables rather than values to
+            # inline, so don't warn on names introduced by ``for ... in ...``.
+            if (name, definition_line) in analyzer.for_target_definitions:
                 continue
             if any(
                 start <= definition_line <= end
