@@ -7,12 +7,14 @@ from SpinCore_pp import configuration
 config_dict = configuration("active.ini")
 
 
+# {{{ changeable parameters
 TARGET_CURRENT_A = 21.1
 SET_CURRENT_STEP_A = 0.1 * config_dict["current_v_field_A_G"]
 REPEATS_PER_STEP = 1
 NUM_STEPS = 100
 ZERO_WAIT_S = 40.0
 OUTPUT_FILENAME = "Irounding.txt"
+# }}}
 
 des_current = TARGET_CURRENT_A
 hold_secs = 20.0
