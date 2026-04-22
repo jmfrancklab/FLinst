@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+# In GitHub Actions, this checker is intended to run only on changed Python
+# files, not on the whole repository.
+#
+# Local usage before pushing a branch:
+#   python .github/scripts/check_single_use.py path/to/file.py
+#
+# You can also pass several files explicitly:
+#   python .github/scripts/check_single_use.py path/to/one.py path/to/two.py
+#
+# This is useful when you want to check a file of your choice before opening a
+# PR.
+"""Check changed files for single-use module variables and single-call functions."""
+
+from __future__ import annotations
+
+import argparse
+import ast
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+import re
+import sys
+
+CHANGEABLE_PARAMETERS_PHRASE = "changeable parameters"
+REMINDER = (
+    "Reminder: if a module-level value is intentionally used once because "
+    "it is meant to stay easy to edit, place it near the top of the file "
+    "inside a vim fold block that starts with '# {{{' and ends with "
+    "'# }}}'. The opening comment for that block must include "
+    "'changeable parameters'; that wording may wrap onto following "
+    "comment lines."
+)
+
+FOLD_START = re.compile(r"^\s*#\s*\{\{\{")
+FOLD_END = re.compile(r"^\s*#\s*\}\}\}")
+
+
+@dataclass(frozen=True)
+class Violation:
+    """A single finding from the checker."""
+
+    path: str
+    line: int
+    name: str
+    kind: str
+    definition_line: int
+    use_line: int
+
+
+def _normalize_whitespace(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _iter_target_names(node: ast.AST):
+    if isinstance(node, ast.Name):
+        yield node.id, node.lineno
+        return
+    if isinstance(node, (ast.Tuple, ast.List)):
+        for item in node.elts:
+            yield from _iter_target_names(item)
+        return
+    if isinstance(node, ast.Starred):
+        yield from _iter_target_names(node.value)
+
+
+def _opening_comments_have_phrase(block_lines: list[str]) -> bool:
+    opening_comment_lines = []
+    for line in block_lines:
+        stripped = line.strip()
+        if not stripped:
+            if opening_comment_lines:
+                opening_comment_lines.append("")
+            continue
+        if not stripped.startswith("#"):
+            break
+        opening_comment_lines.append(stripped[1:])
+    return CHANGEABLE_PARAMETERS_PHRASE in _normalize_whitespace(
+        " ".join(opening_comment_lines)
+    )
+
+
+def _preamble_limit(tree: ast.Module, total_lines: int) -> int:
+    for stmt in tree.body:
+        if (
+            isinstance(stmt, ast.Expr)
+            and isinstance(stmt.value, ast.Constant)
+            and isinstance(stmt.value.value, str)
+        ):
+            continue
+        if isinstance(
+            stmt, (ast.Import, ast.ImportFrom, ast.Assign, ast.AnnAssign)
+        ):
+            continue
+        return stmt.lineno - 1
+    return total_lines
+
+
+def _find_allowed_parameter_blocks(
+    source: str, tree: ast.Module
+) -> list[tuple[int, int]]:
+    lines = source.splitlines()
+    preamble_limit = _preamble_limit(tree, len(lines))
+    blocks = []
+    line_idx = 0
+    while line_idx < len(lines):
+        if not FOLD_START.match(lines[line_idx]):
+            line_idx += 1
+            continue
+        block_start = line_idx + 1
+        block_lines = [lines[line_idx]]
+        scan_idx = line_idx + 1
+        while scan_idx < len(lines):
+            block_lines.append(lines[scan_idx])
+            if FOLD_END.match(lines[scan_idx]):
+                block_end = scan_idx + 1
+                if (
+                    block_start <= preamble_limit
+                    and _opening_comments_have_phrase(block_lines)
+                ):
+                    blocks.append((block_start, block_end))
+                line_idx = scan_idx + 1
+                break
+            scan_idx += 1
+        else:
+            break
+    return blocks
+
+
+def _line_is_in_allowed_block(
+    line_number: int, allowed_blocks: list[tuple[int, int]]
+) -> bool:
+    return any(start <= line_number <= end for start, end in allowed_blocks)
+
+
+class ModuleAnalyzer(ast.NodeVisitor):
+    """Collect module-level definitions and direct calls."""
+
+    def __init__(self):
+        self.scope_depth = 0
+        self.class_depth = 0
+        self.module_variable_definitions = defaultdict(list)
+        self.module_variable_uses = defaultdict(list)
+        self.top_level_function_definitions = defaultdict(list)
+        self.direct_function_calls = defaultdict(list)
+
+    def _record_target(self, node: ast.AST):
+        for name, lineno in _iter_target_names(node):
+            self.module_variable_definitions[name].append(lineno)
+
+    def _visit_nested_scope(self, node):
+        self.scope_depth += 1
+        self.generic_visit(node)
+        self.scope_depth -= 1
+
+    def visit_Name(self, node: ast.Name):
+        if (
+            self.scope_depth == 0
+            and self.class_depth == 0
+            and isinstance(node.ctx, ast.Load)
+        ):
+            self.module_variable_uses[node.id].append(node.lineno)
+
+    def visit_Assign(self, node: ast.Assign):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            for target in node.targets:
+                self._record_target(target)
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            self._record_target(node.target)
+        self.generic_visit(node)
+
+    def visit_AugAssign(self, node: ast.AugAssign):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            self._record_target(node.target)
+        self.generic_visit(node)
+
+    def visit_For(self, node: ast.For):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            self._record_target(node.target)
+        self.generic_visit(node)
+
+    def visit_AsyncFor(self, node: ast.AsyncFor):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            self._record_target(node.target)
+        self.generic_visit(node)
+
+    def visit_With(self, node: ast.With):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            for item in node.items:
+                if item.optional_vars is not None:
+                    self._record_target(item.optional_vars)
+        self.generic_visit(node)
+
+    def visit_AsyncWith(self, node: ast.AsyncWith):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            for item in node.items:
+                if item.optional_vars is not None:
+                    self._record_target(item.optional_vars)
+        self.generic_visit(node)
+
+    def visit_NamedExpr(self, node: ast.NamedExpr):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            self._record_target(node.target)
+        self.generic_visit(node)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler):
+        if (
+            self.scope_depth == 0
+            and self.class_depth == 0
+            and node.name is not None
+        ):
+            self.module_variable_definitions[node.name].append(node.lineno)
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        self.class_depth += 1
+        self.generic_visit(node)
+        self.class_depth -= 1
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            self.top_level_function_definitions[node.name].append(node.lineno)
+        self._visit_nested_scope(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        if self.scope_depth == 0 and self.class_depth == 0:
+            self.top_level_function_definitions[node.name].append(node.lineno)
+        self._visit_nested_scope(node)
+
+    def visit_Lambda(self, node: ast.Lambda):
+        self._visit_nested_scope(node)
+
+    def visit_Call(self, node: ast.Call):
+        if isinstance(node.func, ast.Name):
+            self.direct_function_calls[node.func.id].append(node.lineno)
+        self.generic_visit(node)
+
+
+def analyze_source(source: str, path: str) -> list[Violation]:
+    tree = ast.parse(source, filename=path)
+    allowed_blocks = _find_allowed_parameter_blocks(source, tree)
+    analyzer = ModuleAnalyzer()
+    analyzer.visit(tree)
+    violations = []
+
+    for name, definition_lines in analyzer.module_variable_definitions.items():
+        use_lines = analyzer.module_variable_uses.get(name, [])
+        if len(definition_lines) != 1 or len(use_lines) != 1:
+            continue
+        definition_line = definition_lines[0]
+        if _line_is_in_allowed_block(definition_line, allowed_blocks):
+            continue
+        violations.append(
+            Violation(
+                path=path,
+                line=definition_line,
+                name=name,
+                kind="module variable",
+                definition_line=definition_line,
+                use_line=use_lines[0],
+            )
+        )
+
+    for name, definition_lines in (
+        analyzer.top_level_function_definitions.items()
+    ):
+        call_lines = analyzer.direct_function_calls.get(name, [])
+        if len(definition_lines) != 1 or len(call_lines) != 1:
+            continue
+        definition_line = definition_lines[0]
+        violations.append(
+            Violation(
+                path=path,
+                line=definition_line,
+                name=name,
+                kind="top-level function",
+                definition_line=definition_line,
+                use_line=call_lines[0],
+            )
+        )
+
+    return sorted(violations, key=lambda item: (item.path, item.line, item.name))
+
+
+def analyze_file(path: Path) -> list[Violation]:
+    source = path.read_text(encoding="utf-8")
+    return analyze_source(source, str(path))
+
+
+def _render_violation(violation: Violation) -> str:
+    if violation.kind == "module variable":
+        return (
+            f"{violation.path}:{violation.line}: "
+            f"`{violation.name}` is a module-level variable that is defined "
+            "once and used once.\n"
+            f"Defined on line {violation.definition_line}; the only use is "
+            f"on line {violation.use_line}.\n"
+            "The easiest solution is to move the expression from "
+            f"{violation.definition_line} and evaluate "
+            f"in-place on {violation.use_line}\n"
+        )
+    return (
+        f"{violation.path}:{violation.line}: "
+        f"`{violation.name}` is a top-level function that is defined once "
+        "and directly called once.\n"
+        f"The easiest solution is to simply move the code to where it is used.\n"
+        "**NOTE** I'm a little more worried about this error message vs. the "
+        "variable one.  If you want the function to be accessible outside the "
+        "module, you don't want to do this, and we should discuss ← (JMF)."
+    )
+
+
+def build_report(violations: list[Violation]) -> str:
+    report_lines = [REMINDER, ""]
+    report_lines.extend(_render_violation(item) for item in violations)
+    report_lines.append("")
+    return "\n\n".join(report_lines)
+
+
+def parse_args(argv: list[str] | None = None):
+    parser = argparse.ArgumentParser(
+        description=(
+            "Check for module-level variables that are defined once and used "
+            "once, and top-level functions that are directly called once."
+        )
+    )
+    parser.add_argument("paths", nargs="+", help="Python files to inspect")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    violations = []
+    parse_failures = []
+    for raw_path in args.paths:
+        path = Path(raw_path)
+        try:
+            violations.extend(analyze_file(path))
+        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+            parse_failures.append(f"{path}: could not analyze this file: {exc}")
+    if parse_failures:
+        print("\n".join(parse_failures), file=sys.stderr)
+        return 1
+    if not violations:
+        return 0
+    print(build_report(violations))
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
