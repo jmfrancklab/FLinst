@@ -5,23 +5,20 @@ import pyspecdata as psd
 import matplotlib.pyplot as plt
 import numpy as np
 
-
+# □ TODO: explain why this is needed
 POINTS_TO_SKIP_FIRST_FIGURE = 3
 
 # am I pulling previously stored data, or something I just ran
-pull_old_file = False
+pull_old_file = True
 if pull_old_file:
-    DEFAULT_DATA = "260420_Irounding.txt"
-    DEFAULT_EXP_TYPE = "b27/Irounding"
     datafile = Path(
         psd.search_filename(
-            re.escape(DEFAULT_DATA),
-            exp_type=DEFAULT_EXP_TYPE,
+            re.escape("260420_Irounding.txt"),
+            exp_type="b27/Irounding",
             unique=True,
             print_result=False,
         )
     )
-
 else:
     datafile = Path("Irounding.txt")
 if not os.path.exists(datafile):
@@ -66,34 +63,33 @@ ax_fit.plot(
     "o",
     ms=4,
     label="Hall Probe Reading",
+    alpha=0.5,
 )
 ax_fit.plot(
     x_data,
     y_fit,
-    "-",
-    lw=2.5,
     label=(
         "Linear fit: "
         rf"$B_0 = ({slope:.10g})\,I_{{req}} {intercept:+.10g}$"
     ),
+    alpha=0.5,
 )
 ax_fit.plot(
     x_quantized,
     y_quantized_fit,
-    "--",
-    lw=2.0,
     label=(
         rf"$({c_0:.8g})\cdot({Del_I:.8g})\cdot"
         rf"\mathrm{{round}}\!\left((I_{{req}}-{offset:.8g})/"
         rf"({Del_I:.8g})\right){c_1:+.8g}$"
     ),
+    alpha=0.5,
 )
 ax_fit.set_ylabel("Hall Probe Reading G)")
 ax_fit.set_title("Hall Probe Reading vs Requested Current")
 ax_fit.legend()
 ax_fit.grid(alpha=0.25)
 
-ax_resid.plot(x_data, residuals, ".", ms=8, color="C0")
+ax_resid.plot(x_data, residuals, ".", ms=8, color="C0", alpha=0.5)
 ax_resid.axhline(0.1, color="C3", alpha=0.2, lw=3)
 ax_resid.axhline(-0.1, color="C3", alpha=0.2, lw=3)
 ax_resid.set_xlabel("Requested Current (A)")
