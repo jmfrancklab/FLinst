@@ -14,8 +14,8 @@ POINTS_TO_SKIP_FIRST_FIGURE = 3
 Del_I = 0.003115
 step = 0.00005
 offset = 0.0016
-c_0 = 178.66095
-c_1 = -358.56219
+c_1 = 178.66095
+c_0 = -358.56219
 # }}}
 
 # am I pulling previously stored data, or something I just ran
@@ -37,9 +37,11 @@ if not os.path.exists(datafile):
         "pull_old_file flag as you intend"
     )
 # {{{ loading directly into an nddata is a much better choice
-raw_columns = np.atleast_2d(np.loadtxt(datafile, skiprows=1))
-hall_probe_data = psd.nddata(raw_columns[:, 1], ["I_desired"]).setaxis(
-    "I_desired", raw_columns[:, 0]
+raw_columns = np.genfromtxt(datafile, names=True)
+# following gives ('I_desiredA', 'I_act_reqA', 'I_measA', 'B0G', 'I_act_setB0')
+# print(raw_columns.dtype.names);quit()
+hall_probe_data = psd.nddata(raw_columns["B0G"], ["I_desired"]).setaxis(
+    "I_desired", raw_columns["I_desiredA"]
 )
 hall_probe_data = hall_probe_data["I_desired", POINTS_TO_SKIP_FIRST_FIGURE:]
 # }}}
@@ -47,11 +49,8 @@ coeff = hall_probe_data.polyfit("I_desired", order=1)
 intercept, slope = coeff
 y_fit = hall_probe_data.eval_poly(coeff, "I_desired", npts=500)
 staircase_function = lambda x: (
-        c_0
-        * Del_I
-        * (x / Del_I).runcopy(np.round)
-        + c_1
-        )
+    c_1 * Del_I * ((x - offset) / Del_I).runcopy(np.round) + c_0
+)
 
 fig, (ax_fit, ax_resid) = plt.subplots(
     2,
@@ -80,23 +79,24 @@ psd.plot(
     alpha=0.5,
     ax=ax_fit,
 )
-#psd.plot(
-#    staircase_function(y_fit.fromaxis('I_desired')),
-#    label=(
-#        rf"$({c_0:.8g})\cdot({Del_I:.8g})\cdot"
-#        rf"\mathrm{{round}}\!\left((I_{{req}}-{offset:.8g})/"
-#        rf"({Del_I:.8g})\right){c_1:+.8g}$"
-#    ),
-#    alpha=0.5,
-#    ax=ax_fit,
-#)
+psd.plot(
+    staircase_function(y_fit.fromaxis("I_desired")),
+    label=(
+        rf"$({c_1:.8g})\cdot({Del_I:.8g})\cdot"
+        rf"\mathrm{{round}}\!\left((I_{{req}}-{offset:.8g})/"
+        rf"({Del_I:.8g})\right){c_0:+.8g}$"
+    ),
+    alpha=0.5,
+    ax=ax_fit,
+)
 ax_fit.set_ylabel("Hall Probe Reading G)")
 ax_fit.set_title("Hall Probe Reading vs Requested Current")
 ax_fit.legend()
 ax_fit.grid(alpha=0.25)
 
 psd.plot(
-    hall_probe_data - staircase_function(hall_probe_data.fromaxis('I_desired')),
+    hall_probe_data
+    - staircase_function(hall_probe_data.fromaxis("I_desired")),
     ".",
     ms=8,
     color="C0",
