@@ -45,13 +45,17 @@ class ModuleAnalyzer(ast.NodeVisitor):
         self.main_guard_depth = 0
         self.module_variable_definitions = defaultdict(list)
         self.multi_name_lhs_definitions = set()
+        self.with_alias_definitions = set()
         self.module_variable_uses = defaultdict(list)
         self.top_level_function_definitions = defaultdict(list)
         self.direct_function_calls = defaultdict(list)
         self.main_guard_direct_calls = defaultdict(list)
 
     def _record_target(
-        self, node: ast.AST, allow_multi_name_lhs_exception: bool = False
+        self,
+        node: ast.AST,
+        allow_multi_name_lhs_exception: bool = False,
+        allow_with_alias_exception: bool = False,
     ):
         target_names = []
         nodes_to_visit = [node]
@@ -73,6 +77,8 @@ class ModuleAnalyzer(ast.NodeVisitor):
             and len(target_names) > 1
         ):
             self.multi_name_lhs_definitions.update(target_names)
+        if allow_with_alias_exception:
+            self.with_alias_definitions.update(target_names)
 
     def _visit_nested_scope(self, node):
         self.scope_depth += 1
@@ -119,14 +125,18 @@ class ModuleAnalyzer(ast.NodeVisitor):
         if self.scope_depth == 0 and self.class_depth == 0:
             for item in node.items:
                 if item.optional_vars is not None:
-                    self._record_target(item.optional_vars)
+                    self._record_target(
+                        item.optional_vars, allow_with_alias_exception=True
+                    )
         self.generic_visit(node)
 
     def visit_AsyncWith(self, node: ast.AsyncWith):
         if self.scope_depth == 0 and self.class_depth == 0:
             for item in node.items:
                 if item.optional_vars is not None:
-                    self._record_target(item.optional_vars)
+                    self._record_target(
+                        item.optional_vars, allow_with_alias_exception=True
+                    )
         self.generic_visit(node)
 
     def visit_NamedExpr(self, node: ast.NamedExpr):
@@ -278,6 +288,11 @@ def main(argv: list[str] | None = None) -> int:
             # function that returns more than one value, so don't warn on
             # single-use names introduced by tuple/list unpacking.
             if (name, definition_line) in analyzer.multi_name_lhs_definitions:
+                continue
+            # Context-manager aliases are often just resource plumbing between
+            # multiple with-items or into the body, so allow single-use names
+            # introduced by ``with ... as name``.
+            if (name, definition_line) in analyzer.with_alias_definitions:
                 continue
             if any(
                 start <= definition_line <= end
