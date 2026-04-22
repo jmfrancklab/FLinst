@@ -1,8 +1,9 @@
 from pathlib import Path
-import re
 import os
-import pyspecdata as psd
+import re
+
 import matplotlib.pyplot as plt
+import pyspecdata as psd
 import numpy as np
 
 # □ TODO: explain why this is needed
@@ -26,17 +27,17 @@ if not os.path.exists(datafile):
         f"{datafile} not found. Check that you've set the "
         "pull_old_file flag as you intend"
     )
-table = np.genfromtxt(datafile, names=True)
-
-x_all = table["I_desiredA"]
-y_all = table["B0G"]
-
-x_data = x_all[POINTS_TO_SKIP_FIRST_FIGURE:]
-y_data = y_all[POINTS_TO_SKIP_FIRST_FIGURE:]
-
-c = np.polyfit(x_data, y_data, 1)
-slope, intercept = c
-y_fit = slope * x_data + intercept
+# {{{ loading directly into an nddata is a much better choice
+raw_columns = np.atleast_2d(np.loadtxt(datafile, skiprows=1))
+hall_probe_data = psd.nddata(raw_columns[:, 1], ["I_desired"]).setaxis(
+    "I_desired", raw_columns[:, 0]
+)
+hall_probe_data = hall_probe_data["I_desired"][POINTS_TO_SKIP_FIRST_FIGURE:]
+# }}}
+coeff = hall_probe_data.polyfit("I_desired", order=1)
+intercept, slope = coeff
+y_data = fit_data.data
+y_fit = fit_data.eval_poly(coeff, "I_desired").data
 Del_I = 0.003115
 step = 0.00005
 offset = 0.0016
@@ -69,8 +70,7 @@ ax_fit.plot(
     x_data,
     y_fit,
     label=(
-        "Linear fit: "
-        rf"$B_0 = ({slope:.10g})\,I_{{req}} {intercept:+.10g}$"
+        "Linear fit: " rf"$B_0 = ({slope:.10g})\,I_{{req}} {intercept:+.10g}$"
     ),
     alpha=0.5,
 )
