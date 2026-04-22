@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import time
 
+# □ TODO: wouldn't these be config settings?
 FIELD_CURRENT_STEP_A = 0.003115
 FIELD_CURRENT_OFFSET_A = 0.0016
 FIELD_CURRENT_TO_FIELD_C0 = 178.66095
