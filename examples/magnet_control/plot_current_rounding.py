@@ -9,6 +9,7 @@ import numpy as np
 # {{{ changeable parameters
 # □ TODO: explain why this is needed
 POINTS_TO_SKIP_FIRST_FIGURE = 3
+pull_old_file = True
 # }}}
 # {{{ changeable parameters to describe the staircase function
 Del_I = 0.003115
@@ -19,7 +20,6 @@ c_0 = -358.56219
 # }}}
 
 # am I pulling previously stored data, or something I just ran
-pull_old_file = True
 if pull_old_file:
     datafile = Path(
         psd.search_filename(
