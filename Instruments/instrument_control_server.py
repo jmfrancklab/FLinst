@@ -89,14 +89,14 @@ def main():
                     field_error_G,
                     desired_field_G,
                 )
-                current_field = ramp_field(
+                current_field_G = ramp_field(
                     desired_field_G,
                     config_dict,
                     h,
                     gen,
                     sh_map,
                 )
-            return current_field
+            return current_field_G
 
         def process_cmd(cmd, this_logobj):
             nonlocal desired_field_G
