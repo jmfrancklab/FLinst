@@ -76,7 +76,6 @@ def main():
         desired_field_G = None
 
         def get_field_for_logging():
-            nonlocal desired_field_G
             current_field_G = h.field_in_G
             if desired_field_G is None:
                 return current_field_G
