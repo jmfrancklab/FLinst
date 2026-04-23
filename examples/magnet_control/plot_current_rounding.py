@@ -7,7 +7,7 @@ import pyspecdata as psd
 import numpy as np
 
 # {{{ changeable parameters
-# □ TODO: explain why this is needed
+# We skip the first 3 points since the magnet has not warmed up
 POINTS_TO_SKIP_FIRST_FIGURE = 3
 pull_old_file = True
 # }}}
@@ -40,8 +40,11 @@ if not os.path.exists(datafile):
 raw_columns = np.genfromtxt(datafile, names=True)
 # following gives ('I_desiredA', 'I_act_reqA', 'I_measA', 'B0G', 'I_act_setB0')
 # print(raw_columns.dtype.names);quit()
-hall_probe_data = psd.nddata(raw_columns["B0G"], ["I_desired"]).setaxis(
-    "I_desired", raw_columns["I_desiredA"]
+hall_probe_data = (
+    psd.nddata(raw_columns["B0G"], ["I_desired"])
+    .setaxis("I_desired", raw_columns["I_desiredA"])
+    .set_units("G")
+    .set_units("I_desired", "A")
 )
 hall_probe_data = hall_probe_data["I_desired", POINTS_TO_SKIP_FIRST_FIGURE:]
 # }}}
@@ -60,9 +63,6 @@ fig, (ax_fit, ax_resid) = plt.subplots(
     gridspec_kw={"height_ratios": [2.4, 1.2]},
 )
 
-# TODO ☐: this shows up as being in G -- is that really true??
-#         Think about setting the units and/or using the pyspec
-#         div_units function to get into the units you want.
 psd.plot(
     hall_probe_data,
     "o",
@@ -89,7 +89,7 @@ psd.plot(
     alpha=0.5,
     ax=ax_fit,
 )
-ax_fit.set_ylabel("Hall Probe Reading G)")
+ax_fit.set_ylabel("Hall Probe Reading (G)")
 ax_fit.set_title("Hall Probe Reading vs Requested Current")
 ax_fit.legend()
 ax_fit.grid(alpha=0.25)
