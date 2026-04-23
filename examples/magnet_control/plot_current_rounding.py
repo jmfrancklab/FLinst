@@ -51,6 +51,9 @@ hall_probe_data = hall_probe_data["I_desired", POINTS_TO_SKIP_FIRST_FIGURE:]
 coeff = hall_probe_data.polyfit("I_desired", order=1)
 intercept, slope = coeff
 y_fit = hall_probe_data.eval_poly(coeff, "I_desired", npts=500)
+# TODO ☐: set up a pyspecdata lmfitdata object to actually fit this, and
+#         use the current values as the initial guesses
+#         (refer to the various pyspecdata examples and documentation!)
 staircase_function = lambda x: (
     c_1 * Del_I * ((x - offset) / Del_I).runcopy(np.round) + c_0
 )
@@ -80,7 +83,7 @@ psd.plot(
     ax=ax_fit,
 )
 psd.plot(
-    staircase_function(y_fit.fromaxis("I_desired")),
+    staircase_function(y_fit.fromaxis("I_desired")).name("Hall Probe Reading"),
     label=(
         rf"$({c_1:.8g})\cdot({Del_I:.8g})\cdot"
         rf"\mathrm{{round}}\!\left((I_{{req}}-{offset:.8g})/"
@@ -89,7 +92,6 @@ psd.plot(
     alpha=0.5,
     ax=ax_fit,
 )
-ax_fit.set_ylabel("Hall Probe Reading (G)")
 ax_fit.set_title("Hall Probe Reading vs Requested Current")
 ax_fit.legend()
 ax_fit.grid(alpha=0.25)
