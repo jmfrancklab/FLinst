@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 from SpinCore_pp import configuration
+from pyspecdata import T_per_G
 
 config_dict = configuration("active.ini")
 
@@ -46,7 +47,7 @@ with (
         )
         time.sleep(15)
         I_des.append(I_set)
-        B_field.append(h.field.to("T").magnitude * 1e4)
+        B_field.append((h.field.to("T") / T_per_G).to("G").magnitude)
 
     print(" I_desired(A)   B0(G)")
     for B, des in zip(B_field, I_des):

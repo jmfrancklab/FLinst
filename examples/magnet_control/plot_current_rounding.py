@@ -1,10 +1,11 @@
 from pathlib import Path
 import os
 import re
-
+from lmfit import fit_report
 import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
+import sympy as sp
 
 # {{{ changeable parameters
 # We skip the first 3 points since the magnet has not warmed up
@@ -50,13 +51,34 @@ hall_probe_data = hall_probe_data["I_desired", POINTS_TO_SKIP_FIRST_FIGURE:]
 # }}}
 coeff = hall_probe_data.polyfit("I_desired", order=1)
 intercept, slope = coeff
-y_fit = hall_probe_data.eval_poly(coeff, "I_desired", npts=500)
-# TODO ☐: set up a pyspecdata lmfitdata object to actually fit this, and
-#         use the current values as the initial guesses
-#         (refer to the various pyspecdata examples and documentation!)
-staircase_function = lambda x: (
-    c_1 * Del_I * ((x - offset) / Del_I).runcopy(np.round) + c_0
+# {{{ fit the staircase response using lmfitdata, seeding from the current
+#     hand-tuned parameters
+I_desired, Del_I_symbol, offset_symbol, c_1_symbol, c_0_symbol = sp.symbols(
+    "I_desired Del_I offset c_1 c_0", real=True
 )
+staircase_fit = psd.lmfitdata(hall_probe_data)
+staircase_fit.functional_form = (
+    c_1_symbol
+    * Del_I_symbol
+    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + sp.Rational(1, 2))
+    + c_0_symbol
+)
+staircase_fit.set_guess(
+    Del_I=dict(value=Del_I, min=step, max=2 * Del_I),
+    offset={"value": offset, "min": -2 * offset, "max": 2 * offset},
+    c_1={"value": c_1, "min": 0.5 * c_1, "max": 2 * c_1},
+    c_0={"value": c_0, "min": -2 * c_0, "max": 2 * c_0},
+)
+staircase_fit.set_to_guess()
+staircase_guess, staircase_guess_label = (
+    staircase_fit.eval(500).name("Hall Probe Reading"),
+    "Initial staircase guess: " rf"$\Delta I={Del_I:.8g},\ x_0={offset:.8g}$",
+)
+# The staircase has discontinuities, so let lmfit estimate derivatives
+# numerically rather than relying on a symbolic Jacobian.
+staircase_fit.fit(use_jacobian=False)
+print(staircase_fit.fit_report())
+# }}}
 
 fig, (ax_fit, ax_resid) = plt.subplots(
     2,
@@ -75,7 +97,7 @@ psd.plot(
     ax=ax_fit,
 )
 psd.plot(
-    y_fit,
+    hall_probe_data.eval_poly(coeff, "I_desired", npts=500),
     label=(
         "Linear fit: " rf"$B_0 = ({slope:.10g})\,I_{{req}} {intercept:+.10g}$"
     ),
@@ -83,12 +105,15 @@ psd.plot(
     ax=ax_fit,
 )
 psd.plot(
-    staircase_function(y_fit.fromaxis("I_desired")).name("Hall Probe Reading"),
-    label=(
-        rf"$({c_1:.8g})\cdot({Del_I:.8g})\cdot"
-        rf"\mathrm{{round}}\!\left((I_{{req}}-{offset:.8g})/"
-        rf"({Del_I:.8g})\right){c_0:+.8g}$"
-    ),
+    staircase_guess,
+    "--",
+    label=staircase_guess_label,
+    alpha=0.5,
+    ax=ax_fit,
+)
+psd.plot(
+    staircase_fit.eval(500).name("Hall Probe Reading"),
+    label=("Staircase lmfit: " + staircase_fit.latex()),
     alpha=0.5,
     ax=ax_fit,
 )
@@ -97,8 +122,7 @@ ax_fit.legend()
 ax_fit.grid(alpha=0.25)
 
 psd.plot(
-    hall_probe_data
-    - staircase_function(hall_probe_data.fromaxis("I_desired")),
+    hall_probe_data - staircase_fit.eval().name("Hall Probe Reading"),
     ".",
     ms=8,
     color="C0",
