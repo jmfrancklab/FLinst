@@ -45,9 +45,8 @@ with (
             "Current I set: {I_set}"
         )
         time.sleep(15)
-        true_B0_G = h.field.to("T").magnitude * 1e4
         I_des.append(I_set)
-        B_field.append(true_B0_G)
+        B_field.append(h.field.to("T").magnitude * 1e4)
 
     print(" I_desired(A)   B0(G)")
     for B, des in zip(B_field, I_des):
