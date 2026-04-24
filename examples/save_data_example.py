@@ -72,7 +72,7 @@ def run_scans(
                 # stop times
             )
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
-            direct_time_axis = r_[0 : data_length] / 3.9e3
+            direct_time_axis = r_[0:data_length] / 3.9e3
             ret_data = ndshape(
                 [indirect_len, nScans, len(ph1_cyc), data_length],
                 ["indirect", "nScans", "ph1", "t2"],
@@ -90,21 +90,21 @@ def run_scans(
 
 # }}}
 power_settings_dBm = np.zeros_like(dB_settings)
-with instrument_control() as p:
+with instrument_control() as ic:
     DNP_data = None
     for j, this_dB in enumerate(dB_settings):
         print("I'm going to pretend to run", this_dB, "dBm")
         if j == 0:
             time.sleep(short_delay)
-            p.start_log()
+            ic.start_log()
             time.sleep(short_delay)
-        p.set_power(this_dB)
+        ic.set_power(this_dB)
         for k in range(10):
             time.sleep(short_delay)
-            if p.get_power_setting() >= this_dB:
+            if ic.get_power_setting() >= this_dB:
                 break
         time.sleep(long_delay)
-        power_settings_dBm[j] = p.get_power_setting()
+        power_settings_dBm[j] = ic.get_power_setting()
         DNP_ini_time = time.time()
         DNP_data = run_scans(
             indirect_idx=j,
@@ -120,8 +120,24 @@ with instrument_control() as p:
         time_axis_coords[j]["stop_times"] = DNP_done
     DNP_data.name("nodename_test")
     DNP_data.set_prop("power_settings", power_settings_dBm)
+    # note that the validity of saving the log data in this way (rather
+    # than manually creating the HDF5 node) is already tested as part of
+    # the test suite (test_logobj.py)
+    DNP_data.set_prop("log", ic.stop_log().__getstate__())
+    # TODO ☐: before merging this PR, make sure to run
+    #  find . -iname '*.py' -exec grep {} -le 'with h5py'  \;
+    #         and fix the code in all the files that it finds to follow the
+    #         convention that we use in the previous line.  Also, be sure that
+    #         we bump the postproc_type of all affected data.
+    # TODO ☐: I think it should be easy (esp. w/ codex help) to make a short
+    #         processing PR to add postproc functions for these new postproc
+    #         types.  These new postproc types should use the logs to create a
+    #         structured array axis coord for the indirect dimension that
+    #         includes fields for time (the original axis coord) as well as all
+    #         the average of all logged quantities.  The stdev can be attached
+    #         as the axis coord error.
     nodename = DNP_data.name()
-    this_log = p.stop_log()
+    this_log = ic.stop_log()
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
 DNP_data.set_prop("postproc_type", "spincore_SE_v1")

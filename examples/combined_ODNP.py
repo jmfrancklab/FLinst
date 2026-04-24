@@ -17,9 +17,6 @@ This needs to be run in sync with the power control server. To do so:
 """
 
 from numpy import r_, zeros_like
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
 import pyspecdata as psd
 from pyspecdata import strm
 import os
@@ -187,11 +184,9 @@ if myinput.lower().startswith("n"):
 powers = 1e-3 * 10 ** (dB_settings / 10.0)
 # }}}
 # {{{ these change if we change the way the data is saved
-IR_postproc = "spincore_IR_v4"  # note that you have changed the way the data
-#                                 is saved, and so this should change
-#                                 likewise!!!!
+IR_postproc = "spincore_IR_v4"
 IR_pathway = {"ph1": 0, "ph2": +1}
-Ep_postproc = "spincore_ODNP_v5"
+Ep_postproc = "spincore_ODNP_v6"
 # }}}
 # {{{check total points
 total_points = len(Ep_ph1_cyc) * nPoints
@@ -408,9 +403,10 @@ with instrument_control() as ic:
         )
     this_log = ic.stop_log()
 # }}}
+# note that the validity of saving the log data in this way (rather than
+# manually creating the HDF5 node) is already tested as part of the test suite
+# (test_logobj.py)
+DNP_data.set_prop("log", this_log.__getstate__())
+DNP_data.hdf5_write(filename, directory=target_directory)
 config_dict.write()
-with h5py.File(
-    os.path.normpath(os.path.join(target_directory, filename)), "a"
-) as f:
-    hdf_save_dict_to_group(f, {"log": this_log.__getstate__()})
 print("*" * 30 + "\n" + "\n".join(final_log))
