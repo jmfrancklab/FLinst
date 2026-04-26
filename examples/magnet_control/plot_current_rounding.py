@@ -1,7 +1,8 @@
+# TODO ☐: this needs an explanation -- what was used to save this??
+
 from pathlib import Path
 import os
 import re
-from lmfit import fit_report
 import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
@@ -13,6 +14,8 @@ POINTS_TO_SKIP_FIRST_FIGURE = 3
 pull_old_file = True
 # }}}
 # {{{ changeable parameters to describe the staircase function
+# TODO ☐: these values don't give a good guess for the staircase fit --
+#         probably better to base off of the data
 Del_I = 0.003115
 step = 0.00005
 offset = 0.0016
@@ -51,12 +54,40 @@ hall_probe_data = hall_probe_data["I_desired", POINTS_TO_SKIP_FIRST_FIGURE:]
 # }}}
 coeff = hall_probe_data.polyfit("I_desired", order=1)
 intercept, slope = coeff
+# {{{ use a convolution transform to smooth the staircase model just enough
+#     that the optimizer sees a response as the step locations move between
+#     sampled x points
+staircase_smoothing_width = (
+    2 * np.abs(np.diff(hall_probe_data["I_desired"])).mean()
+)
+# TODO ☐: this gives several different values -- why?? Something is
+#         wrong with the data. → see todos in the acquisition script.
+print(np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))))
+# }}}
 # {{{ fit the staircase response using lmfitdata, seeding from the current
-#     hand-tuned parameters
+#     hand-tuned parameters and smoothing the discontinuities with a
+#     transform
 I_desired, Del_I_symbol, offset_symbol, c_1_symbol, c_0_symbol = sp.symbols(
     "I_desired Del_I offset c_1 c_0", real=True
 )
 staircase_fit = psd.lmfitdata(hall_probe_data)
+
+@staircase_fit.define_residual_transform
+def smooth_staircase_response(d):
+    original_axis = d.getaxis("I_desired").copy()
+    # TODO ☐: it should not need to do this because the axis of
+    #         requested currents should be evenly spaced!!!  This leads
+    #         to the other problems!
+    d.setaxis(
+        "I_desired",
+        np.linspace(original_axis[0], original_axis[-1],
+                    len(original_axis)),
+    )
+    d.convolve("I_desired", staircase_smoothing_width)
+    d.setaxis("I_desired", original_axis)
+    return d
+
+
 staircase_fit.functional_form = (
     c_1_symbol
     * Del_I_symbol
@@ -72,9 +103,10 @@ staircase_fit.set_guess(
 staircase_fit.set_to_guess()
 staircase_guess, staircase_guess_label = (
     staircase_fit.eval(500).name("Hall Probe Reading"),
-    "Initial staircase guess: " rf"$\Delta I={Del_I:.8g},\ x_0={offset:.8g}$",
+    "Initial staircase guess: "
+    rf"$\Delta I={Del_I:.8g},\ x_0={offset:.8g},\ w={staircase_smoothing_width:.8g}$",
 )
-# The staircase has discontinuities, so let lmfit estimate derivatives
+# The model is still floor-based, so let lmfit estimate derivatives
 # numerically rather than relying on a symbolic Jacobian.
 staircase_fit.fit(use_jacobian=False)
 print(staircase_fit.fit_report())
@@ -113,7 +145,11 @@ psd.plot(
 )
 psd.plot(
     staircase_fit.eval(500).name("Hall Probe Reading"),
-    label=("Staircase lmfit: " + staircase_fit.latex()),
+    label=(
+        "Staircase lmfit: "
+        + staircase_fit.latex()
+        + rf", $w={staircase_smoothing_width:.8g}$"
+    ),
     alpha=0.5,
     ax=ax_fit,
 )
@@ -122,7 +158,8 @@ ax_fit.legend()
 ax_fit.grid(alpha=0.25)
 
 psd.plot(
-    hall_probe_data - staircase_fit.eval().name("Hall Probe Reading"),
+    staircase_fit.residual_transform(hall_probe_data.C).name("Hall Probe Reading")
+    - staircase_fit.eval().name("Hall Probe Reading"),
     ".",
     ms=8,
     color="C0",
@@ -133,7 +170,7 @@ ax_resid.axhline(0.1, color="C3", alpha=0.2, lw=3)
 ax_resid.axhline(-0.1, color="C3", alpha=0.2, lw=3)
 ax_resid.set_xlabel("Requested Current (A)")
 ax_resid.set_ylabel("Residuals (G)")
-ax_resid.set_title("Fit Residuals")
+ax_resid.set_title("Smoothed Fit Residuals")
 ax_resid.grid(alpha=0.25)
 
 fig.tight_layout()

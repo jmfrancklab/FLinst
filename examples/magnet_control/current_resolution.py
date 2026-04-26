@@ -49,10 +49,10 @@ with (
         I_des.append(I_set)
         B_field.append((h.field.to("T") / T_per_G).to("G").magnitude)
 
-    print(" I_desired(A)   B0(G)")
-    for B, des in zip(B_field, I_des):
-        print(f"{des:8.4f} {B:8.3f}")
 
+    # TODO ☐: this look different vs. the file that you specify in
+    #         plot_current_rounding.py, which I really don't understand.
+    #         Also, this is mis-labeled.
     with open(OUTPUT_FILENAME, "w", encoding="utf-8") as fp:
         fp.write(" I_desired(A)   B0(G)\n")
         for B, des in zip(B_field, I_des):
