@@ -1,5 +1,3 @@
-# TODO ☐: this needs an explanation -- what was used to save this??
-
 from pathlib import Path
 import os
 import re
@@ -27,7 +25,7 @@ c_0 = -358.56219
 if pull_old_file:
     datafile = Path(
         psd.search_filename(
-            re.escape("260420_Irounding.txt"),
+            re.escape("260420_Irounding_old_script.txt"),
             exp_type="b27/Irounding",
             unique=True,
             print_result=False,
@@ -72,6 +70,7 @@ I_desired, Del_I_symbol, offset_symbol, c_1_symbol, c_0_symbol = sp.symbols(
 )
 staircase_fit = psd.lmfitdata(hall_probe_data)
 
+
 @staircase_fit.define_residual_transform
 def smooth_staircase_response(d):
     original_axis = d.getaxis("I_desired").copy()
@@ -80,8 +79,7 @@ def smooth_staircase_response(d):
     #         to the other problems!
     d.setaxis(
         "I_desired",
-        np.linspace(original_axis[0], original_axis[-1],
-                    len(original_axis)),
+        np.linspace(original_axis[0], original_axis[-1], len(original_axis)),
     )
     d.convolve("I_desired", staircase_smoothing_width)
     d.setaxis("I_desired", original_axis)
@@ -158,7 +156,9 @@ ax_fit.legend()
 ax_fit.grid(alpha=0.25)
 
 psd.plot(
-    staircase_fit.residual_transform(hall_probe_data.C).name("Hall Probe Reading")
+    staircase_fit.residual_transform(hall_probe_data.C).name(
+        "Hall Probe Reading"
+    )
     - staircase_fit.eval().name("Hall Probe Reading"),
     ".",
     ms=8,
