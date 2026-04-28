@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
 import sympy as sp
+from lmfit import fit_report
 
 # {{{ changeable parameters
 # We skip the first 3 points since the magnet has not warmed up
@@ -117,7 +118,7 @@ staircase_guess, staircase_guess_label = (
 # numerically rather than relying on a symbolic Jacobian.
 if do_fit:
     staircase_fit.fit(use_jacobian=False)
-    print(staircase_fit.fit_report())
+    print(fit_report(staircase_fit.fit_output))
 # }}}
 
 fig, (ax_fit, ax_resid) = plt.subplots(
