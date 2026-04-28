@@ -42,8 +42,8 @@ with (
         I_set = des_current + idx * SET_CURRENT_STEP_A
         g.I_limit = I_set
         print(
-            f"\n Set current step: {SET_CURRENT_STEP_A:.4f} A\n "
-            "Current I set: {I_set}"
+            f"\n Set current step: {SET_CURRENT_STEP_A:.18f} A\n "
+            f"Current I set: {I_set:.18f} A"
         )
         time.sleep(15)
         I_des.append(I_set)
