@@ -1,5 +1,3 @@
-# TODO ☐: this needs an explanation -- what was used to save this??
-
 from pathlib import Path
 import os
 import re
@@ -28,7 +26,7 @@ do_fit = True
 if pull_old_file:
     datafile = Path(
         psd.search_filename(
-            re.escape("260420_Irounding.txt"),
+            re.escape("260420_Irounding_old_script.txt"),
             exp_type="b27/Irounding",
             unique=True,
             print_result=False,
