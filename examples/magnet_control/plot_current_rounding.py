@@ -78,15 +78,34 @@ def smooth_staircase_response(d):
     # TODO ☐: it should not need to do this because the axis of
     #         requested currents should be evenly spaced!!!  This leads
     #         to the other problems!
-    d.setaxis(
-        "I_desired",
-        np.linspace(original_axis[0], original_axis[-1], len(original_axis)),
+    uniform_axis = np.linspace(
+        original_axis[0], original_axis[-1], len(original_axis)
     )
-    # TODO ☐: (for JF) I have fold-back from the conv, and need to fill
-    #         to both sides with values equal to endpoints before conv.
-    #         The following is required for convolve, but should not be.
+    d.setaxis("I_desired", uniform_axis)
+    # Pad by ~6 sigma on both sides so the Gaussian convolution sees
+    # endpoint plateaus instead of wrapping around the finite axis.
+    axis_step = np.abs(np.diff(uniform_axis)).mean()
+    gaussian_sigma = staircase_smoothing_width / (
+        2 * np.sqrt(2 * np.log(2))
+    )
+    padding_width = max(axis_step, 6 * gaussian_sigma)
+    d.extend(
+        "I_desired",
+        uniform_axis[0] - padding_width,
+        fill_with=d.data[0],
+    )
+    d.extend(
+        "I_desired",
+        uniform_axis[-1] + padding_width,
+        fill_with=d.data[-1],
+    )
+    padded_axis = d.getaxis("I_desired")
+    original_start = np.searchsorted(padded_axis, uniform_axis[0])
+    original_stop = original_start + len(original_axis)
+    # The following is required for convolve, but should not be.
     d.ft("I_desired", shift=True).ift("I_desired")
     d.convolve("I_desired", staircase_smoothing_width, enforce_causality=False)
+    d = d["I_desired", original_start: original_stop]
     d.setaxis("I_desired", original_axis)
     return d.real
 
