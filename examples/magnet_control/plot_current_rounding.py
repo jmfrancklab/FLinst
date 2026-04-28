@@ -20,7 +20,8 @@ Del_I = 0.003115
 step = 0.00005
 offset = 0.0016
 c_1 = 178.66095
-c_0 = -358.56219
+c_0 = 3393 - c_1 * 21
+do_fit = True
 # }}}
 
 # am I pulling previously stored data, or something I just ran
@@ -58,7 +59,7 @@ intercept, slope = coeff
 #     that the optimizer sees a response as the step locations move between
 #     sampled x points
 staircase_smoothing_width = (
-    2 * np.abs(np.diff(hall_probe_data["I_desired"])).mean()
+    0.5 * np.abs(np.diff(hall_probe_data["I_desired"])).mean()
 )
 # TODO ☐: this gives several different values -- why?? Something is
 #         wrong with the data. → see todos in the acquisition script.
@@ -72,6 +73,7 @@ I_desired, Del_I_symbol, offset_symbol, c_1_symbol, c_0_symbol = sp.symbols(
 )
 staircase_fit = psd.lmfitdata(hall_probe_data)
 
+
 @staircase_fit.define_residual_transform
 def smooth_staircase_response(d):
     original_axis = d.getaxis("I_desired").copy()
@@ -80,12 +82,15 @@ def smooth_staircase_response(d):
     #         to the other problems!
     d.setaxis(
         "I_desired",
-        np.linspace(original_axis[0], original_axis[-1],
-                    len(original_axis)),
+        np.linspace(original_axis[0], original_axis[-1], len(original_axis)),
     )
-    d.convolve("I_desired", staircase_smoothing_width)
+    # TODO ☐: (for JF) I have fold-back from the conv, and need to fill
+    #         to both sides with values equal to endpoints before conv.
+    #         The following is required for convolve, but should not be.
+    d.ft("I_desired", shift=True).ift("I_desired")
+    d.convolve("I_desired", staircase_smoothing_width, enforce_causality=False)
     d.setaxis("I_desired", original_axis)
-    return d
+    return d.real
 
 
 staircase_fit.functional_form = (
@@ -101,6 +106,10 @@ staircase_fit.set_guess(
     c_0={"value": c_0, "min": -2 * c_0, "max": 2 * c_0},
 )
 staircase_fit.set_to_guess()
+# TODO ☐: (for JF) eval here seems to give a complex number, unless I add real
+#         to the transform.  Why?  With all real variables, the lambda function
+#         should eval to real.  I checked that both the data and the axis
+#         coords are float64, NOT complex!
 staircase_guess, staircase_guess_label = (
     staircase_fit.eval(500).name("Hall Probe Reading"),
     "Initial staircase guess: "
@@ -108,8 +117,9 @@ staircase_guess, staircase_guess_label = (
 )
 # The model is still floor-based, so let lmfit estimate derivatives
 # numerically rather than relying on a symbolic Jacobian.
-staircase_fit.fit(use_jacobian=False)
-print(staircase_fit.fit_report())
+if do_fit:
+    staircase_fit.fit(use_jacobian=False)
+    print(staircase_fit.fit_report())
 # }}}
 
 fig, (ax_fit, ax_resid) = plt.subplots(
@@ -143,22 +153,25 @@ psd.plot(
     alpha=0.5,
     ax=ax_fit,
 )
-psd.plot(
-    staircase_fit.eval(500).name("Hall Probe Reading"),
-    label=(
-        "Staircase lmfit: "
-        + staircase_fit.latex()
-        + rf", $w={staircase_smoothing_width:.8g}$"
-    ),
-    alpha=0.5,
-    ax=ax_fit,
-)
+if do_fit:
+    psd.plot(
+        staircase_fit.eval(500).name("Hall Probe Reading"),
+        label=(
+            "Staircase lmfit: "
+            + staircase_fit.latex()
+            + rf", $w={staircase_smoothing_width:.8g}$"
+        ),
+        alpha=0.5,
+        ax=ax_fit,
+    )
 ax_fit.set_title("Hall Probe Reading vs Requested Current")
 ax_fit.legend()
 ax_fit.grid(alpha=0.25)
 
 psd.plot(
-    staircase_fit.residual_transform(hall_probe_data.C).name("Hall Probe Reading")
+    staircase_fit.residual_transform(hall_probe_data.C).name(
+        "Hall Probe Reading"
+    )
     - staircase_fit.eval().name("Hall Probe Reading"),
     ".",
     ms=8,

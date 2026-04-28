@@ -55,7 +55,7 @@ with (
     #         Also, this is mis-labeled.
     with open(OUTPUT_FILENAME, "w", encoding="utf-8") as fp:
         fp.write(" I_desired(A)   B0(G)\n")
-        for B, des in zip(B_field, I_des):
+        for des, B in zip(I_dex, B_field):
             fp.write(f"{des:8.4f} {B:8.3f}\n")
 
     fig, ax = plt.subplots()
