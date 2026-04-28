@@ -27,7 +27,7 @@ do_fit = True
 if pull_old_file:
     datafile = Path(
         psd.search_filename(
-            re.escape("260420_Irounding_old_script.txt"),
+            re.escape("260428_Irounding.txt"),
             exp_type="b27/Irounding",
             unique=True,
             print_result=False,
