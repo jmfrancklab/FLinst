@@ -73,8 +73,32 @@ def main():
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((IP, PORT))
         this_logobj = logobj()
+        desired_field_G = None
+
+        def get_field_for_logging():
+            current_field_G = h.field_in_G
+            if desired_field_G is None:
+                return current_field_G
+            field_error_G = abs(current_field_G - desired_field_G)
+            if 0.2 <= field_error_G:
+                logging.info(
+                    "Logged field %0.3f G is %0.3f G away from desired "
+                    "field %0.3f G; re-ramping to target",
+                    current_field_G,
+                    field_error_G,
+                    desired_field_G,
+                )
+                current_field_G = ramp_field(
+                    desired_field_G,
+                    config_dict,
+                    h,
+                    gen,
+                    sh_map,
+                )
+            return current_field_G
 
         def process_cmd(cmd, this_logobj):
+            nonlocal desired_field_G
             leave_open = True
             cmd = cmd.strip()
             print("I am processing", cmd)
@@ -82,6 +106,7 @@ def main():
                 this_logobj.add(
                     Rx=b.rxpowerdbm_float(),
                     power=g.read_power(),
+                    field=get_field_for_logging(),
                     cmd=cmd,
                 )
             args = cmd.split(b" ")
@@ -220,6 +245,7 @@ def main():
                         b.set_freq(float(args[1]))
                     case b"SET_FIELD":
                         B0_des_G = float(args[1])  # B in G
+                        desired_field_G = B0_des_G
                         true_B0_G = ramp_field(
                             B0_des_G,
                             config_dict,
@@ -336,4 +362,5 @@ def main():
                         this_logobj.add(
                             Rx=b.rxpowerdbm_float(),
                             power=g.read_power(),
+                            field=get_field_for_logging(),
                         )
