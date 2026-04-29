@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
 import sympy as sp
+from lmfit import Minimizer
+
 
 # {{{ changeable parameters
 # We skip the first 3 points since the magnet has not warmed up
@@ -21,6 +23,43 @@ c_1 = 178.66095
 c_0 = 3393 - c_1 * 21
 do_fit = True
 # }}}
+
+
+class BasinhoppingLmfitData(psd.lmfitdata):
+    """Only replace the default leastsq call with basinhopping."""
+
+    basinhopping_kws = dict(
+        niter=2,
+        niter_success=1,
+        stepsize=0.1,
+        minimizer_kwargs={
+            "method": "Nelder-Mead",
+            "options": {"maxiter": 50, "xatol": 1e-4, "fatol": 1e-4},
+        },
+        seed=0,
+    )
+
+    def fit(self, use_jacobian=False):
+        del use_jacobian
+        sigma = self.get_error()
+        if sigma is not None:
+            themin = Minimizer(
+                self.residual,
+                self.guess_parameters,
+            )
+        else:
+            themin = Minimizer(
+                self.residual,
+                self.guess_parameters,
+                fcn_args=(sigma,),
+            )
+        out = themin.basinhopping(**self.basinhopping_kws)
+        self.fit_parameters = out.params
+        self.fit_coeff = [out.params[j].value for j in self.parameter_names]
+        self.fit_output = out
+        assert self.fit_output.success
+        del self.fit_output.call_kws
+        return self
 
 # am I pulling previously stored data, or something I just ran
 if pull_old_file:
@@ -69,7 +108,7 @@ print(np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))))
 I_desired, Del_I_symbol, offset_symbol, c_1_symbol, c_0_symbol = sp.symbols(
     "I_desired Del_I offset c_1 c_0", real=True
 )
-staircase_fit = psd.lmfitdata(hall_probe_data)
+staircase_fit = BasinhoppingLmfitData(hall_probe_data)
 
 
 @staircase_fit.define_residual_transform
