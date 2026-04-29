@@ -129,13 +129,6 @@ with instrument_control() as ic:
     #         and fix the code in all the files that it finds to follow the
     #         convention that we use in the previous line.  Also, be sure that
     #         we bump the postproc_type of all affected data.
-    # TODO ☐: I think it should be easy (esp. w/ codex help) to make a short
-    #         processing PR to add postproc functions for these new postproc
-    #         types.  These new postproc types should use the logs to create a
-    #         structured array axis coord for the indirect dimension that
-    #         includes fields for time (the original axis coord) as well as all
-    #         the average of all logged quantities.  The stdev can be attached
-    #         as the axis coord error.
     nodename = DNP_data.name()
     this_log = ic.stop_log()
 
