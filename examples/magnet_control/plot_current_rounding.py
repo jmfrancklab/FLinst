@@ -21,6 +21,7 @@ step = 0.00005
 offset = 0.0016
 c_1 = 178.66095
 c_0 = 3393 - c_1 * 21
+c_2 = 0
 do_fit = True
 # }}}
 
@@ -105,8 +106,8 @@ print(np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))))
 # {{{ fit the staircase response using lmfitdata, seeding from the current
 #     hand-tuned parameters and smoothing the discontinuities with a
 #     transform
-I_desired, Del_I_symbol, offset_symbol, c_1_symbol, c_0_symbol = sp.symbols(
-    "I_desired Del_I offset c_1 c_0", real=True
+I_desired, Del_I_symbol, offset_symbol, c_2_symbol, c_1_symbol, c_0_symbol = sp.symbols(
+    "I_desired Del_I offset c_2 c_1 c_0", real=True
 )
 staircase_fit = BasinhoppingLmfitData(hall_probe_data)
 
@@ -150,6 +151,10 @@ def smooth_staircase_response(d):
 
 
 staircase_fit.functional_form = (
+    c_2_symbol
+    * (Del_I_symbol
+    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + sp.Rational(1, 2)))**2
+    +
     c_1_symbol
     * Del_I_symbol
     * sp.floor((I_desired - offset_symbol) / Del_I_symbol + sp.Rational(1, 2))
@@ -159,6 +164,7 @@ staircase_fit.set_guess(
     Del_I=dict(value=Del_I, min=step, max=2 * Del_I),
     offset={"value": offset, "min": -2 * offset, "max": 2 * offset},
     c_1={"value": c_1, "min": 0.5 * c_1, "max": 2 * c_1},
+    c_2={"value": 0, "min": -c_1, "max": c_1},
     c_0={"value": c_0, "min": -2 * c_0, "max": 2 * c_0},
 )
 staircase_fit.set_to_guess()
@@ -213,7 +219,7 @@ if do_fit:
     psd.plot(
         staircase_fit.eval(500).name("Hall Probe Reading"),
         label=(
-            "Staircase lmfit: "
+            "Staircase lmfit"
             + staircase_fit.latex()
             + rf", $w={staircase_smoothing_width:.8g}$"
         ),
