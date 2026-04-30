@@ -1,6 +1,6 @@
 "Reads the output from the instrument control server test."
 
-import time, h5py, os
+import time, os
 import pylab as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.transforms as transforms
@@ -27,10 +27,10 @@ if not os.path.exists(fname):
         f"{fname} not found.  Check that you've set the pull_old_data flag as"
         "you intend"
     )
-with h5py.File(fname, "r") as f:
-    thislog = logobj.from_group(f["log"])
-    read_array = thislog.total_log
-    read_dict = thislog.log_dict
+data = psd.nddata_hdf5(fname + "/instrument_control_server_test")
+thislog = logobj.from_group(data.get_prop("log"))
+read_array = thislog.total_log
+read_dict = thislog.log_dict
 print(read_array)
 for j in range(len(read_array)):
     thistime, thisrx, thispower, thisfield, thiscmd = read_array[j]

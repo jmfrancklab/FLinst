@@ -6,13 +6,11 @@ on the same computer
 
 generates hdf output to be read by the companion readout example"""
 
-from pyspecdata import init_logging
+from numpy import r_
+from pyspecdata import init_logging, nddata
 from Instruments import instrument_control
 from SpinCore_pp import configuration
-import os, time, h5py
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
+import os, time
 
 logger = init_logging(level="debug")
 config_dict = configuration("active.ini")
@@ -58,7 +56,8 @@ logger.debug("log array:\n" + repr(log_array))
 logger.debug(f"log array shape {log_array.shape}")
 log_dict = this_log.log_dict
 logger.debug("log dict:\n" + repr(log_dict))
-with h5py.File("output.h5", "a") as f:
-    hdf_save_dict_to_group(
-        f, {"log": this_log.__getstate__()}
-    )  # normally, I would actually put this under the node with the data
+log_data = nddata(r_[0 : len(log_array)], "t").name(
+    "instrument_control_server_test"
+)
+log_data.set_prop("log", this_log.__getstate__())
+log_data.hdf5_write("output.h5")
