@@ -45,7 +45,7 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
     #     `seed` makes the random starts reproducible.
     # }}}
     basinhopping_kws = dict(
-        n_locals=50,
+        n_locals=200,
         basin_sigma=3.0,
         max_trials=500,
         max_start_draws=500,
