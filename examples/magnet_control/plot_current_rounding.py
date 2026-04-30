@@ -88,7 +88,6 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
                 lower, upper = sorted((params[this_name].min, params[this_name].max))
                 params[this_name].value = float(np.clip(this_value, lower, upper))
             params.update_constraints()
-            return params
 
         def same_well_by_covariance(
             left_vector,
@@ -130,14 +129,14 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
             )
             return bool(result.success)
 
-        def choose_random_start(connected_sets):
+        def choose_random_start(connected_spaces):
             best_candidate = None
             fewest_hits = np.inf
             for _ in range(self.basinhopping_kws["max_start_draws"]):
                 candidate = rng.uniform(bounds[:, 0], bounds[:, 1])
                 hull_hits = sum(
                     point_in_convex_hull(candidate, this_set)
-                    for this_set in connected_sets
+                    for this_set in connected_spaces
                 )
                 if hull_hits == 0:
                     return candidate, 0, False
@@ -160,14 +159,11 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
                         and points[j]["well_id"] == points[k]["well_id"]
                     ):
                         this_relation = 1
-                    elif points[j]["success"] and points[k]["success"]:
-                        if (
-                            points[j]["well_id"] is not None
-                            and points[k]["well_id"] is not None
-                        ):
-                            this_relation = 0
-                        else:
-                            this_relation = -1
+                    elif (
+                        points[j]["well_id"] is not None
+                        and points[k]["well_id"] is not None
+                    ):
+                        this_relation = 0
                     else:
                         this_relation = -1
                     connection_matrix[j, k] = this_relation
@@ -178,12 +174,9 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
         scales = np.maximum(bounds[:, 1] - bounds[:, 0], np.finfo(float).eps)
         rng = np.random.default_rng(self.basinhopping_kws["seed"])
         tested_points = []
-        connection_matrix = np.zeros((0, 0), dtype=int)
         total_nfev = 0
         next_well_id = 0
-        best_output = None
-        best_parameters = None
-        best_coeff = None
+        best_fit = None
         best_trial_index = None
         first_failure = None
         for trial_index in range(self.basinhopping_kws["max_trials"]):
@@ -195,13 +188,13 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
                 used_fallback = False
                 hull_hits = 0
             else:
-                connected_sets = [
+                connected_spaces = [
                     [j["vector"] for j in tested_points if j["well_id"] == this_well]
                     for this_well in sorted(
                         {
                             j["well_id"]
                             for j in tested_points
-                            if j["success"] and j["well_id"] is not None
+                            if j["well_id"] is not None
                         }
                     )
                 ]
@@ -209,13 +202,18 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
                     start_vector,
                     hull_hits,
                     used_fallback,
-                ) = choose_random_start(connected_sets)
+                ) = choose_random_start(connected_spaces)
             trial_fit = self.copy()
             trial_fit.guess_parameters = copy.deepcopy(original_guess_parameters)
+            if original_guess_dict is not None:
+                trial_fit.guess_dict = copy.deepcopy(original_guess_dict)
             load_parameter_vector(trial_fit.guess_parameters, start_vector)
             trial_output = None
             fit_exception = None
             try:
+                # Use lmfitdata's inherited fit path for each local solve so
+                # transforms, complex residual handling, and fit-report state
+                # stay consistent with the single-fit behavior.
                 psd.lmfitdata.fit(trial_fit, use_jacobian=use_jacobian)
                 trial_output = trial_fit.fit_output
             except Exception as exc:
@@ -234,8 +232,6 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
             total_nfev += int(
                 getattr(trial_output, "nfev", 0) if trial_output is not None else 0
             )
-            minimum_vector = start_vector.copy()
-            covariance = None
             well_id = None
             well_state = "failed"
             if trial_success:
@@ -243,117 +239,112 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
                     trial_output.params,
                     parameter_names,
                 )
-                if getattr(trial_output, "covar", None) is not None:
-                    covariance = np.asarray(trial_output.covar, dtype=float)
-                matching_wells = []
+                covariance = getattr(trial_output, "covar", None)
                 if covariance is not None:
-                    for this_point in tested_points:
-                        if (
-                            this_point["kind"] != "minimum"
-                            or not this_point["success"]
-                            or this_point["well_id"] is None
-                            or this_point["covariance"] is None
-                        ):
-                            continue
-                        if same_well_by_covariance(
+                    covariance = np.asarray(covariance, dtype=float)
+                matching_wells = sorted(
+                    {
+                        this_point["well_id"]
+                        for this_point in tested_points
+                        if this_point["kind"] == "minimum"
+                        and this_point["well_id"] is not None
+                        and this_point["covariance"] is not None
+                        and covariance is not None
+                        and same_well_by_covariance(
                             minimum_vector,
                             covariance,
                             this_point["vector"],
                             this_point["covariance"],
-                        ):
-                            matching_wells.append(this_point["well_id"])
-                matching_wells = sorted(set(matching_wells))
-                if len(matching_wells) > 0:
+                        )
+                    }
+                )
+                if matching_wells:
                     well_id = matching_wells[0]
                     for this_point in tested_points:
                         if this_point["well_id"] in matching_wells[1:]:
                             this_point["well_id"] = well_id
-                    well_state = (
-                        "merged" if len(matching_wells) > 1 else "connected"
-                    )
+                    well_state = "connected"
                 else:
                     well_id = next_well_id
                     next_well_id += 1
                     # If LM does not provide a covariance, we cannot merge
                     # this result into an older connected space, so treat this
                     # successful start/minimum pair as a new one.
-                    well_state = (
-                        "new" if covariance is not None else "new_no_covar"
-                    )
-            # {{{ Each successful trial contributes both the start point and
-            #     the converged minimum, and those two points are connected by
-            #     definition. Failed trials contribute only the failed start.
-            #     When a successful minimum is assigned to a connected space,
-            #     its corresponding start inherits that same space identity.
-            # }}}
-            start_point = dict(
-                vector=start_vector.copy(),
-                trial_index=trial_index,
-                kind="start",
-                success=trial_success,
-                chisqr=None,
-                covariance=None,
-                well_id=well_id,
-            )
-            tested_points.append(start_point)
-            if trial_success:
-                minimum_point = dict(
-                    vector=minimum_vector.copy(),
-                    trial_index=trial_index,
-                    kind="minimum",
-                    success=True,
-                    chisqr=trial_chisqr,
-                    covariance=covariance,
-                    well_id=well_id,
+                    well_state = "new" if covariance is not None else "new_no_covar"
+                # {{{ Each successful trial contributes a start point and a
+                #     converged minimum. They are connected by definition, so
+                #     both carry the same `well_id`. A failed trial contributes
+                #     only the failed start and remains outside any connected
+                #     space.
+                # }}}
+                tested_points.extend(
+                    [
+                        dict(
+                            vector=start_vector.copy(),
+                            trial_index=trial_index,
+                            kind="start",
+                            well_id=well_id,
+                        ),
+                        dict(
+                            vector=minimum_vector.copy(),
+                            trial_index=trial_index,
+                            kind="minimum",
+                            covariance=covariance,
+                            well_id=well_id,
+                        ),
+                    ]
                 )
-                tested_points.append(minimum_point)
-            connection_matrix = build_connection_matrix(tested_points)
-            successful_wells = {
-                j["well_id"]
-                for j in tested_points
-                if j["kind"] == "minimum" and j["success"] and j["well_id"] is not None
-            }
+            else:
+                tested_points.append(
+                    dict(
+                        vector=start_vector.copy(),
+                        trial_index=trial_index,
+                        kind="start",
+                        well_id=None,
+                    )
+                )
+            successful_wells = sorted(
+                {
+                    j["well_id"]
+                    for j in tested_points
+                    if j["kind"] == "minimum" and j["well_id"] is not None
+                }
+            )
             if trial_success and (
-                best_output is None or trial_chisqr < float(best_output.chisqr)
+                best_fit is None or trial_chisqr < float(best_fit.fit_output.chisqr)
             ):
-                best_output = copy.deepcopy(trial_fit.fit_output)
-                best_parameters = copy.deepcopy(trial_fit.fit_parameters)
-                best_coeff = list(trial_fit.fit_coeff)
+                best_fit = trial_fit
                 best_trial_index = trial_index
             if basinhopping_updates:
-                spacing_text = ""
-                if trial_index > 0:
-                    spacing_text = f" hull_hits={hull_hits}"
-                    if used_fallback:
-                        spacing_text += " draw=best_of_sample"
                 if trial_success:
-                    print(
+                    update_text = [
                         "basin_search",
-                        trial_index + 1,
+                        str(trial_index + 1),
                         f"success chi-square={trial_chisqr:.6g}",
                         f"well={well_state}",
                         f"n_wells={len(successful_wells)}",
-                        f"best={float(best_output.chisqr):.6g}",
-                        spacing_text,
-                        flush=True,
-                    )
+                        f"best={float(best_fit.fit_output.chisqr):.6g}",
+                    ]
                 else:
                     failure_name = (
                         type(fit_exception).__name__
                         if fit_exception is not None
                         else "fit_failed"
                     )
-                    print(
+                    update_text = [
                         "basin_search",
-                        trial_index + 1,
+                        str(trial_index + 1),
                         f"failed error={failure_name}",
                         f"n_wells={len(successful_wells)}",
-                        spacing_text,
-                        flush=True,
-                    )
+                    ]
+                if trial_index > 0:
+                    update_text.append(f"hull_hits={hull_hits}")
+                    if used_fallback:
+                        update_text.append("draw=best_of_sample")
+                print(*update_text, flush=True)
             if len(successful_wells) >= self.basinhopping_kws["n_locals"]:
                 break
-        if best_output is None:
+        if best_fit is None:
             self.guess_parameters = original_guess_parameters
             if original_guess_dict is not None:
                 self.guess_dict = original_guess_dict
@@ -363,13 +354,13 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
         self.guess_parameters = original_guess_parameters
         if original_guess_dict is not None:
             self.guess_dict = original_guess_dict
-        self.fit_output = best_output
+        self.fit_output = best_fit.fit_output
         self.fit_output.method = "custom basin search (leastsq)"
         self.fit_output.nfev = total_nfev
-        self.fit_parameters = best_parameters
-        self.fit_coeff = best_coeff
+        self.fit_parameters = best_fit.fit_parameters
+        self.fit_coeff = list(best_fit.fit_coeff)
         self.basin_tested_points = tested_points
-        self.basin_connection_matrix = connection_matrix
+        self.basin_connection_matrix = build_connection_matrix(tested_points)
         self.basin_connection_labels = [
             f"trial {j['trial_index'] + 1} {j['kind']}" for j in tested_points
         ]
@@ -420,8 +411,8 @@ print(np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))))
 # {{{ fit the staircase response using lmfitdata, seeding from the current
 #     hand-tuned parameters and smoothing the discontinuities with a
 #     transform
-I_desired, Del_I_symbol, offset_symbol, c_2_symbol, c_1_symbol, c_0_symbol = sp.symbols(
-    "I_desired Del_I offset c_2 c_1 c_0", real=True
+I_desired, Del_I_symbol, offset_symbol, vertoff_symbol, c_2_symbol, c_1_symbol, c_0_symbol = sp.symbols(
+    "I_desired Del_I offset vertoff c_2 c_1 c_0", real=True
 )
 staircase_fit = CustomBasinSearchLmfitData(hall_probe_data)
 
@@ -467,11 +458,11 @@ def smooth_staircase_response(d):
 staircase_fit.functional_form = (
     c_2_symbol
     * (Del_I_symbol
-    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + sp.Rational(1, 2)))**2
+    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + vertoff_symbol))**2
     +
     c_1_symbol
     * Del_I_symbol
-    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + sp.Rational(1, 2))
+    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + vertoff_symbol)
     + c_0_symbol
 )
 staircase_fit.set_guess(
@@ -480,6 +471,7 @@ staircase_fit.set_guess(
     c_1={"value": c_1, "min": 0.5 * c_1, "max": 2 * c_1},
     c_2={"value": 0, "min": -c_1, "max": c_1},
     c_0={"value": c_0, "min": -2 * c_0, "max": 2 * c_0},
+    vertoff={"value": 0.5, "min": 0, "max":1},
 )
 staircase_fit.set_to_guess()
 # TODO ☐: (for JF) eval here seems to give a complex number, unless I add real
