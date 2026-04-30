@@ -12,14 +12,9 @@ average over each power step in a later post processing step.
 
 from numpy import r_
 import numpy as np
-from pyspecdata import ndshape, getDATADIR
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
+from pyspecdata import ndshape
 from Instruments import instrument_control
-import os
 import time
-import h5py
 import SpinCore_pp
 from SpinCore_pp import save_data
 
@@ -124,27 +119,12 @@ with instrument_control() as ic:
     # than manually creating the HDF5 node) is already tested as part of
     # the test suite (test_logobj.py)
     DNP_data.set_prop("log", ic.stop_log().__getstate__())
-    # TODO ☐: before merging this PR, make sure to run
-    #  find . -iname '*.py' -exec grep {} -le 'with h5py'  \;
-    #         and fix the code in all the files that it finds to follow the
-    #         convention that we use in the previous line.  Also, be sure that
-    #         we bump the postproc_type of all affected data.
-    nodename = DNP_data.name()
-    this_log = ic.stop_log()
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
-DNP_data.set_prop("postproc_type", "spincore_SE_v1")
+# TODO ☐: Add spincore_SE_v2 postproc type.
+DNP_data.set_prop("postproc_type", "spincore_SE_v2")
 DNP_data.set_prop("coherence_pathway", {"ph1": 1})
 DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
 )
-# all of the following will be auto-adjusted by save_data
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
-)
-target_directory = getDATADIR(exp_type=my_exp_type)
-with h5py.File(
-    os.path.normpath(os.path.join(target_directory, filename)), "a"
-) as f:
-    hdf_save_dict_to_group(f, {"log": this_log.__getstate__()})

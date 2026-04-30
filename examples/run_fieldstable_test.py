@@ -10,12 +10,8 @@ import os
 import time
 import pyspecdata as psd
 import SpinCore_pp
-import h5py
 from numpy import r_
 from pyspecdata import strm
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 
@@ -120,17 +116,11 @@ if config_dict["nScans"] > 1:
 data.reorder(["nScans", "ph1", "indirect", "t2"])
 data.squeeze()
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "spincore_generalproc_v1")
+# TODO ☐: Add spincore_generalproc_v2 postproc type.
+data.set_prop("postproc_type", "spincore_generalproc_v2")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
+data.set_prop("log", this_log.__getstate__())
 config_dict = save_data(data, my_exp_type, config_dict, counter_type="n_scan")
-filename_out = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
-)
-target_directory = psd.getDATADIR(exp_type=my_exp_type)
-with h5py.File(
-    os.path.normpath(os.path.join(target_directory, filename_out)), "a"
-) as fp:
-    hdf_save_dict_to_group(fp, {"log": this_log.__getstate__()})
 config_dict.write()
 # }}}
