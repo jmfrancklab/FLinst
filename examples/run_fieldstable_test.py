@@ -83,6 +83,7 @@ with instrument_control() as ic:
             "In other words, the discrepancy is"
             f" {true_B0_G - B0_G} G"
         )
+        DNP_ini_time = time.time()
         data = run_spin_echo(
             nScans=config_dict["nScans"],
             indirect_idx=idx,
@@ -99,12 +100,13 @@ with instrument_control() as ic:
             SW_kHz=config_dict["SW_kHz"],
             amplitude=config_dict["amplitude"],
             ret_data=data,
-            indirect_fields=("time", "field"),
+            indirect_fields=("start_times", "stop_times"),
         )
+        DNP_done = time.time()
         if idx == 0:
-            x_axis = data.getaxis("indirect")
-        x_axis[idx]["field"] = true_B0_G
-        x_axis[idx]["time"] = time.time()
+            time_axis_coords = data.getaxis("indirect")
+        time_axis_coords[idx]["start_times"] = DNP_ini_time
+        time_axis_coords[idx]["stop_times"] = DNP_done
     this_log = ic.stop_log()
 data.set_prop("acq_params", config_dict.asdict())
 # }}}
