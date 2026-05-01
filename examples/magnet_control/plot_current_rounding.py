@@ -37,11 +37,14 @@ class MonteCarloLmfitData(psd.lmfitdata):
     # {{{ These settings control the Monte Carlo walk:
     #     `mc_steps` is the number of local-minimum evaluations to attempt;
     #     `mc_temperature` is the Metropolis temperature used for uphill
-    #     accepts; and `seed` makes the random directions reproducible.
+    #     accepts; `temperature_update_every` is how often we retune the
+    #     temperature to target a 50% acceptance ratio; and `seed` makes the
+    #     random directions reproducible.
     # }}}
     mc_kws = dict(
         mc_steps=100,
         mc_temperature=1.0,
+        temperature_update_every=10,
         seed=0,
     )
 
@@ -184,6 +187,7 @@ class MonteCarloLmfitData(psd.lmfitdata):
         best_step = 1
         current_fit = None
         mc_history = []
+        current_temperature = self.mc_kws["mc_temperature"]
 
         current_vector = pack_parameter_vector(
             original_guess_parameters,
@@ -257,7 +261,7 @@ class MonteCarloLmfitData(psd.lmfitdata):
             proposal_chisqr = float(proposal_fit.fit_output.chisqr)
             delta_chisqr = proposal_chisqr - current_chisqr
             accept_probability = np.exp(
-                -0.5 * max(delta_chisqr, 0.0) / self.mc_kws["mc_temperature"]
+                -0.5 * max(delta_chisqr, 0.0) / current_temperature
             )
             accepted = delta_chisqr <= 0 or rng.random() < accept_probability
             if accepted:
@@ -271,6 +275,7 @@ class MonteCarloLmfitData(psd.lmfitdata):
                     step=step_number,
                     chisqr=proposal_chisqr,
                     accepted=accepted,
+                    temperature=current_temperature,
                 )
             )
             report_step(
@@ -279,6 +284,18 @@ class MonteCarloLmfitData(psd.lmfitdata):
                 float(best_fit.fit_output.chisqr),
                 "accepted" if accepted else "rejected",
             )
+            if step_number % self.mc_kws["temperature_update_every"] == 0:
+                recent_trials = mc_history[-self.mc_kws["temperature_update_every"] :]
+                acceptance_rate = np.mean([j["accepted"] for j in recent_trials])
+                current_temperature *= np.exp(0.5 - acceptance_rate)
+                if basinhopping_updates:
+                    print(
+                        "mc_temperature",
+                        step_number,
+                        f"acceptance_rate={acceptance_rate:.3g}",
+                        f"new_temperature={current_temperature:.6g}",
+                        flush=True,
+                    )
 
         self.guess_parameters = original_guess_parameters
         if original_guess_dict is not None:
@@ -290,6 +307,8 @@ class MonteCarloLmfitData(psd.lmfitdata):
         self.fit_coeff = list(best_fit.fit_coeff)
         self.mc_history = mc_history
         self.mc_best_step = best_step
+        self.mc_acceptance_rate = np.mean([j["accepted"] for j in mc_history])
+        self.mc_temperature = current_temperature
         return self
 
 # am I pulling previously stored data, or something I just ran
@@ -456,13 +475,19 @@ psd.plot(
 if do_fit:
     psd.plot(
         staircase_fit.eval(500).name("Hall Probe Reading"),
-        label=(
-            "Staircase lmfit"
-            + staircase_fit.latex()
-            + rf", $w={staircase_smoothing_width:.8g}$"
-        ),
+        label=rf"Staircase lmfit, $w={staircase_smoothing_width:.8g}$",
         alpha=0.5,
         ax=ax_fit,
+    )
+    ax_fit.text(
+        0.5,
+        0.5,
+        staircase_fit.latex(),
+        transform=ax_fit.transAxes,
+        ha="center",
+        va="center",
+        fontsize=9,
+        bbox=dict(facecolor="white", edgecolor="none", alpha=0.7),
     )
 ax_fit.set_title("Hall Probe Reading vs Requested Current")
 ax_fit.legend()
