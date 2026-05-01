@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
 import sympy as sp
-from scipy.optimize import linprog
 
 
 # {{{ changeable parameters
@@ -30,25 +29,19 @@ def pack_parameter_vector(params, parameter_names):
     return np.array([params[this_name].value for this_name in parameter_names])
 
 
-class CustomBasinSearchLmfitData(psd.lmfitdata):
-    # {{{ Use a custom LM basin search here because lmfit's built-in
-    #     basinhopping path delegates the local minimizer through
-    #     scipy.optimize.minimize, which does not accept LM/leastsq as a
-    #     standard local method.
+class MonteCarloLmfitData(psd.lmfitdata):
+    # {{{ Use a custom Monte Carlo walk here because we want to keep the
+    #     local optimizer as plain LM, but still hop between different local
+    #     minima by taking covariance-scaled random steps between LM solves.
     # }}}
-    # {{{ These settings control the custom search:
-    #     `n_locals` is how many distinct wells we want to discover;
-    #     `basin_sigma` is the covariance-scaled threshold for calling two
-    #     minima connected; `max_trials` caps the number of LM solves;
-    #     `max_start_draws` limits how long we spend drawing a restart that
-    #     lies outside the convex hulls of already-connected spaces; and
-    #     `seed` makes the random starts reproducible.
+    # {{{ These settings control the Monte Carlo walk:
+    #     `mc_steps` is the number of local-minimum evaluations to attempt;
+    #     `mc_temperature` is the Metropolis temperature used for uphill
+    #     accepts; and `seed` makes the random directions reproducible.
     # }}}
-    basinhopping_kws = dict(
-        n_locals=200,
-        basin_sigma=3.0,
-        max_trials=500,
-        max_start_draws=500,
+    mc_kws = dict(
+        mc_steps=100,
+        mc_temperature=1.0,
         seed=0,
     )
 
@@ -57,6 +50,7 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
         use_jacobian=False,
         basinhopping=False,
         basinhopping_updates=True,
+        mc_steps=None,
     ):
         if not basinhopping:
             return super().fit(use_jacobian=use_jacobian)
@@ -65,6 +59,8 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
         parameter_names = [
             name for name, par in original_guess_parameters.items() if par.vary
         ]
+        if mc_steps is None:
+            mc_steps = self.mc_kws["mc_steps"]
 
         def parameter_bounds():
             bounds = np.zeros((len(parameter_names), 2), dtype=float)
@@ -77,7 +73,7 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
                 )
                 if not np.isfinite(lower) or not np.isfinite(upper):
                     raise ValueError(
-                        "custom LM basin search requires finite bounds for"
+                        "custom Monte Carlo stepping requires finite bounds for"
                         f" {this_name}"
                     )
                 bounds[j] = [lower, upper]
@@ -89,120 +85,7 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
                 params[this_name].value = float(np.clip(this_value, lower, upper))
             params.update_constraints()
 
-        def same_well_by_covariance(
-            left_vector,
-            left_covar,
-            right_vector,
-            right_covar,
-        ):
-            if left_covar is None or right_covar is None:
-                return False
-            average_covar = 0.5 * (
-                np.asarray(left_covar, dtype=float)
-                + np.asarray(right_covar, dtype=float)
-            )
-            delta = np.asarray(left_vector, dtype=float) - np.asarray(
-                right_vector,
-                dtype=float,
-            )
-            metric = float(delta @ np.linalg.pinv(average_covar) @ delta)
-            if not np.isfinite(metric):
-                return False
-            return np.sqrt(max(metric, 0.0)) <= self.basinhopping_kws["basin_sigma"]
-
-        def point_in_convex_hull(candidate, hull_points):
-            hull_points = np.asarray(hull_points, dtype=float)
-            if hull_points.ndim != 2 or len(hull_points) == 0:
-                return False
-            scaled_points = hull_points / scales
-            scaled_candidate = np.asarray(candidate, dtype=float) / scales
-            n_points = scaled_points.shape[0]
-            # Hull membership for a general connected cloud is a convex-
-            # combination feasibility test; determinant tests only apply
-            # directly to simplices.
-            result = linprog(
-                c=np.zeros(n_points),
-                A_eq=np.vstack([np.ones(n_points), scaled_points.T]),
-                b_eq=np.concatenate([[1.0], scaled_candidate]),
-                bounds=[(0, None)] * n_points,
-                method="highs",
-            )
-            return bool(result.success)
-
-        def choose_random_start(connected_spaces):
-            best_candidate = None
-            fewest_hits = np.inf
-            for _ in range(self.basinhopping_kws["max_start_draws"]):
-                candidate = rng.uniform(bounds[:, 0], bounds[:, 1])
-                hull_hits = sum(
-                    point_in_convex_hull(candidate, this_set)
-                    for this_set in connected_spaces
-                )
-                if hull_hits == 0:
-                    return candidate, 0, False
-                if hull_hits < fewest_hits:
-                    best_candidate = candidate.copy()
-                    fewest_hits = hull_hits
-            return best_candidate, int(fewest_hits), True
-
-        def build_connection_matrix(points):
-            n_points = len(points)
-            connection_matrix = -np.ones((n_points, n_points), dtype=int)
-            for j in range(n_points):
-                connection_matrix[j, j] = 1
-            for j in range(1, n_points):
-                for k in range(j):
-                    if points[j]["trial_index"] == points[k]["trial_index"]:
-                        this_relation = 1
-                    elif (
-                        points[j]["well_id"] is not None
-                        and points[j]["well_id"] == points[k]["well_id"]
-                    ):
-                        this_relation = 1
-                    elif (
-                        points[j]["well_id"] is not None
-                        and points[k]["well_id"] is not None
-                    ):
-                        this_relation = 0
-                    else:
-                        this_relation = -1
-                    connection_matrix[j, k] = this_relation
-                    connection_matrix[k, j] = this_relation
-            return connection_matrix
-
-        bounds = parameter_bounds()
-        scales = np.maximum(bounds[:, 1] - bounds[:, 0], np.finfo(float).eps)
-        rng = np.random.default_rng(self.basinhopping_kws["seed"])
-        tested_points = []
-        total_nfev = 0
-        next_well_id = 0
-        best_fit = None
-        best_trial_index = None
-        first_failure = None
-        for trial_index in range(self.basinhopping_kws["max_trials"]):
-            if trial_index == 0:
-                start_vector = pack_parameter_vector(
-                    original_guess_parameters,
-                    parameter_names,
-                )
-                used_fallback = False
-                hull_hits = 0
-            else:
-                connected_spaces = [
-                    [j["vector"] for j in tested_points if j["well_id"] == this_well]
-                    for this_well in sorted(
-                        {
-                            j["well_id"]
-                            for j in tested_points
-                            if j["well_id"] is not None
-                        }
-                    )
-                ]
-                (
-                    start_vector,
-                    hull_hits,
-                    used_fallback,
-                ) = choose_random_start(connected_spaces)
+        def run_local_fit(start_vector):
             trial_fit = self.copy()
             trial_fit.guess_parameters = copy.deepcopy(original_guess_parameters)
             if original_guess_dict is not None:
@@ -219,152 +102,194 @@ class CustomBasinSearchLmfitData(psd.lmfitdata):
             except Exception as exc:
                 fit_exception = exc
                 trial_output = getattr(trial_fit, "fit_output", None)
-                if first_failure is None:
-                    first_failure = exc
-            trial_success = bool(
-                trial_output is not None and getattr(trial_output, "success", False)
+            return trial_fit, trial_output, fit_exception
+
+        def covariance_step(center_vector, covariance):
+            covariance = np.asarray(covariance, dtype=float)
+            eigenvalues, eigenvectors = np.linalg.eigh(covariance)
+            eigenvalues = np.clip(eigenvalues, 0.0, None)
+            if not np.any(eigenvalues > 0):
+                return None
+            random_direction = rng.normal(size=len(parameter_names))
+            random_direction /= np.linalg.norm(random_direction)
+            return np.clip(
+                center_vector
+                + eigenvectors @ (np.sqrt(eigenvalues) * random_direction),
+                bounds[:, 0],
+                bounds[:, 1],
             )
-            trial_chisqr = float(
-                getattr(trial_output, "chisqr", np.inf)
-                if trial_output is not None
-                else np.inf
+
+        def covariance_from_chisqr(fit_object):
+            base_vector = pack_parameter_vector(
+                fit_object.fit_output.params,
+                parameter_names,
             )
-            total_nfev += int(
-                getattr(trial_output, "nfev", 0) if trial_output is not None else 0
+            margin = np.minimum(base_vector - bounds[:, 0], bounds[:, 1] - base_vector)
+            if np.any(margin <= 0):
+                return None
+            step_sizes = np.minimum(1e-3 * (bounds[:, 1] - bounds[:, 0]), 0.25 * margin)
+            step_sizes = np.maximum(
+                step_sizes,
+                1e-8 * np.maximum(1.0, np.abs(base_vector)),
             )
-            well_id = None
-            well_state = "failed"
-            if trial_success:
-                minimum_vector = pack_parameter_vector(
-                    trial_output.params,
-                    parameter_names,
-                )
-                covariance = getattr(trial_output, "covar", None)
-                if covariance is not None:
-                    covariance = np.asarray(covariance, dtype=float)
-                matching_wells = sorted(
-                    {
-                        this_point["well_id"]
-                        for this_point in tested_points
-                        if this_point["kind"] == "minimum"
-                        and this_point["well_id"] is not None
-                        and this_point["covariance"] is not None
-                        and covariance is not None
-                        and same_well_by_covariance(
-                            minimum_vector,
-                            covariance,
-                            this_point["vector"],
-                            this_point["covariance"],
-                        )
-                    }
-                )
-                if matching_wells:
-                    well_id = matching_wells[0]
-                    for this_point in tested_points:
-                        if this_point["well_id"] in matching_wells[1:]:
-                            this_point["well_id"] = well_id
-                    well_state = "connected"
-                else:
-                    well_id = next_well_id
-                    next_well_id += 1
-                    # If LM does not provide a covariance, we cannot merge
-                    # this result into an older connected space, so treat this
-                    # successful start/minimum pair as a new one.
-                    well_state = "new" if covariance is not None else "new_no_covar"
-                # {{{ Each successful trial contributes a start point and a
-                #     converged minimum. They are connected by definition, so
-                #     both carry the same `well_id`. A failed trial contributes
-                #     only the failed start and remains outside any connected
-                #     space.
-                # }}}
-                tested_points.extend(
-                    [
-                        dict(
-                            vector=start_vector.copy(),
-                            trial_index=trial_index,
-                            kind="start",
-                            well_id=well_id,
-                        ),
-                        dict(
-                            vector=minimum_vector.copy(),
-                            trial_index=trial_index,
-                            kind="minimum",
-                            covariance=covariance,
-                            well_id=well_id,
-                        ),
-                    ]
-                )
-            else:
-                tested_points.append(
-                    dict(
-                        vector=start_vector.copy(),
-                        trial_index=trial_index,
-                        kind="start",
-                        well_id=None,
-                    )
-                )
-            successful_wells = sorted(
-                {
-                    j["well_id"]
-                    for j in tested_points
-                    if j["kind"] == "minimum" and j["well_id"] is not None
-                }
-            )
-            if trial_success and (
-                best_fit is None or trial_chisqr < float(best_fit.fit_output.chisqr)
-            ):
-                best_fit = trial_fit
-                best_trial_index = trial_index
+
+            def chisqr_at(this_vector):
+                trial_params = copy.deepcopy(fit_object.fit_output.params)
+                load_parameter_vector(trial_params, this_vector)
+                residual = fit_object.residual(trial_params, fit_object.get_error())
+                return float((residual**2).sum())
+
+            base_chisqr = chisqr_at(base_vector)
+            hessian = np.zeros((len(parameter_names), len(parameter_names)), dtype=float)
+            for j, step_j in enumerate(step_sizes):
+                delta_j = np.zeros(len(parameter_names))
+                delta_j[j] = step_j
+                hessian[j, j] = (
+                    chisqr_at(base_vector + delta_j)
+                    - 2 * base_chisqr
+                    + chisqr_at(base_vector - delta_j)
+                ) / step_j**2
+                for k in range(j + 1, len(parameter_names)):
+                    step_k = step_sizes[k]
+                    delta_k = np.zeros(len(parameter_names))
+                    delta_k[k] = step_k
+                    cross_term = (
+                        chisqr_at(base_vector + delta_j + delta_k)
+                        - chisqr_at(base_vector + delta_j - delta_k)
+                        - chisqr_at(base_vector - delta_j + delta_k)
+                        + chisqr_at(base_vector - delta_j - delta_k)
+                    ) / (4 * step_j * step_k)
+                    hessian[j, k] = cross_term
+                    hessian[k, j] = cross_term
+            if not np.all(np.isfinite(hessian)):
+                return None
+            return 2.0 * np.linalg.pinv(hessian)
+
+        def report_step(step_number, chisqr, best_chisqr, status):
             if basinhopping_updates:
-                if trial_success:
-                    update_text = [
-                        "basin_search",
-                        str(trial_index + 1),
-                        f"success chi-square={trial_chisqr:.6g}",
-                        f"well={well_state}",
-                        f"n_wells={len(successful_wells)}",
-                        f"best={float(best_fit.fit_output.chisqr):.6g}",
-                    ]
-                else:
-                    failure_name = (
-                        type(fit_exception).__name__
-                        if fit_exception is not None
-                        else "fit_failed"
-                    )
-                    update_text = [
-                        "basin_search",
-                        str(trial_index + 1),
-                        f"failed error={failure_name}",
-                        f"n_wells={len(successful_wells)}",
-                    ]
-                if trial_index > 0:
-                    update_text.append(f"hull_hits={hull_hits}")
-                    if used_fallback:
-                        update_text.append("draw=best_of_sample")
-                print(*update_text, flush=True)
-            if len(successful_wells) >= self.basinhopping_kws["n_locals"]:
-                break
-        if best_fit is None:
+                print(
+                    "mc_step",
+                    step_number,
+                    f"chi-square={chisqr:.6g}",
+                    f"best={best_chisqr:.6g}",
+                    status,
+                    flush=True,
+                )
+
+        bounds = parameter_bounds()
+        rng = np.random.default_rng(self.mc_kws["seed"])
+        total_nfev = 0
+        first_failure = None
+        best_fit = None
+        best_step = 1
+        current_fit = None
+        mc_history = []
+
+        current_vector = pack_parameter_vector(
+            original_guess_parameters,
+            parameter_names,
+        )
+        current_fit, current_output, first_failure = run_local_fit(current_vector)
+        if current_output is not None:
+            total_nfev += int(getattr(current_output, "nfev", 0))
+        if not (
+            current_output is not None and getattr(current_output, "success", False)
+        ):
             self.guess_parameters = original_guess_parameters
             if original_guess_dict is not None:
                 self.guess_dict = original_guess_dict
             raise RuntimeError(
-                "custom LM basin search did not find a successful fit"
+                "custom Monte Carlo search could not find the initial local minimum"
             ) from first_failure
+        best_fit = current_fit
+        current_chisqr = float(current_fit.fit_output.chisqr)
+        mc_history.append(dict(step=1, chisqr=current_chisqr, accepted=True))
+        report_step(1, current_chisqr, current_chisqr, "accepted")
+
+        for step_number in range(2, mc_steps + 1):
+            covariance = getattr(current_fit.fit_output, "covar", None)
+            if covariance is None:
+                covariance = covariance_from_chisqr(current_fit)
+            if covariance is None:
+                report_step(
+                    step_number,
+                    current_chisqr,
+                    float(best_fit.fit_output.chisqr),
+                    "stopped(no_covar)",
+                )
+                break
+            proposal_start = covariance_step(
+                pack_parameter_vector(current_fit.fit_output.params, parameter_names),
+                covariance,
+            )
+            if proposal_start is None:
+                report_step(
+                    step_number,
+                    current_chisqr,
+                    float(best_fit.fit_output.chisqr),
+                    "stopped(singular_covar)",
+                )
+                break
+            proposal_fit, proposal_output, proposal_exception = run_local_fit(
+                proposal_start
+            )
+            if proposal_output is not None:
+                total_nfev += int(getattr(proposal_output, "nfev", 0))
+            if not (
+                proposal_output is not None
+                and getattr(proposal_output, "success", False)
+            ):
+                failure_name = (
+                    type(proposal_exception).__name__
+                    if proposal_exception is not None
+                    else "fit_failed"
+                )
+                mc_history.append(
+                    dict(step=step_number, chisqr=np.inf, accepted=False)
+                )
+                report_step(
+                    step_number,
+                    np.inf,
+                    float(best_fit.fit_output.chisqr),
+                    f"rejected({failure_name})",
+                )
+                continue
+            proposal_chisqr = float(proposal_fit.fit_output.chisqr)
+            delta_chisqr = proposal_chisqr - current_chisqr
+            accept_probability = np.exp(
+                -0.5 * max(delta_chisqr, 0.0) / self.mc_kws["mc_temperature"]
+            )
+            accepted = delta_chisqr <= 0 or rng.random() < accept_probability
+            if accepted:
+                current_fit = proposal_fit
+                current_chisqr = proposal_chisqr
+            if proposal_chisqr < float(best_fit.fit_output.chisqr):
+                best_fit = proposal_fit
+                best_step = step_number
+            mc_history.append(
+                dict(
+                    step=step_number,
+                    chisqr=proposal_chisqr,
+                    accepted=accepted,
+                )
+            )
+            report_step(
+                step_number,
+                proposal_chisqr,
+                float(best_fit.fit_output.chisqr),
+                "accepted" if accepted else "rejected",
+            )
+
         self.guess_parameters = original_guess_parameters
         if original_guess_dict is not None:
             self.guess_dict = original_guess_dict
         self.fit_output = best_fit.fit_output
-        self.fit_output.method = "custom basin search (leastsq)"
+        self.fit_output.method = "custom Monte Carlo (leastsq)"
         self.fit_output.nfev = total_nfev
         self.fit_parameters = best_fit.fit_parameters
         self.fit_coeff = list(best_fit.fit_coeff)
-        self.basin_tested_points = tested_points
-        self.basin_connection_matrix = build_connection_matrix(tested_points)
-        self.basin_connection_labels = [
-            f"trial {j['trial_index'] + 1} {j['kind']}" for j in tested_points
-        ]
-        self.basin_best_trial = best_trial_index
+        self.mc_history = mc_history
+        self.mc_best_step = best_step
         return self
 
 # am I pulling previously stored data, or something I just ran
@@ -414,7 +339,7 @@ print(np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))))
 I_desired, Del_I_symbol, offset_symbol, vertoff_symbol, c_2_symbol, c_1_symbol, c_0_symbol = sp.symbols(
     "I_desired Del_I offset vertoff c_2 c_1 c_0", real=True
 )
-staircase_fit = CustomBasinSearchLmfitData(hall_probe_data)
+staircase_fit = MonteCarloLmfitData(hall_probe_data)
 
 
 @staircase_fit.define_residual_transform
@@ -486,12 +411,13 @@ staircase_guess, staircase_guess_label = (
 # The model is still floor-based, so let lmfit estimate derivatives
 # numerically rather than relying on a symbolic Jacobian.
 if do_fit:
-    # Set basinhopping=False here to fall back to the inherited single LM fit.
-    # Set basinhopping_updates=False to silence the live basin-by-basin prints.
+    # Set `mc_steps=1` to recover a plain local LM fit from the current guess.
+    # Larger values turn on the Monte Carlo walk between local minima.
     staircase_fit.fit(
         use_jacobian=False,
         basinhopping=True,
         basinhopping_updates=True,
+        mc_steps=100,
     )
     print(staircase_fit.fit_report())
 # }}}
