@@ -118,8 +118,7 @@ if config_dict["nScans"] > 1:
 data.reorder(["nScans", "ph1", "indirect", "t2"])
 data.squeeze()
 data.set_units("t2", "s")
-# TODO ☐: Add spincore_generalproc_v2 postproc type.
-data.set_prop("postproc_type", "spincore_generalproc_v2")
+data.set_prop("postproc_type", "stability_test_v3")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
 data.set_prop("log", this_log.__getstate__())
