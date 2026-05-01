@@ -50,7 +50,7 @@ class MonteCarloLmfitData(psd.lmfitdata):
 
     def fit(
         self,
-        use_jacobian=False,
+        use_jacobian=True,
         basinhopping=False,
         basinhopping_updates=True,
         mc_steps=None,
