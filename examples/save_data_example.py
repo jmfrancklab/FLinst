@@ -121,7 +121,7 @@ with instrument_control() as ic:
     DNP_data.set_prop("log", ic.stop_log().__getstate__())
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
-DNP_data.set_prop("postproc_type", "spincore_withlog_v1")
+DNP_data.set_prop("postproc_type", "field_sweep_v5")
 DNP_data.set_prop("coherence_pathway", {"ph1": 1})
 DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(

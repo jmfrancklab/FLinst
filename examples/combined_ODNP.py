@@ -403,9 +403,6 @@ with instrument_control() as ic:
         )
     this_log = ic.stop_log()
 # }}}
-# note that the validity of saving the log data in this way (rather than
-# manually creating the HDF5 node) is already tested as part of the test suite
-# (test_logobj.py)
 DNP_data.set_prop("log", this_log.__getstate__())
 DNP_data.hdf5_write(filename, directory=target_directory)
 config_dict.write()
