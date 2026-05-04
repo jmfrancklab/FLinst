@@ -12,14 +12,9 @@ average over each power step in a later post processing step.
 
 from numpy import r_
 import numpy as np
-from pyspecdata import ndshape, getDATADIR
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
+from pyspecdata import ndshape
 from Instruments import instrument_control
-import os
 import time
-import h5py
 import SpinCore_pp
 from SpinCore_pp import save_data
 
@@ -72,7 +67,7 @@ def run_scans(
                 # stop times
             )
             mytimes = np.zeros(indirect_len, dtype=times_dtype)
-            direct_time_axis = r_[0 : data_length] / 3.9e3
+            direct_time_axis = r_[0:data_length] / 3.9e3
             ret_data = ndshape(
                 [indirect_len, nScans, len(ph1_cyc), data_length],
                 ["indirect", "nScans", "ph1", "t2"],
@@ -90,21 +85,21 @@ def run_scans(
 
 # }}}
 power_settings_dBm = np.zeros_like(dB_settings)
-with instrument_control() as p:
+with instrument_control() as ic:
     DNP_data = None
     for j, this_dB in enumerate(dB_settings):
         print("I'm going to pretend to run", this_dB, "dBm")
         if j == 0:
             time.sleep(short_delay)
-            p.start_log()
+            ic.start_log()
             time.sleep(short_delay)
-        p.set_power(this_dB)
+        ic.set_power(this_dB)
         for k in range(10):
             time.sleep(short_delay)
-            if p.get_power_setting() >= this_dB:
+            if ic.get_power_setting() >= this_dB:
                 break
         time.sleep(long_delay)
-        power_settings_dBm[j] = p.get_power_setting()
+        power_settings_dBm[j] = ic.get_power_setting()
         DNP_ini_time = time.time()
         DNP_data = run_scans(
             indirect_idx=j,
@@ -120,22 +115,15 @@ with instrument_control() as p:
         time_axis_coords[j]["stop_times"] = DNP_done
     DNP_data.name("nodename_test")
     DNP_data.set_prop("power_settings", power_settings_dBm)
-    nodename = DNP_data.name()
-    this_log = p.stop_log()
+    # note that the validity of saving the log data in this way (rather
+    # than manually creating the HDF5 node) is already tested as part of
+    # the test suite (test_logobj.py)
+    DNP_data.set_prop("log", ic.stop_log().__getstate__())
 
 DNP_data.set_prop("power_settings", power_settings_dBm)
-DNP_data.set_prop("postproc_type", "spincore_SE_v1")
+DNP_data.set_prop("postproc_type", "field_sweep_v5")
 DNP_data.set_prop("coherence_pathway", {"ph1": 1})
 DNP_data.set_prop("acq_params", config_dict.asdict())
 config_dict = save_data(
     DNP_data, my_exp_type, config_dict, counter_type="odnp", proc=True
 )
-# all of the following will be auto-adjusted by save_data
-filename = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
-)
-target_directory = getDATADIR(exp_type=my_exp_type)
-with h5py.File(
-    os.path.normpath(os.path.join(target_directory, filename)), "a"
-) as f:
-    hdf_save_dict_to_group(f, {"log": this_log.__getstate__()})

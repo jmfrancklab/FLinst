@@ -10,12 +10,8 @@ import os
 import time
 import pyspecdata as psd
 import SpinCore_pp
-import h5py
 from numpy import r_
 from pyspecdata import strm
-from pyspecdata.file_saving.hdf_save_dict_to_group import (
-    hdf_save_dict_to_group,
-)
 from SpinCore_pp import get_integer_sampling_intervals, save_data
 from SpinCore_pp.ppg import run_spin_echo
 
@@ -87,6 +83,7 @@ with instrument_control() as ic:
             "In other words, the discrepancy is"
             f" {true_B0_G - B0_G} G"
         )
+        DNP_ini_time = time.time()
         data = run_spin_echo(
             nScans=config_dict["nScans"],
             indirect_idx=idx,
@@ -103,12 +100,13 @@ with instrument_control() as ic:
             SW_kHz=config_dict["SW_kHz"],
             amplitude=config_dict["amplitude"],
             ret_data=data,
-            indirect_fields=("time", "field"),
+            indirect_fields=("start_times", "stop_times"),
         )
+        DNP_done = time.time()
         if idx == 0:
-            x_axis = data.getaxis("indirect")
-        x_axis[idx]["field"] = true_B0_G
-        x_axis[idx]["time"] = time.time()
+            time_axis_coords = data.getaxis("indirect")
+        time_axis_coords[idx]["start_times"] = DNP_ini_time
+        time_axis_coords[idx]["stop_times"] = DNP_done
     this_log = ic.stop_log()
 data.set_prop("acq_params", config_dict.asdict())
 # }}}
@@ -120,17 +118,10 @@ if config_dict["nScans"] > 1:
 data.reorder(["nScans", "ph1", "indirect", "t2"])
 data.squeeze()
 data.set_units("t2", "s")
-data.set_prop("postproc_type", "spincore_generalproc_v1")
+data.set_prop("postproc_type", "stability_test_v1")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
+data.set_prop("log", this_log.__getstate__())
 config_dict = save_data(data, my_exp_type, config_dict, counter_type="n_scan")
-filename_out = (
-    f"{config_dict['date']}_{config_dict['chemical']}_{config_dict['type']}.h5"
-)
-target_directory = psd.getDATADIR(exp_type=my_exp_type)
-with h5py.File(
-    os.path.normpath(os.path.join(target_directory, filename_out)), "a"
-) as fp:
-    hdf_save_dict_to_group(fp, {"log": this_log.__getstate__()})
 config_dict.write()
 # }}}
