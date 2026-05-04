@@ -47,7 +47,7 @@ with (
         )
         time.sleep(15)
         I_des.append(I_set)
-        B_field.append(h.field.to("T").magnitude * 1e4)
+        B_field.append((h.field.to("T") / T_per_G).to("G").magnitude)
 
     with open(OUTPUT_FILENAME, "w", encoding="utf-8") as fp:
         fp.write(" I_desired(A)   B0(G)\n")

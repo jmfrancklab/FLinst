@@ -515,13 +515,8 @@ staircase_smoothing_width = (
 )
 # TODO ☐: this gives several different values -- why?? Something is
 #         wrong with the data. → see todos in the acquisition script.
-print(
-    "Differences are:",
-    np.array2string(
-        np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))),
-        formatter={"float_kind": lambda x: f"{x:.18f}"},
-    ),
-)
+temp = np.abs(np.diff(hall_probe_data["I_desired"]))
+print(np.unique(np.round(temp/np.mean(temp),5)*np.mean(temp)))
 # }}}
 # {{{ fit the staircase response using lmfitdata, seeding from the current
 #     hand-tuned parameters and smoothing the discontinuities with a
