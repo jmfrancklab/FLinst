@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
 import sympy as sp
+from pyspecdata.lmfitdata import (
+    finite_difference_heaviside_derivative,
+    sympy_module_arg,
+)
 
 
 # {{{ changeable parameters
@@ -47,6 +51,116 @@ class MonteCarloLmfitData(psd.lmfitdata):
         temperature_update_every=10,
         seed=0,
     )
+    _floorprime = sp.Function("floorprime")
+
+    @staticmethod
+    def _finite_difference_floor_derivative(x):
+        x = np.asarray(x, dtype=float)
+        lower = int(np.ceil(np.min(x)))
+        upper = int(np.floor(np.max(x)))
+        weights = np.zeros_like(x)
+        for jump_location in range(lower, upper + 1):
+            offset = x - jump_location
+            nearest_idx = np.argmin(np.abs(offset))
+            if np.isclose(offset[nearest_idx], 0.0):
+                weights[nearest_idx] += 1.0
+                continue
+            crossing_idx = np.nonzero(
+                ((offset[:-1] < 0.0) & (offset[1:] > 0.0))
+                | ((offset[:-1] > 0.0) & (offset[1:] < 0.0))
+            )[0]
+            if len(crossing_idx) == 0:
+                continue
+            left_idx = crossing_idx[0]
+            right_idx = left_idx + 1
+            interval = x[right_idx] - x[left_idx]
+            if np.isclose(interval, 0.0):
+                weights[nearest_idx] += 1.0
+                continue
+            right_weight = (jump_location - x[left_idx]) / interval
+            left_weight = 1.0 - right_weight
+            weights[left_idx] += left_weight
+            weights[right_idx] += right_weight
+        return weights
+
+    def _replace_floor_derivatives(self, expr):
+        return expr.replace(
+            lambda node: (
+                isinstance(node, sp.Subs)
+                and isinstance(node.expr, sp.Derivative)
+                and len(node.expr.variables) == 1
+                and node.expr.expr.func is sp.floor
+                and len(node.expr.expr.args) == 1
+                and node.expr.expr.args[0] == node.expr.variables[0]
+                and len(node.variables) == 1
+                and node.variables[0] == node.expr.variables[0]
+            ),
+            lambda node: self._floorprime(node.point[0]),
+        )
+
+    # TODO ☐: overloading the jacobian method is garbage!  I understand
+    #         that we need to define the derivative of floor as the
+    #         floorprime function that we defined, but I believe there's
+    #         a formally correct way of doing this within sympy.
+    #         Overriding the *way* the jacobian is calculated isn't
+    #         acceptable!!
+    def jacobian(self, pars, sigma=None):
+        if sigma is not None:
+            raise ValueError(
+                "Jacobian with generalized leastsq not yet supported (you have"
+                " error set, so I want to do generalized)"
+            )
+        if not hasattr(self, "jacobian_symbolic"):
+            self.jacobian_symbolic = [
+                self._replace_floor_derivatives(sp.diff(self.expression, j, 1))
+                for j in self.parameter_symbols
+            ]
+            self.jacobian_lambda = [
+                sp.lambdify(
+                    self.variable_symbols + self.parameter_symbols,
+                    j,
+                    modules=[
+                        {"floorprime": self._finite_difference_floor_derivative}
+                    ]
+                    + sympy_module_arg,
+                )
+                for j in self.jacobian_symbolic
+            ]
+        jacobian_array = np.array(
+            [
+                self._apply_residual_transform(
+                    np.full_like(
+                        self.getaxis(self.fit_axis),
+                        raw_jacobian,
+                        dtype=float,
+                    )
+                    if np.isscalar(raw_jacobian)
+                    else raw_jacobian
+                )
+                for jacobian_fn in self.jacobian_lambda
+                for raw_jacobian in [
+                    jacobian_fn(
+                        *(self.getaxis(k) for k in self.variable_names),
+                        **pars.valuesdict(),
+                    )
+                ]
+            ]
+        )
+        if np.issubdtype(
+            self.data.dtype, np.complexfloating
+        ) and not np.issubdtype(jacobian_array.dtype, np.complexfloating):
+            if self.data.dtype == np.complex64:
+                jacobian_array = np.complex64(jacobian_array)
+            elif self.data.dtype == np.complex128:
+                jacobian_array = np.complex128(jacobian_array)
+            else:
+                raise ValueError(
+                    "I don't understand the dtype", self.data.dtype
+                )
+        jacobian_array = jacobian_array.view(float)
+        jacobian_array = jacobian_array[:, self.nan_mask]
+        jacobian_array[~np.isfinite(jacobian_array)] = 0
+        return jacobian_array
 
     def fit(
         self,
