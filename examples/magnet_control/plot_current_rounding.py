@@ -64,6 +64,7 @@ class MonteCarloLmfitData(psd.lmfitdata):
         ]
         if mc_steps is None:
             mc_steps = self.mc_kws["mc_steps"]
+        jacobian_fallback_state = dict(fit=False, covariance=False)
 
         def parameter_bounds():
             bounds = np.zeros((len(parameter_names), 2), dtype=float)
@@ -103,8 +104,26 @@ class MonteCarloLmfitData(psd.lmfitdata):
                 psd.lmfitdata.fit(trial_fit, use_jacobian=use_jacobian)
                 trial_output = trial_fit.fit_output
             except Exception as exc:
-                fit_exception = exc
-                trial_output = getattr(trial_fit, "fit_output", None)
+                if use_jacobian:
+                    fit_exception = exc
+                    if not jacobian_fallback_state["fit"]:
+                        print(
+                            "WARNING:"
+                            " `use_jacobian=True` was requested, but the LM"
+                            " solve could not use the Jacobian"
+                            f" ({type(exc).__name__}: {exc}). Falling back to"
+                            " numerical LM for this run.",
+                            flush=True,
+                        )
+                        jacobian_fallback_state["fit"] = True
+                    try:
+                        psd.lmfitdata.fit(trial_fit, use_jacobian=False)
+                        trial_output = trial_fit.fit_output
+                    except Exception:
+                        trial_output = getattr(trial_fit, "fit_output", None)
+                else:
+                    fit_exception = exc
+                    trial_output = getattr(trial_fit, "fit_output", None)
             return trial_fit, trial_output, fit_exception
 
         def covariance_step(center_vector, covariance):
@@ -121,6 +140,23 @@ class MonteCarloLmfitData(psd.lmfitdata):
                 bounds[:, 0],
                 bounds[:, 1],
             )
+
+        def covariance_from_jacobian(fit_object):
+            try:
+                fit_object.residual(
+                    fit_object.fit_output.params,
+                    fit_object.get_error(),
+                )
+                jacobian = fit_object.jacobian(
+                    fit_object.fit_output.params,
+                    fit_object.get_error(),
+                )
+            except Exception:
+                return None
+            info_matrix = jacobian @ jacobian.T
+            if not np.all(np.isfinite(info_matrix)):
+                return None
+            return np.linalg.pinv(info_matrix)
 
         def covariance_from_chisqr(fit_object):
             base_vector = pack_parameter_vector(
@@ -212,7 +248,21 @@ class MonteCarloLmfitData(psd.lmfitdata):
 
         for step_number in range(2, mc_steps + 1):
             covariance = getattr(current_fit.fit_output, "covar", None)
+            if covariance is None and use_jacobian:
+                # With the symbolic Jacobian available, the local 1-sigma
+                # covariance estimate is just the pseudoinverse of J J^T,
+                # which is much cheaper than probing the chi-square surface.
+                covariance = covariance_from_jacobian(current_fit)
             if covariance is None:
+                if use_jacobian and not jacobian_fallback_state["covariance"]:
+                    print(
+                        "WARNING:"
+                        " `use_jacobian=True` was requested, but the"
+                        " Jacobian-based covariance estimate was unavailable."
+                        " Falling back to chi-square probing for covariance.",
+                        flush=True,
+                    )
+                    jacobian_fallback_state["covariance"] = True
                 covariance = covariance_from_chisqr(current_fit)
             if covariance is None:
                 report_step(
@@ -433,7 +483,7 @@ if do_fit:
     # Set `mc_steps=1` to recover a plain local LM fit from the current guess.
     # Larger values turn on the Monte Carlo walk between local minima.
     staircase_fit.fit(
-        use_jacobian=False,
+        use_jacobian=True,
         basinhopping=True,
         basinhopping_updates=True,
         mc_steps=100,
