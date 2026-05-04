@@ -42,19 +42,16 @@ with (
         I_set = des_current + idx * SET_CURRENT_STEP_A
         g.I_limit = I_set
         print(
-            f"\n Set current step: {SET_CURRENT_STEP_A:.4f} A\n "
-            "Current I set: {I_set}"
+            f"\n Set current step: {SET_CURRENT_STEP_A:.18f} A\n "
+            f"Current I set: {I_set:.18f} A"
         )
         time.sleep(15)
         I_des.append(I_set)
-        B_field.append((h.field.to("T") / T_per_G).to("G").magnitude)
+        B_field.append(h.field.to("T").magnitude * 1e4)
 
-    # TODO ☐: this look different vs. the file that you specify in
-    #         plot_current_rounding.py, which I really don't understand.
-    #         Also, this is mis-labeled.
-    
+    with open(OUTPUT_FILENAME, "w", encoding="utf-8") as fp:
         fp.write(" I_desired(A)   B0(G)\n")
-        for des, B in zip(I_dex, B_field):
+        for des, B in zip(I_des, B_field):
             fp.write(f"{des:.18f} {B:8.3f}\n")
 
     fig, ax = plt.subplots()

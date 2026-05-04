@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
 import sympy as sp
+from lmfit import fit_report
 from pyspecdata.lmfitdata import (
     finite_difference_heaviside_derivative,
     sympy_module_arg,
@@ -479,7 +480,7 @@ class MonteCarloLmfitData(psd.lmfitdata):
 if pull_old_file:
     datafile = Path(
         psd.search_filename(
-            re.escape("260420_Irounding_old_script.txt"),
+            re.escape("260428_Irounding.txt"),
             exp_type="b27/Irounding",
             unique=True,
             print_result=False,
@@ -514,7 +515,13 @@ staircase_smoothing_width = (
 )
 # TODO ☐: this gives several different values -- why?? Something is
 #         wrong with the data. → see todos in the acquisition script.
-print(np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))))
+print(
+    "Differences are:",
+    np.array2string(
+        np.unique(np.abs(np.diff(hall_probe_data["I_desired"]))),
+        formatter={"float_kind": lambda x: f"{x:.18f}"},
+    ),
+)
 # }}}
 # {{{ fit the staircase response using lmfitdata, seeding from the current
 #     hand-tuned parameters and smoothing the discontinuities with a
