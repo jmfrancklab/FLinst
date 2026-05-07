@@ -6,27 +6,14 @@ import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
 import sympy as sp
-from lmfit import fit_report
-from pyspecdata.lmfitdata import (
-    finite_difference_heaviside_derivative,
-    sympy_module_arg,
+from lmfit import Parameters, fit_report
+from current_rounding_helpers import (
+    StaircaseFloor,
+    axis_spacing_diagnostics,
+    estimate_staircase_guesses,
+    finite_difference_floor_derivative,
 )
-
-# TODO ☐: before other changes, explicitly make a new test module that uses
-#         numerical derivatives to test the analytical calculation of the
-#         jacobian of the transformed/convolved function that we have here.
-#         This way, you at least know how to calculate the jacobian for the
-#         function here. (It seems very likely that the failure noted in the
-#         next TODO is because you are either improperly calculating, or
-#         improperly implementing the jacobian.  Let's start out by making sure
-#         that you are properly calculating it, to narrow the scope of possible
-#         problems. (If at all possible, use the
-#         finite_difference_heaviside_derivative from lmfitdata)
-# TODO ☐: note that git commmit 47ee1b, which is much simpler than this, gives
-#         the right ratio of MC failure to success.  The main difference
-#         between that commit and this is that I was trying to get you to
-#         actually calculate the jacobian, but what you have here is garbage,
-#         as I note below.
+from pyspecdata.lmfitdata import finite_difference_heaviside_derivative
 
 
 # {{{ changeable parameters
@@ -35,8 +22,6 @@ POINTS_TO_SKIP_FIRST_FIGURE = 3
 pull_old_file = True
 # }}}
 # {{{ changeable parameters to describe the staircase function
-# TODO ☐: these values don't give a good guess for the staircase fit --
-#         probably better to base off of the data
 Del_I = 0.003115
 step = 0.00005
 offset = 0.0016
@@ -68,116 +53,56 @@ class MonteCarloLmfitData(psd.lmfitdata):
         temperature_update_every=10,
         seed=0,
     )
-    _floorprime = sp.Function("floorprime")
+    @property
+    def functional_form(self):
+        return self.expression
 
-    @staticmethod
-    def _finite_difference_floor_derivative(x):
-        x = np.asarray(x, dtype=float)
-        lower = int(np.ceil(np.min(x)))
-        upper = int(np.floor(np.max(x)))
-        weights = np.zeros_like(x)
-        for jump_location in range(lower, upper + 1):
-            offset = x - jump_location
-            nearest_idx = np.argmin(np.abs(offset))
-            if np.isclose(offset[nearest_idx], 0.0):
-                weights[nearest_idx] += 1.0
-                continue
-            crossing_idx = np.nonzero(
-                ((offset[:-1] < 0.0) & (offset[1:] > 0.0))
-                | ((offset[:-1] > 0.0) & (offset[1:] < 0.0))
-            )[0]
-            if len(crossing_idx) == 0:
-                continue
-            left_idx = crossing_idx[0]
-            right_idx = left_idx + 1
-            interval = x[right_idx] - x[left_idx]
-            if np.isclose(interval, 0.0):
-                weights[nearest_idx] += 1.0
-                continue
-            right_weight = (jump_location - x[left_idx]) / interval
-            left_weight = 1.0 - right_weight
-            weights[left_idx] += left_weight
-            weights[right_idx] += right_weight
-        return weights
-
-    def _replace_floor_derivatives(self, expr):
-        return expr.replace(
-            lambda node: (
-                isinstance(node, sp.Subs)
-                and isinstance(node.expr, sp.Derivative)
-                and len(node.expr.variables) == 1
-                and node.expr.expr.func is sp.floor
-                and len(node.expr.expr.args) == 1
-                and node.expr.expr.args[0] == node.expr.variables[0]
-                and len(node.variables) == 1
-                and node.variables[0] == node.expr.variables[0]
-            ),
-            lambda node: self._floorprime(node.point[0]),
-        )
-
-    # TODO ☐: overloading the jacobian method is garbage!  I understand
-    #         that we need to define the derivative of floor as the
-    #         floorprime function that we defined, but I believe there's
-    #         a formally correct way of doing this within sympy.
-    #         Overriding the *way* the jacobian is calculated isn't
-    #         acceptable!!
-    def jacobian(self, pars, sigma=None):
-        if sigma is not None:
-            raise ValueError(
-                "Jacobian with generalized leastsq not yet supported (you have"
-                " error set, so I want to do generalized)"
-            )
-        if not hasattr(self, "jacobian_symbolic"):
-            self.jacobian_symbolic = [
-                self._replace_floor_derivatives(sp.diff(self.expression, j, 1))
-                for j in self.parameter_symbols
-            ]
-            self.jacobian_lambda = [
-                sp.lambdify(
-                    self.variable_symbols + self.parameter_symbols,
-                    j,
-                    modules=[
-                        {"floorprime": self._finite_difference_floor_derivative}
-                    ]
-                    + sympy_module_arg,
-                )
-                for j in self.jacobian_symbolic
-            ]
-        jacobian_array = np.array(
-            [
-                self._apply_residual_transform(
-                    np.full_like(
-                        self.getaxis(self.fit_axis),
-                        raw_jacobian,
-                        dtype=float,
+    @functional_form.setter
+    def functional_form(self, this_expr):
+        assert psd.issympy(
+            this_expr
+        ), "for now, the functional form must be a sympy expression"
+        self.expression = this_expr
+        if self.expression is None:
+            raise ValueError("what expression are you fitting with??")
+        all_symbols = self.expression.atoms(sp.Symbol)
+        all_symbol_names = set([str(j) for j in all_symbols])
+        axis_names = set(self.dimlabels)
+        variable_symbol_names = axis_names & all_symbol_names
+        parameter_symbol_names = all_symbol_names - variable_symbol_names
+        self.variable_names = tuple(variable_symbol_names)
+        self.variable_symbols = [
+            j for j in all_symbols if str(j) in variable_symbol_names
+        ]
+        self.parameter_symbols = [
+            j for j in all_symbols if str(j) in parameter_symbol_names
+        ]
+        self.parameter_names = tuple([str(j) for j in self.parameter_symbols])
+        self.fit_axis = list(set(self.dimlabels))[0]
+        staircase_modules = [
+            {
+                "ImmutableMatrix": np.ndarray,
+                "DiracDelta": finite_difference_heaviside_derivative,
+                "Heaviside": np.heaviside,
+                "StaircaseFloor": np.floor,
+                "FloorPrime": (
+                    lambda x: finite_difference_floor_derivative(
+                        x,
+                        finite_difference_heaviside_derivative,
                     )
-                    if np.isscalar(raw_jacobian)
-                    else raw_jacobian
-                )
-                for jacobian_fn in self.jacobian_lambda
-                for raw_jacobian in [
-                    jacobian_fn(
-                        *(self.getaxis(k) for k in self.variable_names),
-                        **pars.valuesdict(),
-                    )
-                ]
-            ]
+                ),
+            },
+            "numpy",
+            "scipy",
+        ]
+        self.fitfunc_multiarg_v2 = sp.lambdify(
+            self.variable_symbols + self.parameter_symbols,
+            self.expression,
+            modules=staircase_modules,
         )
-        if np.issubdtype(
-            self.data.dtype, np.complexfloating
-        ) and not np.issubdtype(jacobian_array.dtype, np.complexfloating):
-            if self.data.dtype == np.complex64:
-                jacobian_array = np.complex64(jacobian_array)
-            elif self.data.dtype == np.complex128:
-                jacobian_array = np.complex128(jacobian_array)
-            else:
-                raise ValueError(
-                    "I don't understand the dtype", self.data.dtype
-                )
-        jacobian_array = jacobian_array.view(float)
-        jacobian_array = jacobian_array[:, self.nan_mask]
-        jacobian_array[~np.isfinite(jacobian_array)] = 0
-        return jacobian_array
+        self.guess_parameters = Parameters()
+        for this_name in self.parameter_names:
+            self.guess_parameters.add(this_name)
 
     def fit(
         self,
@@ -523,16 +448,30 @@ hall_probe_data = hall_probe_data["I_desired", POINTS_TO_SKIP_FIRST_FIGURE:]
 # }}}
 coeff = hall_probe_data.polyfit("I_desired", order=1)
 intercept, slope = coeff
+fit_seed = estimate_staircase_guesses(
+    hall_probe_data.getaxis("I_desired"),
+    hall_probe_data.data,
+    slope,
+    intercept,
+)
+Del_I = fit_seed["Del_I"]
+step = fit_seed["step"]
+offset = fit_seed["offset"]
+c_1 = fit_seed["c_1"]
+c_0 = fit_seed["c_0"]
+c_2 = fit_seed["c_2"]
 # {{{ use a convolution transform to smooth the staircase model just enough
 #     that the optimizer sees a response as the step locations move between
 #     sampled x points
 staircase_smoothing_width = (
     0.5 * np.abs(np.diff(hall_probe_data["I_desired"])).mean()
 )
-# TODO ☐: this gives several different values -- why?? Something is
-#         wrong with the data. → see todos in the acquisition script.
-temp = np.abs(np.diff(hall_probe_data["I_desired"]))
-print(np.unique(np.round(temp/np.mean(temp),5)*np.mean(temp)))
+spacing_report = axis_spacing_diagnostics(hall_probe_data.getaxis("I_desired"))
+print(
+    "requested_current_axis",
+    f"median_step={spacing_report['median_step']:.8g}",
+    f"max_spacing_error={spacing_report['max_spacing_error']:.3g}",
+)
 # }}}
 # {{{ fit the staircase response using lmfitdata, seeding from the current
 #     hand-tuned parameters and smoothing the discontinuities with a
@@ -546,12 +485,7 @@ staircase_fit = MonteCarloLmfitData(hall_probe_data)
 @staircase_fit.define_residual_transform
 def smooth_staircase_response(d):
     original_axis = d.getaxis("I_desired").copy()
-    # TODO ☐: it should not need to do this because the axis of
-    #         requested currents should be evenly spaced!!!  This leads
-    #         to the other problems!
-    uniform_axis = np.linspace(
-        original_axis[0], original_axis[-1], len(original_axis)
-    )
+    uniform_axis = spacing_report["uniform_axis"]
     d.setaxis("I_desired", uniform_axis)
     # Pad by ~6 sigma on both sides so the Gaussian convolution sees
     # endpoint plateaus instead of wrapping around the finite axis.
@@ -583,12 +517,18 @@ def smooth_staircase_response(d):
 
 staircase_fit.functional_form = (
     c_2_symbol
-    * (Del_I_symbol
-    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + vertoff_symbol))**2
+    * (
+        Del_I_symbol
+        * StaircaseFloor(
+            (I_desired - offset_symbol) / Del_I_symbol + vertoff_symbol
+        )
+    )**2
     +
     c_1_symbol
     * Del_I_symbol
-    * sp.floor((I_desired - offset_symbol) / Del_I_symbol + vertoff_symbol)
+    * StaircaseFloor(
+        (I_desired - offset_symbol) / Del_I_symbol + vertoff_symbol
+    )
     + c_0_symbol
 )
 staircase_fit.set_guess(
@@ -600,17 +540,11 @@ staircase_fit.set_guess(
     vertoff={"value": 0.5, "min": 0, "max":1},
 )
 staircase_fit.set_to_guess()
-# TODO ☐: (for JF) eval here seems to give a complex number, unless I add real
-#         to the transform.  Why?  With all real variables, the lambda function
-#         should eval to real.  I checked that both the data and the axis
-#         coords are float64, NOT complex!
 staircase_guess, staircase_guess_label = (
     staircase_fit.eval(500).name("Hall Probe Reading"),
     "Initial staircase guess: "
     rf"$\Delta I={Del_I:.8g},\ x_0={offset:.8g},\ w={staircase_smoothing_width:.8g}$",
 )
-# The model is still floor-based, so let lmfit estimate derivatives
-# numerically rather than relying on a symbolic Jacobian.
 if do_fit:
     # Set `mc_steps=1` to recover a plain local LM fit from the current guess.
     # Larger values turn on the Monte Carlo walk between local minima.
