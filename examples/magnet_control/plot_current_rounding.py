@@ -12,6 +12,22 @@ from pyspecdata.lmfitdata import (
     sympy_module_arg,
 )
 
+# TODO ☐: before other changes, explicitly make a new test module that uses
+#         numerical derivatives to test the analytical calculation of the
+#         jacobian of the transformed/convolved function that we have here.
+#         This way, you at least know how to calculate the jacobian for the
+#         function here. (It seems very likely that the failure noted in the
+#         next TODO is because you are either improperly calculating, or
+#         improperly implementing the jacobian.  Let's start out by making sure
+#         that you are properly calculating it, to narrow the scope of possible
+#         problems. (If at all possible, use the
+#         finite_difference_heaviside_derivative from lmfitdata)
+# TODO ☐: note that git commmit 47ee1b, which is much simpler than this, gives
+#         the right ratio of MC failure to success.  The main difference
+#         between that commit and this is that I was trying to get you to
+#         actually calculate the jacobian, but what you have here is garbage,
+#         as I note below.
+
 
 # {{{ changeable parameters
 # We skip the first 3 points since the magnet has not warmed up
