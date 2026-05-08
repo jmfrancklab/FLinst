@@ -3,7 +3,7 @@ import sympy as sp
 
 
 def finite_difference_floor_derivative(
-    x, finite_difference_heaviside_derivative
+    x, finite_difference_heaviside_derivative=None
 ):
     x = np.asarray(x, dtype=float)
     if x.ndim != 1:
@@ -14,7 +14,27 @@ def finite_difference_floor_derivative(
     upper = int(np.floor(np.max(x)))
     weights = np.zeros_like(x)
     for jump_location in range(lower, upper + 1):
-        weights += finite_difference_heaviside_derivative(x - jump_location)
+        offset = x - jump_location
+        nearest_idx = np.argmin(np.abs(offset))
+        if np.isclose(offset[nearest_idx], 0.0):
+            weights[nearest_idx] += 1.0
+            continue
+        crossing_idx = np.nonzero(
+            ((offset[:-1] < 0.0) & (offset[1:] > 0.0))
+            | ((offset[:-1] > 0.0) & (offset[1:] < 0.0))
+        )[0]
+        if len(crossing_idx) == 0:
+            continue
+        left_idx = crossing_idx[0]
+        right_idx = left_idx + 1
+        interval = x[right_idx] - x[left_idx]
+        if np.isclose(interval, 0.0):
+            weights[nearest_idx] += 1.0
+            continue
+        right_weight = (jump_location - x[left_idx]) / interval
+        left_weight = 1.0 - right_weight
+        weights[left_idx] += left_weight
+        weights[right_idx] += right_weight
     return weights
 
 
@@ -35,6 +55,8 @@ class StaircaseFloor(sp.Function):
         if argindex != 1:
             raise ValueError("StaircaseFloor takes one argument")
         return FloorPrime(self.args[0])
+
+
 
 
 def axis_spacing_diagnostics(axis):

@@ -6,14 +6,17 @@ import matplotlib.pyplot as plt
 import pyspecdata as psd
 import numpy as np
 import sympy as sp
-from lmfit import Parameters, fit_report
+from lmfit import fit_report
 from current_rounding_helpers import (
     StaircaseFloor,
     axis_spacing_diagnostics,
     estimate_staircase_guesses,
     finite_difference_floor_derivative,
 )
-from pyspecdata.lmfitdata import finite_difference_heaviside_derivative
+from pyspecdata.lmfitdata import (
+    finite_difference_heaviside_derivative,
+    sympy_module_arg,
+)
 
 
 # {{{ changeable parameters
@@ -51,58 +54,10 @@ class MonteCarloLmfitData(psd.lmfitdata):
         mc_steps=100,
         mc_temperature=1.0,
         temperature_update_every=10,
+        proposal_scale=1.0,
+        max_step_fraction=0.02,
         seed=0,
     )
-    @property
-    def functional_form(self):
-        return self.expression
-
-    @functional_form.setter
-    def functional_form(self, this_expr):
-        assert psd.issympy(
-            this_expr
-        ), "for now, the functional form must be a sympy expression"
-        self.expression = this_expr
-        if self.expression is None:
-            raise ValueError("what expression are you fitting with??")
-        all_symbols = self.expression.atoms(sp.Symbol)
-        all_symbol_names = set([str(j) for j in all_symbols])
-        axis_names = set(self.dimlabels)
-        variable_symbol_names = axis_names & all_symbol_names
-        parameter_symbol_names = all_symbol_names - variable_symbol_names
-        self.variable_names = tuple(variable_symbol_names)
-        self.variable_symbols = [
-            j for j in all_symbols if str(j) in variable_symbol_names
-        ]
-        self.parameter_symbols = [
-            j for j in all_symbols if str(j) in parameter_symbol_names
-        ]
-        self.parameter_names = tuple([str(j) for j in self.parameter_symbols])
-        self.fit_axis = list(set(self.dimlabels))[0]
-        staircase_modules = [
-            {
-                "ImmutableMatrix": np.ndarray,
-                "DiracDelta": finite_difference_heaviside_derivative,
-                "Heaviside": np.heaviside,
-                "StaircaseFloor": np.floor,
-                "FloorPrime": (
-                    lambda x: finite_difference_floor_derivative(
-                        x,
-                        finite_difference_heaviside_derivative,
-                    )
-                ),
-            },
-            "numpy",
-            "scipy",
-        ]
-        self.fitfunc_multiarg_v2 = sp.lambdify(
-            self.variable_symbols + self.parameter_symbols,
-            self.expression,
-            modules=staircase_modules,
-        )
-        self.guess_parameters = Parameters()
-        for this_name in self.parameter_names:
-            self.guess_parameters.add(this_name)
 
     def fit(
         self,
@@ -190,9 +145,18 @@ class MonteCarloLmfitData(psd.lmfitdata):
                 return None
             random_direction = rng.normal(size=len(parameter_names))
             random_direction /= np.linalg.norm(random_direction)
+            # TODO ☐: this needs some detailed explanation
+            step_vector = (
+                self.mc_kws["proposal_scale"]
+                * eigenvectors
+                @ (np.sqrt(eigenvalues) * random_direction)
+            )
+            max_step = (
+                self.mc_kws["max_step_fraction"] * (bounds[:, 1] - bounds[:, 0])
+            )
+            step_vector = np.clip(step_vector, -max_step, max_step)
             return np.clip(
-                center_vector
-                + eigenvectors @ (np.sqrt(eigenvalues) * random_direction),
+                center_vector + step_vector,
                 bounds[:, 0],
                 bounds[:, 1],
             )
@@ -304,18 +268,14 @@ class MonteCarloLmfitData(psd.lmfitdata):
 
         for step_number in range(2, mc_steps + 1):
             covariance = getattr(current_fit.fit_output, "covar", None)
-            if covariance is None and use_jacobian:
-                # With the symbolic Jacobian available, the local 1-sigma
-                # covariance estimate is just the pseudoinverse of J J^T,
-                # which is much cheaper than probing the chi-square surface.
-                covariance = covariance_from_jacobian(current_fit)
             if covariance is None:
                 if use_jacobian and not jacobian_fallback_state["covariance"]:
                     print(
                         "WARNING:"
-                        " `use_jacobian=True` was requested, but the"
-                        " Jacobian-based covariance estimate was unavailable."
-                        " Falling back to chi-square probing for covariance.",
+                        " `use_jacobian=True` was requested, but the Monte"
+                        " Carlo proposal covariance is being estimated by"
+                        " chi-square probing instead of the symbolic"
+                        " Jacobian.",
                         flush=True,
                     )
                     jacobian_fallback_state["covariance"] = True
@@ -417,6 +377,19 @@ class MonteCarloLmfitData(psd.lmfitdata):
         self.mc_temperature = current_temperature
         return self
 
+# `sympy_module_arg` is a list because `sympy.lambdify` accepts a priority
+# ordered list of namespaces/backends; index 0 is the custom symbol map we
+# extend before the fallback `"numpy"` and `"scipy"` modules are consulted.
+sympy_module_arg[0].update(
+    {
+        "StaircaseFloor": np.floor,
+        "FloorPrime": lambda x: finite_difference_floor_derivative(
+            x,
+            finite_difference_heaviside_derivative,
+        ),
+    }
+)
+
 # am I pulling previously stored data, or something I just ran
 if pull_old_file:
     datafile = Path(
@@ -485,7 +458,7 @@ staircase_fit = MonteCarloLmfitData(hall_probe_data)
 @staircase_fit.define_residual_transform
 def smooth_staircase_response(d):
     original_axis = d.getaxis("I_desired").copy()
-    uniform_axis = spacing_report["uniform_axis"]
+    uniform_axis = np.linspace(original_axis[0], original_axis[-1], len(original_axis))
     d.setaxis("I_desired", uniform_axis)
     # Pad by ~6 sigma on both sides so the Gaussian convolution sees
     # endpoint plateaus instead of wrapping around the finite axis.
@@ -533,10 +506,26 @@ staircase_fit.functional_form = (
 )
 staircase_fit.set_guess(
     Del_I=dict(value=Del_I, min=step, max=2 * Del_I),
-    offset={"value": offset, "min": -2 * offset, "max": 2 * offset},
-    c_1={"value": c_1, "min": 0.5 * c_1, "max": 2 * c_1},
-    c_2={"value": 0, "min": -c_1, "max": c_1},
-    c_0={"value": c_0, "min": -2 * c_0, "max": 2 * c_0},
+    offset={
+        "value": offset,
+        "min": -max(0.5 * step, 0.25 * Del_I, abs(offset)),
+        "max": max(0.5 * step, 0.25 * Del_I, abs(offset)),
+    },
+    c_1={
+        "value": c_1,
+        "min": -2 * max(abs(c_1), 1.0),
+        "max": 2 * max(abs(c_1), 1.0),
+    },
+    c_2={
+        "value": 0,
+        "min": -max(abs(c_1), 1.0),
+        "max": max(abs(c_1), 1.0),
+    },
+    c_0={
+        "value": c_0,
+        "min": -2 * max(abs(c_0), abs(c_1 * Del_I), 1.0),
+        "max": 2 * max(abs(c_0), abs(c_1 * Del_I), 1.0),
+    },
     vertoff={"value": 0.5, "min": 0, "max":1},
 )
 staircase_fit.set_to_guess()
