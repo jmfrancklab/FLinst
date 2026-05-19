@@ -43,13 +43,6 @@ input(
     "your .ini file. Hit enter if this is true"
     % config_dict["carrierFreq_MHz"]
 )
-# {{{ let computer set field
-field_G = config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
-print(
-    "Based on that, and the gamma_eff_MHz_G you have in your .ini file, "
-    "I'm setting the field to %f" % field_G
-)
-# }}}
 # {{{set phase cycling
 # NOTE: The overall phase and the 90-180 phase difference are phase cycled
 # in a nested way
@@ -95,13 +88,6 @@ assert total_pts < 2**14, (
 # NOTE: Number of segments is nEchoes * nPhaseSteps
 with instrument_control() as ic:
     ic.start_log()
-    assert field_G < 3700, "are you crazy??? field is too high!"
-    assert field_G > 3300, "are you crazy?? field is too low!"
-    field_G = ic.set_field(field_G)
-    print("field set to", field_G, "G")
-    settle_s = config_dict["magnet_settle_long"]
-    print("waiting", settle_s, "s for the magnet to settle")
-    time.sleep(settle_s)
     data = generic(
         ppg_list=[
             ("phase_reset", 1),
