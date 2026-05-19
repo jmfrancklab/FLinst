@@ -8,7 +8,6 @@ and after your tau through a series of delays.
 """
 
 import os
-import time
 import pyspecdata as psd
 import numpy as np
 from numpy import pi, r_
