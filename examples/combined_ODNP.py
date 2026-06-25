@@ -25,9 +25,9 @@ inversion recovery experiment.  In a fast inversion recovery experiment the
 magnetization is not forced to return completely to equilibrium between scans;
 instead, the steady-state offset/equilibrium magnetization and T1 are fit from
 the recovery data.  Becker, Ferretti, Gupta, and Weiss showed that a waiting
-time of about 2*T1 is optimal or nearly optimal for fast inversion recovery over
-a broad range of prior T1 uncertainty, so this script uses 2*T1 to reduce total
-acquisition time while preserving T1 precision.
+time of about 2*T1 is optimal or nearly optimal for fast inversion recovery
+over a broad range of prior T1 uncertainty, so this script uses 2*T1 to reduce
+total acquisition time while preserving T1 precision.
 
 References
 ----------
