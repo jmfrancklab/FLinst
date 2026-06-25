@@ -28,6 +28,7 @@ from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import instrument_control
 from datetime import datetime
 
+
 def IR_measurement(
     vd_list_us,
     nPoints,
@@ -102,6 +103,7 @@ def IR_measurement(
     print(("Name of saved data", vd_data.name()))
     return
 
+
 final_log = []
 
 logger = psd.init_logging(level="debug")
@@ -169,7 +171,7 @@ T1_powers_dB = gen_powerlist(
     min_dBm_step=config_dict["min_dBm_step"],
     three_down=False,
 )
-T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
+T1_node_names = [f"FIR_{j:g}dBm" for j in T1_powers_dB]
 logger.info(strm("dB_settings", dB_settings))
 logger.info(
     strm("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
@@ -384,7 +386,10 @@ with instrument_control() as ic:
             if ic.get_power_setting() >= this_dB:
                 break
         if ic.get_power_setting() < this_dB:
-            raise ValueError("After 10 tries, the power has still not settled")
+            raise ValueError(
+                f"After 10 tries, the power has still not settled at {this_dB}"
+                "dB"
+            )
         time.sleep(5)
         meter_power = ic.get_power_setting()
         IR_measurement(
