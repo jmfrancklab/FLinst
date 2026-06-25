@@ -241,7 +241,7 @@ class Bridge12(Serial):
         measuring any amplified output power, we are only looking at TX OUT. TX
         IN should not lead to anything. Be sure these are the operational
         conditions before proceeding."""
-        setting = int(10 * round(dBm * 2) / 2.0 + 0.5)
+        setting = int(10 * dBm + 0.5)
         self.write(b"power %d\r" % setting)
         _ = self.readline()  # gobble the power updated statement
 
@@ -267,9 +267,7 @@ class Bridge12(Serial):
             raise ValueError(
                 "you MUST use a with block so the error handling works well"
             )
-        setting = int(
-            10 * round(dBm * 2) / 2.0 + 0.5
-        )  # find closest 0.5 dBm, and round
+        setting = int(10 * dBm + 0.5)  # round to closest 0.1 dBm
         if setting > 400:
             raise ValueError(
                 "You are not allowed to use this function to set a power of"
