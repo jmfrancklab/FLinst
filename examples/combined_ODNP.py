@@ -401,20 +401,16 @@ with instrument_control() as ic:
             )
         )
         ic.set_power(this_dB)
+        power_tolerance_dB = config_dict["min_dBm_step"] / 2
         for k in range(10):
             time.sleep(0.5)
-            # JF notes that the following works for powers going up, but not
-            # for powers going down -- I don't think this has been a problem to
-            # date, and would rather not potentially break a working
-            # implementation, but we should PR and fix this in the future.
-            # (Just say whether we're closer to the newer setting or the older
-            # setting.)
-            if ic.get_power_setting() >= this_dB:
+            meter_power = ic.get_power_setting()
+            if abs(meter_power - this_dB) <= power_tolerance_dB:
                 break
-        if ic.get_power_setting() < this_dB:
+        else:
             raise ValueError(
                 f"After 10 tries, the power has still not settled at {this_dB}"
-                f"dB. I am getting {ic.get_power_setting()}dB"
+                f"dB. I am getting {meter_power}dB"
             )
         time.sleep(5)
         meter_power = ic.get_power_setting()
