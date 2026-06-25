@@ -14,6 +14,32 @@ This needs to be run in sync with the power control server. To do so:
     At the end of the experiment you will have a series of FIR experiments, a
     progressive power saturation dataset, and a log of the power over time
     saved as nodes in an h5 file.
+
+The FIR repetition delay is set to 2*T1, where T1 is estimated from the
+high-temperature/maximum-power ODNP relaxation model
+
+    1/T1 = concentration*krho_hot + 1/T1water_hot.
+
+This is shorter than the conventional fully relaxed delay used for a simple
+inversion recovery experiment.  In a fast inversion recovery experiment the
+magnetization is not forced to return completely to equilibrium between scans;
+instead, the steady-state offset/equilibrium magnetization and T1 are fit from
+the recovery data.  Becker, Ferretti, Gupta, and Weiss showed that a waiting
+time of about 2*T1 is optimal or nearly optimal for fast inversion recovery over
+a broad range of prior T1 uncertainty, so this script uses 2*T1 to reduce total
+acquisition time while preserving T1 precision.
+
+References
+----------
+Becker, E. D., Ferretti, J. A., Gupta, R. K., & Weiss, G. H. (1980).
+The choice of optimal parameters for measurement of spin-lattice relaxation
+times. II. Comparison of saturation recovery, inversion recovery, and fast
+inversion recovery experiments. Journal of Magnetic Resonance, 37, 381-394.
+https://doi.org/10.1016/0022-2364(80)90045-1
+
+Franck, J. M., & Han, S. (2019). Overhauser dynamic nuclear polarization for
+the study of hydration dynamics, explained. Methods in Enzymology, 615,
+131-175. https://doi.org/10.1016/bs.mie.2018.09.024
 """
 
 from numpy import r_, zeros_like
