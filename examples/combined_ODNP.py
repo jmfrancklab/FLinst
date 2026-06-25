@@ -154,7 +154,7 @@ FIR_rep_us = (
         )
     )
     * 1e6
-)
+)  # 2*T_1, equation 14 in Franck & Han Book Chapter
 config_dict["FIR_rep_us"] = FIR_rep_us
 # }}}
 # {{{Power settings
@@ -276,7 +276,7 @@ with instrument_control() as ic:
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
             strm(
-                "setting this power for E(ic)",
+                "setting this power for E(p)",
                 this_dB,
                 "(",
                 dB_settings[j - 1],
@@ -370,7 +370,7 @@ with instrument_control() as ic:
         # server handles this for us
         logger.debug(
             strm(
-                "setting this power for T1(ic)",
+                "setting this power for T1(p)",
                 this_dB,
             )
         )
@@ -388,7 +388,7 @@ with instrument_control() as ic:
         if ic.get_power_setting() < this_dB:
             raise ValueError(
                 f"After 10 tries, the power has still not settled at {this_dB}"
-                "dB"
+                f"dB. I am getting {ic.get_power_setting()}dB"
             )
         time.sleep(5)
         meter_power = ic.get_power_setting()
