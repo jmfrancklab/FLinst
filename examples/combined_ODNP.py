@@ -180,7 +180,7 @@ FIR_rep_us = (
         )
     )
     * 1e6
-)  # 2*T_1, equation 14 in Franck & Han Book Chapter
+)  # 2*T_1 (Weiss), equation 14 in Franck & Han Book Chapter
 config_dict["FIR_rep_us"] = FIR_rep_us
 # }}}
 # {{{Power settings
