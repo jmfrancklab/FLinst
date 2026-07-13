@@ -121,6 +121,8 @@ class instrument_control(object):
         """
         self.send("SET_FIELD %f" % field)
         retval = self.get()
+        if retval.startswith("ERROR"):
+            raise RuntimeError(retval)
         retval = float(retval)
         return retval
 

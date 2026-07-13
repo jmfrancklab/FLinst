@@ -88,13 +88,19 @@ def main():
                     field_error_G,
                     desired_field_G,
                 )
-                current_field_G = ramp_field(
-                    desired_field_G,
-                    config_dict,
-                    h,
-                    gen,
-                    sh_map,
-                )
+                try:
+                    current_field_G = ramp_field(
+                        desired_field_G,
+                        config_dict,
+                        h,
+                        gen,
+                        sh_map,
+                    )
+                except Exception:
+                    logging.exception(
+                        "Field re-ramp during logging failed; keeping current"
+                        " field in log"
+                    )
             return current_field_G
 
         def process_cmd(cmd, this_logobj):
@@ -246,14 +252,24 @@ def main():
                     case b"SET_FIELD":
                         B0_des_G = float(args[1])  # B in G
                         desired_field_G = B0_des_G
-                        true_B0_G = ramp_field(
-                            B0_des_G,
-                            config_dict,
-                            h,
-                            gen,
-                            sh_map,
-                        )
-                        conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
+                        # To keep the server alive when the
+                        # field ramp fails, we catch the exception
+                        # and send an error message back to the client
+                        try:
+                            true_B0_G = ramp_field(
+                                B0_des_G,
+                                config_dict,
+                                h,
+                                gen,
+                                sh_map,
+                            )
+                        except Exception as e:
+                            logging.exception("SET_FIELD failed")
+                            conn.send(
+                                ("ERROR SET_FIELD %s" % e).encode("ASCII")
+                            )
+                        else:
+                            conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case _:
                         raise ValueError(
                             "I don't understand this 2"

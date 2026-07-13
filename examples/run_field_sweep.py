@@ -115,7 +115,8 @@ if (
 # {{{ run field sweep
 data = None
 field_axis_coords = None
-field_readback_G = np.zeros_like(field_axis)
+field_requested_G = []
+field_readback_G = []
 with instrument_control() as ic:
     ic.start_log()
     if mw_power_dBm is None:
@@ -132,13 +133,25 @@ with instrument_control() as ic:
             raise ValueError(
                 "After 10 tries, this power has still not settled"
             )
-    for idx, desired_B0_G in enumerate(field_axis):
-        true_B0_G = ic.set_field(desired_B0_G)
+    for field_idx, desired_B0_G in enumerate(field_axis):
+        try:
+            true_B0_G = ic.set_field(desired_B0_G)
+        except RuntimeError as e:
+            logging.warning(
+                "Skipping field point %d of %d at %f G because field setting"
+                " failed: %s",
+                field_idx + 1,
+                len(field_axis),
+                desired_B0_G,
+                e,
+            )
+            continue
         print("field set to", true_B0_G, "G")
         print("waiting", settle_s, "s for the magnet to settle")
         time.sleep(settle_s)
         carrierFreq_MHz = gamma_eff_MHz_G * true_B0_G
-        logging.info(f"{idx + 1} of {len(field_axis)}")
+        acquired_idx = len(field_requested_G)
+        logging.info(f"{field_idx + 1} of {len(field_axis)}")
         logging.info(
             "The ratio of the field I want to the one I get is"
             f" {desired_B0_G / true_B0_G}\n"
@@ -148,7 +161,7 @@ with instrument_control() as ic:
         DNP_ini_time = time.time()
         data = run_spin_echo(
             nScans=config_dict["nScans"],
-            indirect_idx=idx,
+            indirect_idx=acquired_idx,
             indirect_len=len(field_axis),
             ph1_cyc=ph1_cyc,
             adcOffset=config_dict["adc_offset"],
@@ -166,12 +179,16 @@ with instrument_control() as ic:
             indirect_fields=("start_times", "stop_times"),
         )
         DNP_done = time.time()
-        if idx == 0:
+        if acquired_idx == 0:
             field_axis_coords = data.getaxis("indirect")
-        field_axis_coords[idx]["start_times"] = DNP_ini_time
-        field_axis_coords[idx]["stop_times"] = DNP_done
-        field_readback_G[idx] = true_B0_G
+        field_axis_coords[acquired_idx]["start_times"] = DNP_ini_time
+        field_axis_coords[acquired_idx]["stop_times"] = DNP_done
+        field_requested_G.append(desired_B0_G)
+        field_readback_G.append(true_B0_G)
     this_log = ic.stop_log()
+data = data["indirect", : len(field_requested_G)]
+field_requested_G = np.asarray(field_requested_G)
+field_readback_G = np.asarray(field_readback_G)
 data.set_prop("acq_params", config_dict.asdict())
 # }}}
 # {{{ chunk and save data
@@ -185,7 +202,7 @@ data.set_units("t2", "s")
 data.set_prop("postproc_type", "field_sweep_v5")
 data.set_prop("coherence_pathway", {"ph1": +1})
 data.set_prop("acq_params", config_dict.asdict())
-data.set_prop("field_axis_G", field_axis)
+data.set_prop("field_axis_G", field_requested_G)
 data.set_prop("field_readback_G", field_readback_G)
 data.set_prop("log", this_log.__getstate__())
 config_dict = save_data(data, my_exp_type, config_dict, "field_sweep")
