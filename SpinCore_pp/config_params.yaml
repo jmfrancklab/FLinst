@@ -127,6 +127,18 @@ field_width:
   default: 6
   description: |-
     number of points collected in a field sweep, for a finer data acquisition increase this number
+field_sweep_width_MHz:
+  type: float
+  section: acq_params
+  default: 0.28
+  description: |-
+    Total field sweep width in MHz, centered at carrierFreq_MHz.
+field_sweep_resolution_G:
+  type: float
+  section: acq_params
+  default: 0.5
+  description: |-
+    Field sweep step resolution in G.
 tau_extra_us:
   type: float
   section: acq_params
@@ -184,6 +196,12 @@ max_power:
   section: odnp_params
   default: null
   description: the highest power you plan on acquiring data at - in W
+field_sweep_microwave_power_dBm:
+  type: float
+  section: odnp_params
+  default: 20.0
+  description: |-
+    Microwave power in dBm for field sweeps.
 uw_dip_center_GHz:
   type: float
   section: odnp_params
