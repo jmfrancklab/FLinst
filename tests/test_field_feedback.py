@@ -268,10 +268,12 @@ def test_maintain_field_falls_back_when_z0_cannot_reach_target(
     assert shims.V_limit.commands == []
 
 
-def test_initial_main_current_move_still_sends_target_command(config):
+def test_large_field_error_moves_main_incrementally_to_biased_target(config):
     target_G = 100.0
-    target_A = target_G * config["current_v_field_A_G"]
-    gen = FakeGenesys(measured_current=target_A - 0.001)
+    initial_G = 95.0
+    gen = FakeGenesys(
+        measured_current=initial_G * config["current_v_field_A_G"]
+    )
     hall = FakeHall([95.0, target_G])
     shims = FakeShims(voltage=0.0)
 
@@ -284,7 +286,8 @@ def test_initial_main_current_move_still_sends_target_command(config):
         settling_attempts=3,
     )
 
-    assert gen.current_commands[0] == pytest.approx(target_A)
+    expected_A = (target_G - 1.0) * config["current_v_field_A_G"]
+    assert gen.current_commands[0] == pytest.approx(expected_A)
     assert result == pytest.approx(target_G)
 
 
@@ -293,7 +296,7 @@ def test_small_field_change_skips_initial_main_ramp(config):
     gen = FakeGenesys(measured_current=0.620)
     # The initial read is close enough for Z0 to handle the move, so the main
     # supply must not perform an absolute feed-forward ramp.
-    hall = FakeHall([100.0, 100.0, 100.2, 100.2, 100.2, 100.2])
+    hall = FakeHall([100.0, 100.2, 100.2, 100.2])
     shims = FakeShims(voltage=4.622)
 
     result = field_feedback.ramp_field(
@@ -316,11 +319,14 @@ def test_small_field_change_skips_initial_main_ramp(config):
 def test_initial_main_ramp_accounts_for_existing_z0_voltage(config):
     target_G = 100.0
     z0_voltage_V = 1.0
-    main_target_G = (
-        target_G - z0_voltage_V * config["z0_field_v_voltage_G_V"]
+    initial_total_G = 95.0
+    initial_main_G = (
+        initial_total_G
+        - z0_voltage_V * config["z0_field_v_voltage_G_V"]
     )
-    target_A = main_target_G * config["current_v_field_A_G"]
-    gen = FakeGenesys(measured_current=target_A - 0.001)
+    gen = FakeGenesys(
+        measured_current=initial_main_G * config["current_v_field_A_G"]
+    )
     hall = FakeHall([95.0, target_G])
     shims = FakeShims(voltage=z0_voltage_V)
 
@@ -333,7 +339,46 @@ def test_initial_main_ramp_accounts_for_existing_z0_voltage(config):
         settling_attempts=3,
     )
 
-    assert gen.current_commands[0] == pytest.approx(target_A)
+    expected_A = (
+        initial_main_G
+        + (target_G - 1.0 - initial_total_G)
+    ) * config["current_v_field_A_G"]
+    assert gen.current_commands[0] == pytest.approx(expected_A)
+    assert result == pytest.approx(target_G)
+
+
+def test_high_z0_headroom_failure_moves_main_to_biased_target(config):
+    target_G = 100.0
+    initial_total_G = 99.85
+    z0_voltage_V = 5.9
+    initial_main_G = (
+        initial_total_G
+        - z0_voltage_V * config["z0_field_v_voltage_G_V"]
+    )
+    gen = FakeGenesys(
+        measured_current=initial_main_G * config["current_v_field_A_G"]
+    )
+    hall = FakeHall([initial_total_G, target_G, target_G])
+    shims = FakeShims(voltage=z0_voltage_V)
+
+    result = field_feedback.ramp_field(
+        target_G,
+        config,
+        hall,
+        gen,
+        shims,
+        settling_attempts=3,
+    )
+
+    expected_A = (
+        initial_main_G
+        + (target_G - 1.0 - initial_total_G)
+    ) * config["current_v_field_A_G"]
+    assert gen.current_commands[0] == pytest.approx(expected_A)
+    assert gen.current_commands[0] < initial_main_G * config[
+        "current_v_field_A_G"
+    ]
+    assert shims.V_limit.commands == []
     assert result == pytest.approx(target_G)
 
 
@@ -368,11 +413,17 @@ def test_negative_z0_request_restarts_loop_without_sending_stale_voltage(
     gen = FakeGenesys(measured_current=target_A)
     # First outer-loop reading is 0.2 G above target, so Z0 would need a
     # negative voltage. Subsequent readings are on target and converge.
-    hall = FakeHall([100.2, 100.2, 100.0, 100.0, 100.0, 100.0])
+    hall = FakeHall([100.2, 100.0, 100.0])
     shims = FakeShims(voltage=0.0)
     adjusted_targets = []
 
-    def fake_adjust(target, passed_config, passed_hall, passed_gen):
+    def fake_adjust(
+        target,
+        passed_config,
+        passed_hall,
+        passed_gen,
+        true_B0_G=None,
+    ):
         adjusted_targets.append(target)
 
     monkeypatch.setattr(field_feedback, "adjust_main_field", fake_adjust)
