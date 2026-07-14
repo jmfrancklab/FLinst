@@ -9,7 +9,7 @@ from Instruments import (
     genesys,
     ShimDictMapping,
 )
-from Instruments.field_feedback import ramp_field
+from Instruments.field_feedback import maintain_field, ramp_field
 import SpinCore_pp
 
 IP = "0.0.0.0"
@@ -83,14 +83,15 @@ def main():
             if 0.2 <= field_error_G:
                 logging.info(
                     "Logged field %0.3f G is %0.3f G away from desired "
-                    "field %0.3f G; re-ramping to target",
+                    "field %0.3f G; correcting toward target",
                     current_field_G,
                     field_error_G,
                     desired_field_G,
                 )
                 try:
-                    current_field_G = ramp_field(
+                    current_field_G = maintain_field(
                         desired_field_G,
+                        current_field_G,
                         config_dict,
                         h,
                         gen,
@@ -98,7 +99,7 @@ def main():
                     )
                 except Exception:
                     logging.exception(
-                        "Field re-ramp during logging failed; keeping current"
+                        "Field correction during logging failed; keeping current"
                         " field in log"
                     )
             return current_field_G
@@ -251,7 +252,6 @@ def main():
                         b.set_freq(float(args[1]))
                     case b"SET_FIELD":
                         B0_des_G = float(args[1])  # B in G
-                        desired_field_G = B0_des_G
                         # To keep the server alive when the
                         # field ramp fails, we catch the exception
                         # and send an error message back to the client
@@ -269,6 +269,7 @@ def main():
                                 ("ERROR SET_FIELD %s" % e).encode("ASCII")
                             )
                         else:
+                            desired_field_G = B0_des_G
                             conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case _:
                         raise ValueError(
