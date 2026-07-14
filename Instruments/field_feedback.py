@@ -195,6 +195,15 @@ def maintain_field(
         )
         if not np.isclose(desired_Z0_voltage_V, Z0_initial_voltage_V):
             shims.V_limit["Z0"] = desired_Z0_voltage_V
+            corrected_B0_G = h.field_in_G
+            logging.info(
+                "Z0 response estimate: dV=%s V dB=%s G slope=%s G/V",
+                desired_Z0_voltage_V - Z0_initial_voltage_V,
+                corrected_B0_G - current_B0_G,
+                (corrected_B0_G - current_B0_G)
+                / (desired_Z0_voltage_V - Z0_initial_voltage_V),
+            )
+            return corrected_B0_G
         return h.field_in_G
     # }}}
     return ramp_field(B0_des_G, config_dict, h, gen, shims)
@@ -248,6 +257,9 @@ def ramp_field(
     if Z0_max_voltage_V is None:
         Z0_max_voltage_V = z0_inst.max_V[z0_channel]
     Z0_initial_voltage_V = shims.V_read["Z0"]
+    tolerance_G = (
+        config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
+    )
     main_target_G = B0_des_G - (
         Z0_initial_voltage_V * config_dict["z0_field_v_voltage_G_V"]
     )
@@ -273,16 +285,52 @@ def ramp_field(
     except Exception:
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
-    ramp_steps = max(1, int(abs(I_setting - temp_I_meas) * 2))
-    logging.info(
-        "Ramping the field from %s to %s A, accounting for Z0=%s V",
-        gen.I_meas,
-        I_setting,
-        Z0_initial_voltage_V,
+    initial_B0_G = h.field_in_G
+    initial_field_error_G = B0_des_G - initial_B0_G
+    initial_Z0_voltage_V = Z0_initial_voltage_V + (
+        initial_field_error_G / config_dict["z0_field_v_voltage_G_V"]
     )
-    for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps + 1)[1:]:
-        gen.I_limit = thisI
-        time.sleep(config_dict["magnet_settle_short"])
+    Z0_can_trim_initially = (
+        abs(initial_field_error_G) <= main_field_threshold_G
+        and Z0_min_voltage_V <= initial_Z0_voltage_V <= Z0_max_voltage_V
+    )
+    first_loop_field_G = None
+    logging.info(
+        "Field ramp decision: target=%s G initial=%s G error=%+s G "
+        "Z0=%s V target_Z0=%s V",
+        B0_des_G,
+        initial_B0_G,
+        initial_field_error_G,
+        Z0_initial_voltage_V,
+        initial_Z0_voltage_V,
+    )
+    if abs(initial_field_error_G) < tolerance_G:
+        ramp_steps = 0
+        first_loop_field_G = initial_B0_G
+        logging.info(
+            "Skipping initial main-field ramp because field is already "
+            "within tolerance"
+        )
+    elif Z0_can_trim_initially:
+        ramp_steps = 0
+        first_loop_field_G = initial_B0_G
+        logging.info(
+            "Skipping initial main-field ramp from %s G to %s G; "
+            "Z0 can trim this move",
+            initial_B0_G,
+            B0_des_G,
+        )
+    else:
+        ramp_steps = max(1, int(abs(I_setting - temp_I_meas) * 2))
+        logging.info(
+            "Ramping the field from %s to %s A, accounting for Z0=%s V",
+            gen.I_meas,
+            I_setting,
+            Z0_initial_voltage_V,
+        )
+        for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps + 1)[1:]:
+            gen.I_limit = thisI
+            time.sleep(config_dict["magnet_settle_short"])
     if B0_des_G == 0:
         shims.V_limit["Z0"] = 0
         shims.output["Z0"] = 0
@@ -298,23 +346,26 @@ def ramp_field(
     #     within 0.8 G of our desired
     #     value
     num_field_matches = 0
+    required_field_matches = 3
     for j in range(settling_attempts):
-        time.sleep(config_dict["magnet_settle_short"])
-        true_B0_G = h.field_in_G
+        if first_loop_field_G is None:
+            time.sleep(config_dict["magnet_settle_short"])
+            true_B0_G = h.field_in_G
+        else:
+            true_B0_G = first_loop_field_G
+            first_loop_field_G = None
         field_discrepancy = abs(true_B0_G - B0_des_G)
         if field_discrepancy > 2.0:
             time.sleep(config_dict["magnet_settle_medium"])
-        if (
-            field_discrepancy
-            < config_dict["tolerance_Hz"]
-            * 1e-6
-            / config_dict["gamma_eff_mhz_g"]
-        ):
+        if field_discrepancy < tolerance_G:
             logging.info(
-                "your match to the desired field is within tolerance!"
+                "field %s G is within %s G of desired %s G",
+                true_B0_G,
+                tolerance_G,
+                B0_des_G,
             )
             num_field_matches += 1
-            if num_field_matches > 2:
+            if num_field_matches >= required_field_matches:
                 break
         elif field_discrepancy > main_field_threshold_G:
             # {{{ Large discrepancies belong to the main magnet supply. The
@@ -366,26 +417,40 @@ def ramp_field(
             )
             if not np.isclose(desired_Z0_voltage_V, Z0_initial_voltage_V):
                 shims.V_limit["Z0"] = desired_Z0_voltage_V
+                z0_command_delta_V = (
+                    desired_Z0_voltage_V - Z0_initial_voltage_V
+                )
                 # {{{ Check if the field is stabilizing
                 num_field_matches = 0
+                required_field_matches = 2
                 B0_last_G = h.field_in_G
+                z0_field_matches = 0
                 for j in range(settling_attempts):
                     time.sleep(config_dict["magnet_settle_short"])
                     B0_now_G = h.field_in_G
-                    field_discrepancy = abs(B0_now_G - B0_last_G)
+                    logging.info(
+                        "Z0 response estimate: dV=%s V dB=%s G "
+                        "slope=%s G/V",
+                        z0_command_delta_V,
+                        B0_now_G - true_B0_G,
+                        (B0_now_G - true_B0_G) / z0_command_delta_V,
+                    )
+                    field_change_G = abs(B0_now_G - B0_last_G)
+                    field_error_G = abs(B0_now_G - B0_des_G)
                     if (
-                        field_discrepancy
-                        < config_dict["tolerance_Hz"]
-                        * 1e-6
-                        / config_dict["gamma_eff_mhz_g"]
+                        field_change_G < tolerance_G
+                        and field_error_G < tolerance_G
                     ):
-                        num_field_matches += 1
+                        z0_field_matches += 1
                     else:
                         B0_last_G = B0_now_G
-                        num_field_matches = 0
-                    if num_field_matches > 2:
+                        z0_field_matches = 0
+                    if z0_field_matches >= required_field_matches:
+                        num_field_matches = required_field_matches
                         break
-                if not (num_field_matches > 2):
+                if num_field_matches >= required_field_matches:
+                    break
+                if not (num_field_matches >= required_field_matches):
                     print(
                         " ".join(
                             ["WARNING! "] * 3 + ["field is not stabilizing!"]
@@ -395,15 +460,12 @@ def ramp_field(
             # }}}
             num_field_matches = 0
 
-    if num_field_matches < 3:
-        temp = (
-            config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
-        )
-
+    if num_field_matches < required_field_matches:
         raise RuntimeError(
             f"I tried {settling_attempts} times to get my"
-            f" field to match within {temp} G"
-            f" or {config_dict['tolerance_Hz']} Hz three times"
+            f" field to match within {tolerance_G} G"
+            f" or {config_dict['tolerance_Hz']} Hz "
+            f"{required_field_matches} times "
             "in a row, and it didn't work!"
         )
     # }}}

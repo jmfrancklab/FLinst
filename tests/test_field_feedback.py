@@ -126,7 +126,9 @@ def no_sleep(monkeypatch):
     field_feedback._main_field_calibration_point = None
 
 
-def test_adjust_main_field_uses_incremental_error_without_mutating_config(config):
+def test_adjust_main_field_uses_incremental_error_without_mutating_config(
+    config,
+):
     hall = FakeHall([100.5])
     gen = FakeGenesys(measured_current=0.620)
     original_ratio = config["current_v_field_A_G"]
@@ -238,7 +240,13 @@ def test_maintain_field_falls_back_when_z0_cannot_reach_target(
     shims = FakeShims(voltage=5.9)
     calls = []
 
-    def fake_ramp(target, passed_config, passed_hall, passed_gen, passed_shims):
+    def fake_ramp(
+        target,
+        passed_config,
+        passed_hall,
+        passed_gen,
+        passed_shims,
+    ):
         calls.append(
             (target, passed_config, passed_hall, passed_gen, passed_shims)
         )
@@ -260,11 +268,11 @@ def test_maintain_field_falls_back_when_z0_cannot_reach_target(
     assert shims.V_limit.commands == []
 
 
-def test_small_main_current_move_still_sends_target_command(config):
+def test_initial_main_current_move_still_sends_target_command(config):
     target_G = 100.0
     target_A = target_G * config["current_v_field_A_G"]
     gen = FakeGenesys(measured_current=target_A - 0.001)
-    hall = FakeHall([target_G])
+    hall = FakeHall([95.0, target_G])
     shims = FakeShims(voltage=0.0)
 
     result = field_feedback.ramp_field(
@@ -280,6 +288,31 @@ def test_small_main_current_move_still_sends_target_command(config):
     assert result == pytest.approx(target_G)
 
 
+def test_small_field_change_skips_initial_main_ramp(config):
+    target_G = 100.2
+    gen = FakeGenesys(measured_current=0.620)
+    # The initial read is close enough for Z0 to handle the move, so the main
+    # supply must not perform an absolute feed-forward ramp.
+    hall = FakeHall([100.0, 100.0, 100.2, 100.2, 100.2, 100.2])
+    shims = FakeShims(voltage=4.622)
+
+    result = field_feedback.ramp_field(
+        target_G,
+        config,
+        hall,
+        gen,
+        shims,
+        settling_attempts=6,
+    )
+
+    expected_voltage = 4.622 + 0.2 / config["z0_field_v_voltage_G_V"]
+    assert gen.current_commands == []
+    assert shims.V_limit.commands == [
+        ("Z0", pytest.approx(np.round(expected_voltage, 3)))
+    ]
+    assert result == pytest.approx(target_G)
+
+
 def test_initial_main_ramp_accounts_for_existing_z0_voltage(config):
     target_G = 100.0
     z0_voltage_V = 1.0
@@ -288,7 +321,7 @@ def test_initial_main_ramp_accounts_for_existing_z0_voltage(config):
     )
     target_A = main_target_G * config["current_v_field_A_G"]
     gen = FakeGenesys(measured_current=target_A - 0.001)
-    hall = FakeHall([target_G])
+    hall = FakeHall([95.0, target_G])
     shims = FakeShims(voltage=z0_voltage_V)
 
     result = field_feedback.ramp_field(
@@ -311,7 +344,7 @@ def test_ramp_field_skips_noop_z0_voltage_command(config):
     gen = FakeGenesys(measured_current=target_A)
     # The first read is outside the tiny test tolerance, but its requested Z0
     # correction rounds back to the existing 1.000 V setting.
-    hall = FakeHall([99.9999, 100.0, 100.0, 100.0, 100.0])
+    hall = FakeHall([99.9999, 99.9999, 100.0, 100.0, 100.0, 100.0])
     shims = FakeShims(voltage=1.0)
 
     result = field_feedback.ramp_field(
@@ -335,7 +368,7 @@ def test_negative_z0_request_restarts_loop_without_sending_stale_voltage(
     gen = FakeGenesys(measured_current=target_A)
     # First outer-loop reading is 0.2 G above target, so Z0 would need a
     # negative voltage. Subsequent readings are on target and converge.
-    hall = FakeHall([100.2, 100.0, 100.0, 100.0, 100.0])
+    hall = FakeHall([100.2, 100.2, 100.0, 100.0, 100.0, 100.0])
     shims = FakeShims(voltage=0.0)
     adjusted_targets = []
 
