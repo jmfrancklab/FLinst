@@ -37,7 +37,7 @@ config_dict = SpinCore_pp.configuration("active.ini")
 )
 gamma_eff_MHz_G = config_dict["gamma_eff_MHz_G"]
 config_dict["type"] = "field_sweep"
-settle_s = config_dict["magnet_settle_long"]
+settle_s = config_dict["magnet_settle_medium"]
 if config_dict["nEchoes"] != 1:
     raise ValueError("run_spin_echo requires nEchoes = 1")
 mw_power_dBm = config_dict["field_sweep_microwave_power_dBm"]
