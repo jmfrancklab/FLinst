@@ -5,7 +5,25 @@ import time
 
 
 def adjust_main_field(B0_des_G, config_dict, h, gen):
-    """Correct the main field using the calibrated local A/G slope."""
+    """Correct the main magnet current using the calibrated local slope.
+
+    This applies an incremental current correction from the measured field
+    error. It deliberately does not update ``current_v_field_A_G``; the
+    configured A/G conversion remains the coarse calibration, while the
+    measured field supplies the local error term.
+
+    Parameters
+    ----------
+    B0_des_G : float
+        Desired magnetic field in Gauss.
+    config_dict : dict
+        Configuration dictionary containing ``current_v_field_A_G``.
+    h : LakeShore475
+        Hall probe used for the current field readback.
+    gen : genesys
+        Main magnet power supply. Its ``I_meas`` readback is used as the
+        starting current and its ``I_limit`` property is updated.
+    """
     true_B0_G = h.field_in_G
     field_error_G = B0_des_G - true_B0_G
     I_setting = (
@@ -36,11 +54,46 @@ def maintain_field(
     Z0_min_voltage_V=0.0,
     Z0_max_voltage_V=6.0,
 ):
-    """Apply one fine Z0 correction, falling back to a full field ramp."""
+    """Apply one fine Z0 correction, falling back to a full field ramp.
+
+    This is intended for log-time field maintenance after the main field has
+    already been set. If the requested correction fits inside the allowed Z0
+    voltage window, only the Z0 shim is moved. If Z0 lacks enough headroom, the
+    full ramping algorithm is used so the main supply can be corrected too.
+
+    Parameters
+    ----------
+    B0_des_G : float
+        Desired magnetic field in Gauss.
+    current_B0_G : float
+        Current Hall probe readback in Gauss. Passing this in avoids taking a
+        second pre-correction readback in the server logging path.
+    config_dict : dict
+        Configuration dictionary containing ``z0_field_v_voltage_G_V`` and the
+        values required by ``ramp_field`` if fallback is needed.
+    h : LakeShore475
+        Hall probe used to read the field after the correction.
+    gen : genesys
+        Main magnet power supply, passed through to ``ramp_field`` if needed.
+    shims : ShimDictMapping
+        Shim mapping used to read, round, and set the Z0 voltage.
+    Z0_min_voltage_V : float, optional
+        Minimum allowed Z0 voltage.
+    Z0_max_voltage_V : float, optional
+        Maximum allowed Z0 voltage.
+
+    Returns
+    -------
+    float
+        Hall probe readback after the fine correction or fallback ramp.
+    """
     Z0_initial_voltage_V = shims.V_read["Z0"]
     desired_Z0_voltage_V = Z0_initial_voltage_V + (
         B0_des_G - current_B0_G
     ) / config_dict["z0_field_v_voltage_G_V"]
+    # {{{ Use the shim for small log-time corrections when it has enough
+    #     voltage headroom. This avoids running the slower main-field ramp
+    #     during ordinary logging drift correction.
     if Z0_min_voltage_V <= desired_Z0_voltage_V <= Z0_max_voltage_V:
         desired_Z0_voltage_V = shims.round_to_allowed(
             "V", "Z0", desired_Z0_voltage_V
@@ -48,6 +101,7 @@ def maintain_field(
         if not np.isclose(desired_Z0_voltage_V, Z0_initial_voltage_V):
             shims.V_limit["Z0"] = desired_Z0_voltage_V
         return h.field_in_G
+    # }}}
     return ramp_field(B0_des_G, config_dict, h, gen, shims)
 
 
@@ -136,9 +190,6 @@ def ramp_field(
     if ramp_steps > 4:
         time.sleep(config_dict["magnet_settle_long"])
     # }}}
-    # {{{ now, adjust current_v_field_A_G
-    #     to get the field we want,
-    #     just once at the beginning
     # {{{ try to stabilize the field
     #     within 0.8 G of our desired
     #     value
@@ -161,11 +212,10 @@ def ramp_field(
             num_field_matches += 1
             if num_field_matches > 2:
                 break
-        elif (
-            # as we approach lower fields, we encounter a no-current
-            # discrepancy that can't be calibrated out.
-            field_discrepancy > main_field_threshold_G
-        ):
+        elif field_discrepancy > main_field_threshold_G:
+            # {{{ Large discrepancies belong to the main magnet supply. The
+            #     Z0 shim is reserved for the final small correction so it
+            #     keeps enough headroom for later log-time maintenance.
             adjust_main_field(
                 B0_des_G,
                 config_dict,
@@ -173,6 +223,7 @@ def ramp_field(
                 gen,
             )
             num_field_matches = 0
+            # }}}
         else:
             # {{{ if it's not within tolerance, and it's not asking for a big
             #     step, then it's asking for an intermediate step
@@ -189,12 +240,19 @@ def ramp_field(
             # {{{ we can only use Z0 to increase the voltage, and we don't want
             #     to ask for an unreasonable voltage
             if desired_Z0_voltage_V < Z0_min_voltage_V:
+                # {{{ If Z0 would need to go negative, bias the main field
+                #     slightly low so the positive-only Z0 correction can
+                #     finish the approach on a later pass.
                 adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
                 num_field_matches = 0
+                # }}}
                 continue
             elif desired_Z0_voltage_V > Z0_max_voltage_V:
+                # {{{ If Z0 is out of positive headroom, move the main field
+                #     toward the target and retry the fine correction.
                 adjust_main_field(B0_des_G, config_dict, h, gen)
                 num_field_matches = 0
+                # }}}
                 continue
             # }}}
             shims.V_limit["Z0"] = shims.round_to_allowed(

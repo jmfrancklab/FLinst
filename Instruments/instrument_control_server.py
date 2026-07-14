@@ -19,6 +19,27 @@ PORT = 6002
 def round_and_set_shim_quant(
     sh_map, shim_name, input_string, I_or_V, which_prop
 ):
+    """Round and set one shim current or voltage limit.
+
+    Parameters
+    ----------
+    sh_map : ShimDictMapping
+        Mapping for shim readback, output state, and limit properties.
+    shim_name : str
+        Name of the shim channel to update.
+    input_string : str or bytes
+        Requested current or voltage, as received from the socket command.
+    I_or_V : {"I", "V"}
+        Selects current or voltage rounding rules.
+    which_prop : inst_dict_property
+        Limit property to update, typically ``sh_map.I_limit`` or
+        ``sh_map.V_limit``.
+
+    Returns
+    -------
+    float
+        Rounded current or voltage that was sent to the instrument.
+    """
     current_or_voltage = float(input_string)
     current_or_voltage = sh_map.round_to_allowed(
         I_or_V, shim_name, current_or_voltage
@@ -76,6 +97,12 @@ def main():
         desired_field_G = None
 
         def get_field_for_logging():
+            """Return a field readback, correcting drift during logging.
+
+            The correction is only active after a successful ``SET_FIELD`` has
+            established ``desired_field_G``. Failures are logged and the raw
+            readback is returned so logging can continue.
+            """
             current_field_G = h.field_in_G
             if desired_field_G is None:
                 return current_field_G
@@ -269,7 +296,11 @@ def main():
                                 ("ERROR SET_FIELD %s" % e).encode("ASCII")
                             )
                         else:
+                            # {{{ Only a completed ramp becomes the field held
+                            #     during logging. A failed request must not
+                            #     replace the previous target.
                             desired_field_G = B0_des_G
+                            # }}}
                             conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case _:
                         raise ValueError(
