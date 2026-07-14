@@ -412,3 +412,13 @@ def main():
                             power=g.read_power(),
                             field=get_field_for_logging(),
                         )
+                except Exception as e:
+                    logging.exception(
+                        "Unhandled error while processing instrument command"
+                    )
+                    try:
+                        conn.send(("ERROR %s" % e).encode("ASCII"))
+                    except Exception:
+                        logging.exception(
+                            "Could not send error response to client"
+                        )

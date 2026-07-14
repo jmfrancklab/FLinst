@@ -4,13 +4,107 @@ import numpy as np
 import time
 
 
+_main_field_calibration_point = None
+
+
+def update_main_field_slope(
+    config_dict,
+    field_G,
+    current_A,
+    z0_voltage_V,
+    min_span_G=5.0,
+    max_z0_change_V=1e-6,
+    smoothing=0.2,
+    min_slope_factor=0.5,
+    max_slope_factor=2.0,
+):
+    """Update the local main-field slope from settled differential data.
+
+    The update is intentionally conservative: it uses only two settled points,
+    rejects points where Z0 changed, rejects small field spans, and smooths the
+    accepted differential slope into ``current_v_field_A_G``.
+    """
+    global _main_field_calibration_point
+    previous = _main_field_calibration_point
+    current_point = {
+        "field_G": float(field_G),
+        "current_A": float(current_A),
+        "z0_voltage_V": float(z0_voltage_V),
+    }
+    if previous is None:
+        _main_field_calibration_point = current_point
+        logging.debug(
+            strm("stored main-field calibration point", current_point)
+        )
+        return False
+    if abs(current_point["z0_voltage_V"] - previous["z0_voltage_V"]) > (
+        max_z0_change_V
+    ):
+        _main_field_calibration_point = current_point
+        logging.debug(
+            strm(
+                "reset main-field calibration point because Z0 changed from",
+                previous["z0_voltage_V"],
+                "to",
+                current_point["z0_voltage_V"],
+            )
+        )
+        return False
+    delta_B_G = current_point["field_G"] - previous["field_G"]
+    if abs(delta_B_G) < min_span_G:
+        logging.debug(
+            strm(
+                "retaining main-field calibration point; span",
+                delta_B_G,
+                "G is below",
+                min_span_G,
+                "G",
+            )
+        )
+        return False
+    measured_slope = (
+        current_point["current_A"] - previous["current_A"]
+    ) / delta_B_G
+    current_slope = config_dict["current_v_field_A_G"]
+    min_slope = min_slope_factor * current_slope
+    max_slope = max_slope_factor * current_slope
+    if not (min_slope <= measured_slope <= max_slope):
+        _main_field_calibration_point = current_point
+        logging.debug(
+            strm(
+                "reset main-field calibration point because slope",
+                measured_slope,
+                "is outside",
+                min_slope,
+                "to",
+                max_slope,
+            )
+        )
+        return False
+    config_dict["current_v_field_A_G"] = (
+        (1 - smoothing) * current_slope + smoothing * measured_slope
+    )
+    _main_field_calibration_point = current_point
+    logging.debug(
+        strm(
+            "updated current_v_field_A_G from",
+            current_slope,
+            "to",
+            config_dict["current_v_field_A_G"],
+            "using settled differential slope",
+            measured_slope,
+        )
+    )
+    return True
+
+
 def adjust_main_field(B0_des_G, config_dict, h, gen):
     """Correct the main magnet current using the calibrated local slope.
 
     This applies an incremental current correction from the measured field
-    error. It deliberately does not update ``current_v_field_A_G``; the
-    configured A/G conversion remains the coarse calibration, while the
-    measured field supplies the local error term.
+    error. It deliberately does not update ``current_v_field_A_G`` from a
+    single I/B value; successful settled ramps update the local slope only from
+    guarded differential measurements.
 
     Parameters
     ----------
@@ -26,9 +120,10 @@ def adjust_main_field(B0_des_G, config_dict, h, gen):
     """
     true_B0_G = h.field_in_G
     field_error_G = B0_des_G - true_B0_G
+    current_v_field_A_G = config_dict["current_v_field_A_G"]
     I_setting = (
         gen.I_meas
-        + field_error_G * config_dict["current_v_field_A_G"]
+        + field_error_G * current_v_field_A_G
     )
     logging.debug(
         strm(
@@ -303,6 +398,12 @@ def ramp_field(
         )
     # }}}
     true_B0_G = h.field_in_G
+    update_main_field_slope(
+        config_dict,
+        true_B0_G,
+        gen.I_meas,
+        shims.V_read["Z0"],
+    )
     logging.debug(
         "Your field is"
         f" {true_B0_G} G, and"

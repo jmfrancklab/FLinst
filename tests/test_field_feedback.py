@@ -123,6 +123,7 @@ def config():
 @pytest.fixture(autouse=True)
 def no_sleep(monkeypatch):
     monkeypatch.setattr(field_feedback.time, "sleep", lambda _seconds: None)
+    field_feedback._main_field_calibration_point = None
 
 
 def test_adjust_main_field_uses_incremental_error_without_mutating_config(config):
@@ -134,6 +135,76 @@ def test_adjust_main_field_uses_incremental_error_without_mutating_config(config
 
     expected = 0.620 + (100.0 - 100.5) * original_ratio
     assert gen.I_limit == pytest.approx(expected)
+    assert config["current_v_field_A_G"] == original_ratio
+
+
+def test_update_main_field_slope_uses_settled_differential_points(config):
+    original_ratio = config["current_v_field_A_G"]
+    field_feedback.update_main_field_slope(config, 100.0, 0.600, 0.5)
+
+    updated = field_feedback.update_main_field_slope(
+        config,
+        110.0,
+        0.6625,
+        0.5,
+    )
+
+    measured_ratio = (0.6625 - 0.600) / (110.0 - 100.0)
+    expected_ratio = 0.8 * original_ratio + 0.2 * measured_ratio
+    assert updated is True
+    assert config["current_v_field_A_G"] == pytest.approx(expected_ratio)
+
+
+def test_update_main_field_slope_retains_baseline_until_span_is_large(config):
+    original_ratio = config["current_v_field_A_G"]
+    measured_ratio = 0.00625
+    field_feedback.update_main_field_slope(config, 100.0, 0.600, 0.5)
+
+    for step_idx in range(1, 10):
+        field_G = 100.0 + 0.5 * step_idx
+        current_A = 0.600 + measured_ratio * (field_G - 100.0)
+        updated = field_feedback.update_main_field_slope(
+            config,
+            field_G,
+            current_A,
+            0.5,
+        )
+        assert updated is False
+        assert config["current_v_field_A_G"] == original_ratio
+        assert (
+            field_feedback._main_field_calibration_point["field_G"]
+            == pytest.approx(100.0)
+        )
+        assert "_main_field_calibration_point" not in config
+
+    updated = field_feedback.update_main_field_slope(
+        config,
+        105.0,
+        0.600 + measured_ratio * 5.0,
+        0.5,
+    )
+
+    expected_ratio = 0.8 * original_ratio + 0.2 * measured_ratio
+    assert updated is True
+    assert config["current_v_field_A_G"] == pytest.approx(expected_ratio)
+    assert field_feedback._main_field_calibration_point[
+        "field_G"
+    ] == pytest.approx(105.0)
+    assert "_main_field_calibration_point" not in config
+
+
+def test_update_main_field_slope_rejects_when_z0_changed(config):
+    original_ratio = config["current_v_field_A_G"]
+    field_feedback.update_main_field_slope(config, 100.0, 0.600, 0.5)
+
+    updated = field_feedback.update_main_field_slope(
+        config,
+        110.0,
+        0.6625,
+        0.6,
+    )
+
+    assert updated is False
     assert config["current_v_field_A_G"] == original_ratio
 
 
