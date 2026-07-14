@@ -247,7 +247,11 @@ def ramp_field(
     z0_channel = shims.channel("Z0")
     if Z0_max_voltage_V is None:
         Z0_max_voltage_V = z0_inst.max_V[z0_channel]
-    I_setting = B0_des_G * config_dict["current_v_field_A_G"]
+    Z0_initial_voltage_V = shims.V_read["Z0"]
+    main_target_G = B0_des_G - (
+        Z0_initial_voltage_V * config_dict["z0_field_v_voltage_G_V"]
+    )
+    I_setting = main_target_G * config_dict["current_v_field_A_G"]
     # {{{ First, we ramp from whatever
     #     our current is (zero or not)
     #     to where we think we want to
@@ -270,7 +274,12 @@ def ramp_field(
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
     ramp_steps = max(1, int(abs(I_setting - temp_I_meas) * 2))
-    logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
+    logging.info(
+        "Ramping the field from %s to %s A, accounting for Z0=%s V",
+        gen.I_meas,
+        I_setting,
+        Z0_initial_voltage_V,
+    )
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps + 1)[1:]:
         gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
@@ -350,12 +359,13 @@ def ramp_field(
                 # }}}
                 continue
             # }}}
-            shims.V_limit["Z0"] = shims.round_to_allowed(
+            desired_Z0_voltage_V = shims.round_to_allowed(
                 "V",
                 "Z0",
                 desired_Z0_voltage_V,
             )
-            if (shims.V_read["Z0"] - Z0_initial_voltage_V) != 0:
+            if not np.isclose(desired_Z0_voltage_V, Z0_initial_voltage_V):
+                shims.V_limit["Z0"] = desired_Z0_voltage_V
                 # {{{ Check if the field is stabilizing
                 num_field_matches = 0
                 B0_last_G = h.field_in_G

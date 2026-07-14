@@ -265,7 +265,7 @@ def test_small_main_current_move_still_sends_target_command(config):
     target_A = target_G * config["current_v_field_A_G"]
     gen = FakeGenesys(measured_current=target_A - 0.001)
     hall = FakeHall([target_G])
-    shims = FakeShims(voltage=0.5)
+    shims = FakeShims(voltage=0.0)
 
     result = field_feedback.ramp_field(
         target_G,
@@ -277,6 +277,53 @@ def test_small_main_current_move_still_sends_target_command(config):
     )
 
     assert gen.current_commands[0] == pytest.approx(target_A)
+    assert result == pytest.approx(target_G)
+
+
+def test_initial_main_ramp_accounts_for_existing_z0_voltage(config):
+    target_G = 100.0
+    z0_voltage_V = 1.0
+    main_target_G = (
+        target_G - z0_voltage_V * config["z0_field_v_voltage_G_V"]
+    )
+    target_A = main_target_G * config["current_v_field_A_G"]
+    gen = FakeGenesys(measured_current=target_A - 0.001)
+    hall = FakeHall([target_G])
+    shims = FakeShims(voltage=z0_voltage_V)
+
+    result = field_feedback.ramp_field(
+        target_G,
+        config,
+        hall,
+        gen,
+        shims,
+        settling_attempts=3,
+    )
+
+    assert gen.current_commands[0] == pytest.approx(target_A)
+    assert result == pytest.approx(target_G)
+
+
+def test_ramp_field_skips_noop_z0_voltage_command(config):
+    target_G = 100.0
+    target_A = target_G * config["current_v_field_A_G"]
+    config["tolerance_Hz"] = 0.01
+    gen = FakeGenesys(measured_current=target_A)
+    # The first read is outside the tiny test tolerance, but its requested Z0
+    # correction rounds back to the existing 1.000 V setting.
+    hall = FakeHall([99.9999, 100.0, 100.0, 100.0, 100.0])
+    shims = FakeShims(voltage=1.0)
+
+    result = field_feedback.ramp_field(
+        target_G,
+        config,
+        hall,
+        gen,
+        shims,
+        settling_attempts=6,
+    )
+
+    assert shims.V_limit.commands == []
     assert result == pytest.approx(target_G)
 
 
