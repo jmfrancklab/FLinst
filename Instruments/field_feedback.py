@@ -199,8 +199,11 @@ def ramp_field(
                 )
             ):
                 logging.info(
-                    "Z0 is maxed at %0.3f V and %0.3f A of %0.3f A; "
+                    "Z0 fallback: desired %0.3f V exceeds max %0.3f V "
+                    "(current Z0 %0.3f V, %0.3f A of %0.3f A); "
                     "zeroing Z0 before moving main field toward %0.3f G",
+                    desired_Z0_voltage_V,
+                    Z0_max_voltage_V,
                     Z0_initial_voltage_V,
                     Z0_current_A,
                     Z0_current_limit_A,
