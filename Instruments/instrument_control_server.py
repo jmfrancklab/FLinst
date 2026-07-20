@@ -251,7 +251,6 @@ def main():
                         b.set_freq(float(args[1]))
                     case b"SET_FIELD":
                         B0_des_G = float(args[1])  # B in G
-                        desired_field_G = B0_des_G
                         # To keep the server alive when the
                         # field ramp fails, we catch the exception
                         # and send an error message back to the client
@@ -269,6 +268,7 @@ def main():
                                 ("ERROR SET_FIELD %s" % e).encode("ASCII")
                             )
                         else:
+                            desired_field_G = B0_des_G
                             conn.send(("%0.2f" % true_B0_G).encode("ASCII"))
                     case _:
                         raise ValueError(

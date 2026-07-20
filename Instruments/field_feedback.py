@@ -111,7 +111,7 @@ def ramp_field(
     except Exception:
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
-    ramp_steps = int(abs(I_setting - temp_I_meas) * 2)
+    ramp_steps = max(2, int(abs(I_setting - temp_I_meas) * 2))
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
         gen.I_limit = thisI
@@ -186,18 +186,15 @@ def ramp_field(
                 continue
             Z0_current_A = shims.I_read["Z0"]
             Z0_current_limit_A = shims.I_limit["Z0"]
-            if (
-                desired_Z0_voltage_V > Z0_max_voltage_V
-                or (
-                    desired_Z0_voltage_V > Z0_initial_voltage_V
-                    and (
-                        Z0_initial_voltage_V
-                        >= Z0_current_limit_fraction * Z0_max_voltage_V
-                        or (
-                            Z0_current_limit_A > 0
-                            and Z0_current_A
-                            >= Z0_current_limit_fraction * Z0_current_limit_A
-                        )
+            if desired_Z0_voltage_V > Z0_max_voltage_V or (
+                desired_Z0_voltage_V > Z0_initial_voltage_V
+                and (
+                    Z0_initial_voltage_V
+                    >= Z0_current_limit_fraction * Z0_max_voltage_V
+                    or (
+                        Z0_current_limit_A > 0
+                        and Z0_current_A
+                        >= Z0_current_limit_fraction * Z0_current_limit_A
                     )
                 )
             ):
@@ -211,7 +208,7 @@ def ramp_field(
                 )
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
-                adjust_main_field(B0_des_G, config_dict, h, gen)
+                adjust_main_field(B0_des_G - 0.4, config_dict, h, gen)
                 num_field_matches = 0
                 continue
             # }}}
