@@ -179,36 +179,27 @@ def ramp_field(
             # {{{ we can only use Z0 to increase the voltage, and we don't want
             #     to ask for an unreasonable voltage
             if desired_Z0_voltage_V < Z0_min_voltage_V:
-                adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
-                num_field_matches = 0
-                continue
-            elif desired_Z0_voltage_V > Z0_max_voltage_V:
-                logging.info(
-                    "Z0 voltage target %0.3f V exceeds max %0.3f V; "
-                    "zeroing Z0 before moving main field toward %0.3f G",
-                    desired_Z0_voltage_V,
-                    Z0_max_voltage_V,
-                    B0_des_G,
-                )
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
-                adjust_main_field(B0_des_G, config_dict, h, gen)
+                adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
                 num_field_matches = 0
                 continue
             Z0_current_A = shims.I_read["Z0"]
             Z0_current_limit_A = shims.I_limit["Z0"]
-            Z0_voltage_is_maxed = (
-                Z0_initial_voltage_V
-                >= Z0_current_limit_fraction * Z0_max_voltage_V
-            )
-            Z0_current_is_maxed = (
-                Z0_current_limit_A > 0
-                and Z0_current_A
-                >= Z0_current_limit_fraction * Z0_current_limit_A
-            )
             if (
-                desired_Z0_voltage_V > Z0_initial_voltage_V
-                and (Z0_voltage_is_maxed or Z0_current_is_maxed)
+                desired_Z0_voltage_V > Z0_max_voltage_V
+                or (
+                    desired_Z0_voltage_V > Z0_initial_voltage_V
+                    and (
+                        Z0_initial_voltage_V
+                        >= Z0_current_limit_fraction * Z0_max_voltage_V
+                        or (
+                            Z0_current_limit_A > 0
+                            and Z0_current_A
+                            >= Z0_current_limit_fraction * Z0_current_limit_A
+                        )
+                    )
+                )
             ):
                 logging.info(
                     "Z0 is maxed at %0.3f V and %0.3f A of %0.3f A; "
@@ -230,18 +221,22 @@ def ramp_field(
                 desired_Z0_voltage_V,
             )
             if (shims.V_read["Z0"] - Z0_initial_voltage_V) != 0:
-                # {{{ Check if the field is stabilizing
+                # {{{ Check if the field is stabilizing at the target
                 num_field_matches = 0
                 B0_last_G = 0
+                field_tolerance_G = (
+                    config_dict["tolerance_Hz"]
+                    * 1e-6
+                    / config_dict["gamma_eff_mhz_g"]
+                )
                 for j in range(settling_attempts):
                     time.sleep(config_dict["magnet_settle_short"])
                     B0_now_G = h.field_in_G
-                    field_discrepancy = abs(B0_now_G - B0_last_G)
+                    field_change_G = abs(B0_now_G - B0_last_G)
+                    field_error_G = abs(B0_now_G - B0_des_G)
                     if (
-                        field_discrepancy
-                        < config_dict["tolerance_Hz"]
-                        * 1e-6
-                        / config_dict["gamma_eff_mhz_g"]
+                        field_change_G < field_tolerance_G
+                        and field_error_G < field_tolerance_G
                     ):
                         num_field_matches += 1
                     else:
