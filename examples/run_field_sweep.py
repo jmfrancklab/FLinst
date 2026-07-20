@@ -22,7 +22,7 @@ from SpinCore_pp.ppg import run_spin_echo
 from Instruments import instrument_control
 
 
-my_exp_type = "ODNP_NMR_comp/field_dependent"
+my_exp_type = "b27/field_dependent"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 
 config_dict = SpinCore_pp.configuration("active.ini")
