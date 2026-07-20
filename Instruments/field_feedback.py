@@ -183,24 +183,43 @@ def ramp_field(
                 num_field_matches = 0
                 continue
             elif desired_Z0_voltage_V > Z0_max_voltage_V:
+                logging.info(
+                    "Z0 voltage target %0.3f V exceeds max %0.3f V; "
+                    "zeroing Z0 before moving main field toward %0.3f G",
+                    desired_Z0_voltage_V,
+                    Z0_max_voltage_V,
+                    B0_des_G,
+                )
+                shims.V_limit["Z0"] = 0
+                time.sleep(config_dict["magnet_settle_short"])
                 adjust_main_field(B0_des_G, config_dict, h, gen)
                 num_field_matches = 0
                 continue
             Z0_current_A = shims.I_read["Z0"]
             Z0_current_limit_A = shims.I_limit["Z0"]
-            if (
-                desired_Z0_voltage_V > Z0_initial_voltage_V
-                and Z0_current_limit_A > 0
+            Z0_voltage_is_maxed = (
+                Z0_initial_voltage_V
+                >= Z0_current_limit_fraction * Z0_max_voltage_V
+            )
+            Z0_current_is_maxed = (
+                Z0_current_limit_A > 0
                 and Z0_current_A
                 >= Z0_current_limit_fraction * Z0_current_limit_A
+            )
+            if (
+                desired_Z0_voltage_V > Z0_initial_voltage_V
+                and (Z0_voltage_is_maxed or Z0_current_is_maxed)
             ):
                 logging.info(
-                    "Z0 current is maxed at %0.3f A of %0.3f A; "
-                    "moving main field toward %0.3f G",
+                    "Z0 is maxed at %0.3f V and %0.3f A of %0.3f A; "
+                    "zeroing Z0 before moving main field toward %0.3f G",
+                    Z0_initial_voltage_V,
                     Z0_current_A,
                     Z0_current_limit_A,
                     B0_des_G,
                 )
+                shims.V_limit["Z0"] = 0
+                time.sleep(config_dict["magnet_settle_short"])
                 adjust_main_field(B0_des_G, config_dict, h, gen)
                 num_field_matches = 0
                 continue
