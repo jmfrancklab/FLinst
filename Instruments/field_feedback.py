@@ -47,7 +47,8 @@ def ramp_field(
     settling_attempts=60,
     main_field_threshold_G=2.0,
     Z0_min_voltage_V=0.0,
-    Z0_max_voltage_V=6,
+    Z0_max_voltage_V=5.71,
+    Z0_current_limit_fraction=0.98,
 ):
     """Ramp the field from where we are to where we want to be.
 
@@ -80,6 +81,9 @@ def ramp_field(
     Z0_max_voltage_V: float or None
         The maximum voltage we allow for the Z0 shim coil. If None, use the
         hardware maximum for the mapped Z0 channel.
+    Z0_current_limit_fraction : float
+        Fraction of the Z0 current limit above which Z0 is treated as maxed
+        out if the controller asks for more Z0 field.
     """
     z0_inst = shims.instrument("Z0")
     z0_channel = shims.channel("Z0")
@@ -176,8 +180,30 @@ def ramp_field(
             #     to ask for an unreasonable voltage
             if desired_Z0_voltage_V < Z0_min_voltage_V:
                 adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
+                num_field_matches = 0
+                continue
             elif desired_Z0_voltage_V > Z0_max_voltage_V:
                 adjust_main_field(B0_des_G, config_dict, h, gen)
+                num_field_matches = 0
+                continue
+            Z0_current_A = shims.I_read["Z0"]
+            Z0_current_limit_A = shims.I_limit["Z0"]
+            if (
+                desired_Z0_voltage_V > Z0_initial_voltage_V
+                and Z0_current_limit_A > 0
+                and Z0_current_A
+                >= Z0_current_limit_fraction * Z0_current_limit_A
+            ):
+                logging.info(
+                    "Z0 current is maxed at %0.3f A of %0.3f A; "
+                    "moving main field toward %0.3f G",
+                    Z0_current_A,
+                    Z0_current_limit_A,
+                    B0_des_G,
+                )
+                adjust_main_field(B0_des_G, config_dict, h, gen)
+                num_field_matches = 0
+                continue
             # }}}
             shims.V_limit["Z0"] = shims.round_to_allowed(
                 "V",
