@@ -119,7 +119,7 @@ field_requested_G = []
 field_readback_G = []
 with instrument_control() as ic:
     ic.start_log()
-    if mw_power_dBm is None:
+    if mw_power_dBm == -100:
         ic.mw_off()
     else:
         ic.set_power(10)
