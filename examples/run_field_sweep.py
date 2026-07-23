@@ -2,9 +2,16 @@
 Field Sweep
 ===========
 
-Acquire repeated spin echoes over a field axis centered at carrierFreq_MHz.
-The sweep width is configured in MHz and converted to field using
-gamma_eff_MHz_G.
+Acquire repeated spin echoes while sweeping the magnet field through the
+instrument control server. The requested sweep width is configured in MHz and
+converted to a field axis with gamma_eff_MHz_G. At each field point, the
+measured field readback is used to update the NMR carrier frequency before
+running the echo, and both requested and measured fields are stored with the
+data.
+
+The microwave source is held at uw_dip_center_GHz and set to
+field_sweep_microwave_power_dBm. Set field_sweep_microwave_power_dBm to -100
+for a no-microwave-power experiment.
 """
 
 import logging
