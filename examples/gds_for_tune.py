@@ -63,7 +63,10 @@ def grab_waveforms(g):
 
 d_all = None
 jump_series = r_[
-    -(parser_dict["tuning_offset_jumps"] // 2) : parser_dict["tuning_offset_jumps"] // 2
+    -(parser_dict["tuning_offset_jumps"] // 2) : parser_dict[
+        "tuning_offset_jumps"
+    ]
+    // 2
     + 1
 ]
 print("jump_series", jump_series)
@@ -85,7 +88,9 @@ with GDS_scope() as g:
     g.write(":TRIG:SOUR CH2")
     g.write(":TRIG:MOD NORMAL")
     g.write(":TRIG:HLEV 7.5E-2")
-    freq_series = carrierFreq_MHz + parser_dict["tuning_offset_jump_MHz"] * jump_series
+    freq_series = (
+        carrierFreq_MHz + parser_dict["tuning_offset_jump_MHz"] * jump_series
+    )
     center_idx = np.where(jump_series == 0)[0].item()
     freq_series = freq_series[
         r_[center_idx, 0:center_idx, center_idx + 1 : len(freq_series)]
@@ -105,7 +110,9 @@ with GDS_scope() as g:
         print("I just stopped the SpinCore")
         d_orig = d.C
         if d_all is None:
-            d_all = (d.shape + ("offset", len(jump_series))).alloc(dtype="float")
+            d_all = (d.shape + ("offset", len(jump_series))).alloc(
+                dtype="float"
+            )
             d_all["offset", j] = d
             d_all["t"] = d["t"]
             d_all["ch"] = d["ch"]
@@ -117,16 +124,18 @@ d_all.sort("offset")
 # {{{ analytic signal conversion
 d_all.ft("t", shift=True)
 d_all["t" : (carrierFreq_MHz * 2.3e6, None)] = 0
-d_all["t":(None, 0)] = 0
+d_all["t" : (None, 0)] = 0
 d_all *= 2
 d_all.ift("t")
 flat_slice = d_all["offset":0][
-    "t":(4.5e-6, 6.5e-6)
+    "t" : (4.5e-6, 6.5e-6)
 ]  # will always be the same since the scope settings are the same
 # }}}
 
 with figlist_var() as fl:
-    d_all["ch", 1] *= 2  # just empirically, I need to scale up the reflection by a
+    d_all["ch", 1] *= (
+        2  # just empirically, I need to scale up the reflection by a
+    )
     #         factor of 2 in order to get it to be the right size
     try_again = False
     while try_again:
@@ -167,10 +176,13 @@ ratio = (abs(flat_slice["ch", 1] / flat_slice["ch", 0])).item()
 tuning_dB = np.log10(ratio) * 20
 if tuning_dB < -25:
     print(
-        "congratulations! you have achieved a reflection ratio of %0.1f dB" % tuning_dB
+        "congratulations! you have achieved a reflection ratio of %0.1f dB"
+        % tuning_dB
     )
 else:
-    print("Sorry! Your reflection ratio is %0.1f dB.  TRY HARDER!!!!" % tuning_dB)
+    print(
+        "Sorry! Your reflection ratio is %0.1f dB.  TRY HARDER!!!!" % tuning_dB
+    )
 # this is put here in case it used the default
 parser_dict["carrierFreq_MHz"] = carrierFreq_MHz
 parser_dict.write()
