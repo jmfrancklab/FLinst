@@ -132,7 +132,7 @@ field_sweep_width_MHz:
   section: acq_params
   default: 0.28
   description: |-
-    Total field sweep width in MHz, centered at carrierFreq_MHz.
+    Total NMR field sweep width in MHz, centered at carrierFreq_MHz.
 field_sweep_resolution_G:
   type: float
   section: acq_params
