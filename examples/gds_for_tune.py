@@ -107,18 +107,18 @@ d_all.setaxis(
 ).set_units("offset", "MHz")
 d_all.ft("t", shift=True)
 d_all["t" : (carrierFreq_MHz * 2.3e6, None)] = 0
-d_all["t" : (None, 0)] = 0
+d_all["t":(None, 0)] = 0
 d_all *= 2
 d_all.ift("t")
 flat_slice = d_all["offset":0][
-    "t" : (3.7e-6, 6.5e-6)
+    "t":(3.7e-6, 6.5e-6)
 ]  # will always be the same since the scope settings are the same
 # }}}
 
 with figlist_var() as fl:
-    d_all["ch", 1] *= (
-        2  # just empirically, I need to scale up the reflection by a
-    )
+    d_all[
+        "ch", 1
+    ] *= 2  # just empirically, I need to scale up the reflection by a
     #         factor of 2 in order to get it to be the right size
     try_again = False
     while try_again:
