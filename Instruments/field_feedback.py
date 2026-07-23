@@ -111,6 +111,7 @@ def ramp_field(
     except Exception:
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
+    # Not to get 0 ramping steps.
     ramp_steps = max(2, int(abs(I_setting - temp_I_meas) * 2))
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
@@ -179,6 +180,9 @@ def ramp_field(
             # {{{ we can only use Z0 to increase the voltage, and we don't want
             #     to ask for an unreasonable voltage
             if desired_Z0_voltage_V < Z0_min_voltage_V:
+                # The target is below the range reachable by positive-only Z0:
+                # turn Z0 off, lower the main field, and recompute from a new
+                # Hall read instead of using this stale negative Z0 request.
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
                 adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
@@ -186,6 +190,8 @@ def ramp_field(
                 continue
             Z0_current_A = shims.I_read["Z0"]
             Z0_current_limit_A = shims.I_limit["Z0"]
+            # Fall back when the requested Z0 voltage is out of range, or when
+            # Z0 is already near voltage/current limit and we need still more.
             if desired_Z0_voltage_V > Z0_max_voltage_V or (
                 desired_Z0_voltage_V > Z0_initial_voltage_V
                 and (
@@ -198,6 +204,10 @@ def ramp_field(
                     )
                 )
             ):
+                # Z0 is above its useful voltage range, or the HP supply is
+                # current-limited while we are asking for more Z0 field. In
+                # that state, more Z0 voltage will not reliably add field, so
+                # reset Z0 and let the main supply carry more of the target.
                 logging.info(
                     "Z0 fallback: desired %0.3f V exceeds max %0.3f V "
                     "(current Z0 %0.3f V, %0.3f A of %0.3f A); "
@@ -213,6 +223,8 @@ def ramp_field(
                 time.sleep(config_dict["magnet_settle_short"])
                 adjust_main_field(B0_des_G - 0.4, config_dict, h, gen)
                 num_field_matches = 0
+                # The main-field move invalidates desired_Z0_voltage_V, so
+                # restart the loop and calculate the shim command again.
                 continue
             # }}}
             shims.V_limit["Z0"] = shims.round_to_allowed(
