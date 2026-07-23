@@ -14,6 +14,32 @@ This needs to be run in sync with the power control server. To do so:
     At the end of the experiment you will have a series of FIR experiments, a
     progressive power saturation dataset, and a log of the power over time
     saved as nodes in an h5 file.
+
+The FIR repetition delay is set to 2*T1, where T1 is estimated from the
+high-temperature/maximum-power ODNP relaxation model
+
+    1/T1 = concentration*krho_hot + 1/T1water_hot.
+
+This is shorter than the conventional fully relaxed delay used for a simple
+inversion recovery experiment.  In a fast inversion recovery experiment the
+magnetization is not forced to return completely to equilibrium between scans;
+instead, the steady-state offset/equilibrium magnetization and T1 are fit from
+the recovery data.  Becker, Ferretti, Gupta, and Weiss showed that a waiting
+time of about 2*T1 is optimal or nearly optimal for fast inversion recovery
+over a broad range of prior T1 uncertainty, so this script uses 2*T1 to reduce
+total acquisition time while preserving T1 precision.
+
+References
+----------
+Becker, E. D., Ferretti, J. A., Gupta, R. K., & Weiss, G. H. (1980).
+The choice of optimal parameters for measurement of spin-lattice relaxation
+times. II. Comparison of saturation recovery, inversion recovery, and fast
+inversion recovery experiments. Journal of Magnetic Resonance, 37, 381-394.
+https://doi.org/10.1016/0022-2364(80)90045-1
+
+Franck, J. M., & Han, S. (2019). Overhauser dynamic nuclear polarization for
+the study of hydration dynamics, explained. Methods in Enzymology, 615,
+131-175. https://doi.org/10.1016/bs.mie.2018.09.024
 """
 
 from numpy import r_, zeros_like
@@ -27,6 +53,7 @@ from SpinCore_pp.power_helper import gen_powerlist, Ep_spacing_from_phalf
 from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import instrument_control
 from datetime import datetime
+
 
 def IR_measurement(
     vd_list_us,
@@ -102,6 +129,7 @@ def IR_measurement(
     print(("Name of saved data", vd_data.name()))
     return
 
+
 final_log = []
 
 logger = psd.init_logging(level="debug")
@@ -152,7 +180,7 @@ FIR_rep_us = (
         )
     )
     * 1e6
-)
+)  # 2*T_1 (Weiss), equation 14 in Franck & Han Book Chapter
 config_dict["FIR_rep_us"] = FIR_rep_us
 # }}}
 # {{{Power settings
@@ -169,7 +197,7 @@ T1_powers_dB = gen_powerlist(
     min_dBm_step=config_dict["min_dBm_step"],
     three_down=False,
 )
-T1_node_names = ["FIR_%ddBm" % j for j in T1_powers_dB]
+T1_node_names = [f"FIR_{j:g}dBm" for j in T1_powers_dB]
 logger.info(strm("dB_settings", dB_settings))
 logger.info(
     strm("correspond to powers in Watts", 10 ** (dB_settings / 10.0 - 3))
@@ -274,7 +302,7 @@ with instrument_control() as ic:
     for j, this_dB in enumerate(dB_settings):
         logger.debug(
             strm(
-                "setting this power for E(ic)",
+                "setting this power for E(p)",
                 this_dB,
                 "(",
                 dB_settings[j - 1],
@@ -368,23 +396,22 @@ with instrument_control() as ic:
         # server handles this for us
         logger.debug(
             strm(
-                "setting this power for T1(ic)",
+                "setting this power for T1(p)",
                 this_dB,
             )
         )
         ic.set_power(this_dB)
+        power_tolerance_dB = config_dict["min_dBm_step"] / 2
         for k in range(10):
             time.sleep(0.5)
-            # JF notes that the following works for powers going up, but not
-            # for powers going down -- I don't think this has been a problem to
-            # date, and would rather not potentially break a working
-            # implementation, but we should PR and fix this in the future.
-            # (Just say whether we're closer to the newer setting or the older
-            # setting.)
-            if ic.get_power_setting() >= this_dB:
+            meter_power = ic.get_power_setting()
+            if abs(meter_power - this_dB) <= power_tolerance_dB:
                 break
-        if ic.get_power_setting() < this_dB:
-            raise ValueError("After 10 tries, the power has still not settled")
+        else:
+            raise ValueError(
+                f"After 10 tries, the power has still not settled at {this_dB}"
+                f"dB. I am getting {meter_power}dB"
+            )
         time.sleep(5)
         meter_power = ic.get_power_setting()
         IR_measurement(
