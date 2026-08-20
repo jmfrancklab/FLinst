@@ -139,6 +139,7 @@ fl = psd.figlist_var()
 config_dict = SpinCore_pp.configuration("active.ini")
 nPoints = int(config_dict["acq_time_ms"] * config_dict["SW_kHz"] + 0.5)
 n_thermal_scans = config_dict["thermal_nscans"]
+n_FIR_no_power_scans = config_dict["n_FIR_no_power_scans"]
 # }}}
 # {{{create filename and save to config file
 date = datetime.now().strftime("%y%m%d")
@@ -284,20 +285,23 @@ with instrument_control() as ic:
         time_axis_coords[j]["start_times"] = DNP_ini_time
         time_axis_coords[j]["stop_times"] = DNP_thermal_done
     logger.debug("Starting T1 with no power")
-    IR_measurement(
-        vd_list_us=vd_list_us,
-        nPoints=nPoints,
-        config_dict=config_dict,
-        IR_ph1_cyc=IR_ph1_cyc,
-        IR_ph2_cyc=IR_ph2_cyc,
-        FIR_rep_us=FIR_rep_us,
-        IR_postproc=IR_postproc,
-        IR_pathway=IR_pathway,
-        node_name="FIR_noPower",
-        target_directory=target_directory,
-        filename=filename,
-        final_log=final_log,
-    )
+    for j in range(n_FIR_no_power_scans):
+        node_name = "FIR_noPower" if j == 0 else f"FIR_noPower_{j}"
+        print(f"Starting {node_name} of {n_FIR_no_power_scans}")
+        IR_measurement(
+            vd_list_us=vd_list_us,
+            nPoints=nPoints,
+            config_dict=config_dict,
+            IR_ph1_cyc=IR_ph1_cyc,
+            IR_ph2_cyc=IR_ph2_cyc,
+            FIR_rep_us=FIR_rep_us,
+            IR_postproc=IR_postproc,
+            IR_pathway=IR_pathway,
+            node_name=node_name,
+            target_directory=target_directory,
+            filename=filename,
+            final_log=final_log,
+        )
     power_settings_dBm = zeros_like(dB_settings)
     for j, this_dB in enumerate(dB_settings):
         logger.debug(

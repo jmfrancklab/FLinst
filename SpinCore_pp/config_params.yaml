@@ -316,6 +316,11 @@ num_T1s:
   section: odnp_params
   default: null
   description: number of IR experiments collected in the ODNP experiment
+n_FIR_no_power_scans:
+  type: int
+  section: odnp_params
+  default: 1
+  description: number of no-power FIR experiments collected in the ODNP experiment
 date:
   type: int
   section: file_names
