@@ -193,10 +193,6 @@ with instrument_control() as ic:
         field_requested_G.append(desired_B0_G)
         field_readback_G.append(true_B0_G)
     this_log = ic.stop_log()
-if data is None:
-    raise RuntimeError(
-        "Field setting failed for every requested field point"
-    )
 data = data["indirect", : len(field_requested_G)]
 field_requested_G = np.asarray(field_requested_G)
 field_readback_G = np.asarray(field_readback_G)
