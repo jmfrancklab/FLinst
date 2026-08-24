@@ -237,6 +237,32 @@ z0_field_v_voltage_G_V:
   default: 0.434244
   description: |-
     the ratio of the field to the current at the center of the Z0 shim, in G/A
+z0_max_voltage_V:
+  type: float
+  section: current_params
+  default: 5.71
+  description: Maximum useful voltage for the positive-only Z0 shim coil.
+z0_current_limit_fraction:
+  type: float
+  section: current_params
+  default: 0.98
+  description: |-
+    Fraction of the Z0 voltage or current limit at which the shim is treated
+    as unable to supply additional field.
+z0_below_range_main_field_offset_G:
+  type: float
+  section: current_params
+  default: 1.0
+  description: |-
+    Field headroom left for Z0 after a requested shim voltage falls below its
+    positive-only range.
+z0_limited_main_field_offset_G:
+  type: float
+  section: current_params
+  default: 0.4
+  description: |-
+    Field headroom left for Z0 after the shim reaches its voltage or current
+    limit.
 magnet_settle_long:
   type: float
   section: current_params
