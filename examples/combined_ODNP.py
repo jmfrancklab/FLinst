@@ -15,37 +15,33 @@ This needs to be run in sync with the power control server. To do so:
     progressive power saturation dataset, and a log of the power over time
     saved as nodes in an h5 file.
 
-# TODO ☐:  please clarify for me -- is the following what's recommended by this becker/gupta group for the FIR? I think below you are saying yes, but maybe it's a different paper w/ first author weiss?  Can you add a citation here?
 
-The FIR repetition delay is set to :math:`2 T_1`, where :math:`T_1` is estimated from the
-high-temperature/maximum-power ODNP relaxation model
-
-# TODO ☐: just delete this, but I wanted to call attention to the sphinx math
+The FIR repetition delay is set to :math:`2 T_1` [Becker1980]_, where
+:math:`T_1` is estimated from the high-temperature/maximum-power ODNP
+relaxation model [FranckHan2019]_
 
 :math:`\frac{1}{T_1} = C_{SL} k_{\rho}(T_{hot}) + \frac{1}{T_{1w}(T_{hot})}`
 
 This is shorter than the conventional fully relaxed delay used for a simple
 inversion recovery experiment.  In a fast inversion recovery experiment the
 magnetization is not forced to return completely to equilibrium between scans;
-instead, the steady-state offset/equilibrium magnetization and :math:`T_1` are fit from
-the recovery data.  Becker, Ferretti, Gupta, and Weiss showed that a waiting
-time of about :math:`2 T_1` is optimal or nearly optimal for fast inversion recovery
-over a broad range of prior :math:`T_1` uncertainty, so this script uses :math:`2 T_1` to reduce
-total acquisition time while preserving :math:`T_1` precision.
-
-# TODO ☐:  please use formal sphinx citations
+instead, the steady-state offset/equilibrium magnetization and :math:`T_1` are
+fit from the recovery data.  Becker, Ferretti, Gupta, and Weiss showed that a
+waiting time of about :math:`2 T_1` is optimal or nearly optimal for fast
+inversion recovery over a broad range of prior :math:`T_1` uncertainty, so this
+ script uses :math:`2 T_1` to reduce total acquisition time while preserving
+ :math:`T_1` precision [Becker1980]_.
 
 References
 ----------
-Becker, E. D., Ferretti, J. A., Gupta, R. K., & Weiss, G. H. (1980).
-The choice of optimal parameters for measurement of spin-lattice relaxation
-times. II. Comparison of saturation recovery, inversion recovery, and fast
-inversion recovery experiments. Journal of Magnetic Resonance, 37, 381-394.
-https://doi.org/10.1016/0022-2364(80)90045-1
-
-Franck, J. M., & Han, S. (2019). Overhauser dynamic nuclear polarization for
-the study of hydration dynamics, explained. Methods in Enzymology, 615,
-131-175. https://doi.org/10.1016/bs.mie.2018.09.024
+.. [Becker1980] Becker, E. D., Ferretti, J. A., Gupta, R. K., & Weiss, G. H.
+   (1980). The choice of optimal parameters for measurement of spin-lattice
+   relaxation times. II. Comparison of saturation recovery, inversion recovery,
+   and fast inversion recovery experiments. *Journal of Magnetic Resonance*,
+   37, 381-394. https://doi.org/10.1016/0022-2364(80)90045-1
+.. [FranckHan2019] Franck, J. M., & Han, S. (2019). Overhauser dynamic nuclear
+   polarization for the study of hydration dynamics, explained. *Methods in
+   Enzymology*, 615, 131-175. https://doi.org/10.1016/bs.mie.2018.09.024
 """
 
 from numpy import r_, zeros_like
@@ -59,6 +55,7 @@ from SpinCore_pp.power_helper import gen_powerlist, Ep_spacing_from_phalf
 from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import instrument_control
 from datetime import datetime
+
 
 def IR_measurement(
     vd_list_us,
@@ -134,6 +131,7 @@ def IR_measurement(
     print(("Name of saved data", vd_data.name()))
     return
 
+
 final_log = []
 
 logger = psd.init_logging(level="debug")
@@ -201,7 +199,6 @@ T1_powers_dB = gen_powerlist(
     min_dBm_step=config_dict["min_dBm_step"],
     three_down=False,
 )
-# TODO ☐: is HDF OK with nodes that include . ? (b/c aside from upgrading to f-string, you switch d to g)
 T1_node_names = [f"FIR_{j:g}dBm" for j in T1_powers_dB]
 logger.info(strm("dB_settings", dB_settings))
 logger.info(
