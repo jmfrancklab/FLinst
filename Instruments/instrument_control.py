@@ -3,10 +3,12 @@ instrument_control_server.
 
 It should handle:
 
--   B12 communications
+-   Bridge12 microwave control
 -   GPIB communications
+-   magnet field control
+-   shim voltage and current control
 
-and it provides the capability to start and stop the log.
+and it provides the capability to start and stop instrument logging.
 
 """
 
@@ -31,8 +33,8 @@ buffer_size = 1024
 
 
 class instrument_control(object):
-    """wraps the ethernet connection to the XEPR server and allows you to send
-    commands (provides a with block)"""
+    """wraps the ethernet connection to the instrument control server and
+    allows you to send commands (provides a with block)"""
 
     do_quit = False
 

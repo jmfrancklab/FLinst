@@ -13,6 +13,16 @@ import logging
 from .log_inst import logger
 
 
+def power_decimal_check(dBm):
+    # note that the following is the same as round followed by int, but
+    # more efficient
+    nearest_setting = int(10 * dBm + 0.5)
+    if abs(10 * dBm - nearest_setting) > 1e-9:
+        raise ValueError(
+            f"Power must be given with 0.1 dBm resolution, got {dBm!r}"
+        )
+    return nearest_setting
+
 def generate_beep(f, dur):
     # do nothing -- can be used to generate a beep, but platform-dependent
     return
@@ -241,7 +251,7 @@ class Bridge12(Serial):
         measuring any amplified output power, we are only looking at TX OUT. TX
         IN should not lead to anything. Be sure these are the operational
         conditions before proceeding."""
-        setting = int(10 * round(dBm * 2) / 2.0 + 0.5)
+        setting = power_decimal_check(dBm)
         self.write(b"power %d\r" % setting)
         _ = self.readline()  # gobble the power updated statement
 
@@ -267,9 +277,7 @@ class Bridge12(Serial):
             raise ValueError(
                 "you MUST use a with block so the error handling works well"
             )
-        setting = int(
-            10 * round(dBm * 2) / 2.0 + 0.5
-        )  # find closest 0.5 dBm, and round
+        setting = power_decimal_check(dBm)
         if setting > 400:
             raise ValueError(
                 "You are not allowed to use this function to set a power of"

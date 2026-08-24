@@ -1,4 +1,12 @@
-# To be run from the computer connected to the EPR spectrometer
+"""This provides the instrument control server.
+
+It handles Bridge12 and GPIB communications for microwave, magnet field, and
+shim control, and provides the capability to collect instrument logs.
+
+It is meant to be run from the computer connected to the instruments.
+(Which could *e.g.* be a RPi rather than the processing computer).
+"""
+
 import ast, time, socket, pickle, os, logging, sys
 from Instruments import (
     Bridge12,
