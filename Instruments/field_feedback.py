@@ -47,6 +47,7 @@ def ramp_field(
     settling_attempts=60,
     main_field_threshold_G=2.0,
     Z0_min_voltage_V=0.0,
+    # TODO ☐: why isn't this set in the yaml file, rather than continuously changing around the defaults here?
     Z0_max_voltage_V=5.71,
     Z0_current_limit_fraction=0.98,
 ):
@@ -85,6 +86,11 @@ def ramp_field(
         Fraction of the Z0 current limit above which Z0 is treated as maxed
         out if the controller asks for more Z0 field.
     """
+    field_tolerance_G = (
+        config_dict["tolerance_Hz"]
+        * 1e-6
+        / config_dict["gamma_eff_mhz_g"]
+    )
     z0_inst = shims.instrument("Z0")
     z0_channel = shims.channel("Z0")
     if Z0_max_voltage_V is None:
@@ -111,6 +117,7 @@ def ramp_field(
     except Exception:
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
+    # TODO ☐:  clarify -- I think you're saying you don't want to pass exactly through zero? and why? and the implication is you're going from negative to positive?
     # Not to get 0 ramping steps.
     ramp_steps = max(2, int(abs(I_setting - temp_I_meas) * 2))
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
@@ -180,27 +187,28 @@ def ramp_field(
             # {{{ we can only use Z0 to increase the voltage, and we don't want
             #     to ask for an unreasonable voltage
             if desired_Z0_voltage_V < Z0_min_voltage_V:
+                # TODO ☐:  the following comment is redundant with the block comment above
                 # The target is below the range reachable by positive-only Z0:
                 # turn Z0 off, lower the main field, and recompute from a new
                 # Hall read instead of using this stale negative Z0 request.
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
+                # TODO ☐:  I might have lost track here, but since we're fixing this, don't we want the 1.0 below to be some type of config parameter vs. a hard-coded 1.0 G?
                 adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
                 num_field_matches = 0
                 continue
-            Z0_current_A = shims.I_read["Z0"]
-            Z0_current_limit_A = shims.I_limit["Z0"]
-            # Fall back when the requested Z0 voltage is out of range, or when
-            # Z0 is already near voltage/current limit and we need still more.
-            if desired_Z0_voltage_V > Z0_max_voltage_V or (
+            # TODO ☐: the following is extremely complicated, and needs to
+            #         be justified inline.  It's really unclear to me why
+            #         the previous was not sufficient!
+            elif desired_Z0_voltage_V > Z0_max_voltage_V or (
                 desired_Z0_voltage_V > Z0_initial_voltage_V
                 and (
                     Z0_initial_voltage_V
                     >= Z0_current_limit_fraction * Z0_max_voltage_V
                     or (
-                        Z0_current_limit_A > 0
-                        and Z0_current_A
-                        >= Z0_current_limit_fraction * Z0_current_limit_A
+                        shims.I_limit["Z0"] > 0
+                        and shims.I_read["Z0"]
+                        >= Z0_current_limit_fraction * shims.I_limit["Z0"]
                     )
                 )
             ):
@@ -208,7 +216,7 @@ def ramp_field(
                 # current-limited while we are asking for more Z0 field. In
                 # that state, more Z0 voltage will not reliably add field, so
                 # reset Z0 and let the main supply carry more of the target.
-                logging.info(
+                logging.debug(
                     "Z0 fallback: desired %0.3f V exceeds max %0.3f V "
                     "(current Z0 %0.3f V, %0.3f A of %0.3f A); "
                     "zeroing Z0 before moving main field toward %0.3f G",
@@ -236,11 +244,6 @@ def ramp_field(
                 # {{{ Check if the field is stabilizing at the target
                 num_field_matches = 0
                 B0_last_G = 0
-                field_tolerance_G = (
-                    config_dict["tolerance_Hz"]
-                    * 1e-6
-                    / config_dict["gamma_eff_mhz_g"]
-                )
                 for j in range(settling_attempts):
                     time.sleep(config_dict["magnet_settle_short"])
                     B0_now_G = h.field_in_G

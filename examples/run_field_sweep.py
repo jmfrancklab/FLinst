@@ -1,3 +1,16 @@
+# TODO ☐:  it's not clear what this is supposed to do that's different
+#          from run_field_dep_justMw.
+#          I think that it's worth it to carefully diff them, and
+#          probably eliminate one or both.
+#          I know that this one has been working well, but it's worth
+#          seeing if the old one has any tricks or safeguards that would
+#          be useful here.
+#          In either case, I suspect that we only want ONE of them to
+#          survive so for the sake of the git history, you would at
+#          least want to `git mv run_field_dep_justMw.py
+#          run_field_sweep.py`, and then copy over the contents of this
+#          in the next step.
+
 """
 Field Sweep
 ===========
