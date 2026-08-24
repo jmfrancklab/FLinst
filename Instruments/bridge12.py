@@ -17,11 +17,12 @@ def power_decimal_check(dBm):
     # note that the following is the same as round followed by int, but
     # more efficient
     nearest_setting = int(10 * dBm + 0.5)
-    if abs(setting - nearest_setting) > 1e-9:
+    if abs(10 * dBm - nearest_setting) > 1e-9:
         raise ValueError(
             f"Power must be given with 0.1 dBm resolution, got {dBm!r}"
         )
     return nearest_setting
+
 
 def generate_beep(f, dur):
     # do nothing -- can be used to generate a beep, but platform-dependent

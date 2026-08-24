@@ -411,8 +411,8 @@ with instrument_control() as ic:
                 break
         else:
             raise ValueError(
-                f"After waiting for 5 seconds, the power has still not settled at {this_dB}"
-                f"dB. I am getting {meter_power}dB"
+                f"After waiting for 5 seconds, the power has still not settled"
+                f" at {this_dB} dB. I am getting {meter_power} dB"
             )
         time.sleep(5)
         meter_power = ic.get_power_setting()
