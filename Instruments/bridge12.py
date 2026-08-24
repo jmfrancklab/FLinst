@@ -14,14 +14,14 @@ from .log_inst import logger
 
 
 def power_decimal_check(dBm):
-    setting = 10 * dBm
-    nearest_setting = round(setting)
+    # note that the following is the same as round followed by int, but
+    # more efficient
+    nearest_setting = int(10 * dBm + 0.5)
     if abs(setting - nearest_setting) > 1e-9:
         raise ValueError(
             f"Power must be given with 0.1 dBm resolution, got {dBm!r}"
         )
-    return int(nearest_setting)
-
+    return nearest_setting
 
 def generate_beep(f, dur):
     # do nothing -- can be used to generate a beep, but platform-dependent
