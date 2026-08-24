@@ -172,7 +172,7 @@ vd_list_us = (
     * 1e6
 )  # convert to microseconds
 T1_hot_us = (
-    2
+    1
     * (
         1.0
         / (
