@@ -20,17 +20,18 @@ The FIR repetition delay is set to :math:`2 T_1` [Becker1980]_, where
 :math:`T_1` is estimated from the high-temperature/maximum-power ODNP
 relaxation model [FranckHan2019]_
 
-:math:`\frac{1}{T_1} = C_{SL} k_{\rho}(T_{hot}) + \frac{1}{T_{1w}(T_{hot})}`
+:math:`\\frac{1}{T_1} = C_{SL} k_{\\rho}(T_{hot}) + \\frac{1}{T_{1w}(T_{hot})}`
 
 This is shorter than the conventional fully relaxed delay used for a simple
 inversion recovery experiment.  In a fast inversion recovery experiment the
 magnetization is not forced to return completely to equilibrium between scans;
 instead, the steady-state offset/equilibrium magnetization and :math:`T_1` are
-fit from the recovery data.  Becker, Ferretti, Gupta, and Weiss showed that a
+fit from the recovery data.
+Becker, Ferretti, Gupta, and Weiss showed that a
 waiting time of about :math:`2 T_1` is optimal or nearly optimal for fast
-inversion recovery over a broad range of prior :math:`T_1` uncertainty, so this
- script uses :math:`2 T_1` to reduce total acquisition time while preserving
- :math:`T_1` precision [Becker1980]_.
+inversion recovery over a broad range of prior :math:`T_1` uncertainty,
+so this script uses :math:`2 T_1` to reduce total acquisition time while
+preserving :math:`T_1` precision [Becker1980]_.
 
 References
 ----------
@@ -55,7 +56,6 @@ from SpinCore_pp.power_helper import gen_powerlist, Ep_spacing_from_phalf
 from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import instrument_control
 from datetime import datetime
-
 
 def IR_measurement(
     vd_list_us,
@@ -130,7 +130,6 @@ def IR_measurement(
     print("\n*** FILE SAVED IN TARGET DIRECTORY ***\n")
     print(("Name of saved data", vd_data.name()))
     return
-
 
 final_log = []
 

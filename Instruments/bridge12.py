@@ -23,7 +23,6 @@ def power_decimal_check(dBm):
         )
     return nearest_setting
 
-
 def generate_beep(f, dur):
     # do nothing -- can be used to generate a beep, but platform-dependent
     return
