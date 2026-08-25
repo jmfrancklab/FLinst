@@ -1,11 +1,13 @@
-# TODO ☐:  I'm trying to avoid proliferation of random GPT - created tests. You should please actually review this code before pushing again.
+"""Focused, hardware-free regression tests for Z0 field feedback behavior."""
+
 import importlib.util
 import pathlib
 import sys
-from types import SimpleNamespace
 import types
+
+from types import SimpleNamespace
+
 import pytest
-import yaml
 
 # Load field_feedback without importing the Instruments package, whose
 # __init__ imports optional hardware drivers that are not available in CI.
@@ -130,13 +132,18 @@ def no_sleep(monkeypatch):
     monkeypatch.setattr(field_feedback.time, "sleep", lambda _: None)
 
 
-# TODO ☐:  this should not be called run_fallback -- rather, it records what the field feedback module would do under certain circumstances
-def run_fallback(monkeypatch, fields, shims):
+def run_feedback_recording_main_field_adjustments(
+    monkeypatch,
+    fields,
+    shims,
+):
     # {{{ set it up to capture info in adjusted_fields_G rather than actually
     #     run the field sweep
     adjusted_fields_G = []
+
     def record_adjustment(B0_des_G, config_dict, h, gen):
         adjusted_fields_G.append(B0_des_G)
+
     monkeypatch.setattr(
         field_feedback,
         "adjust_main_field",
@@ -155,7 +162,7 @@ def run_fallback(monkeypatch, fields, shims):
 
 
 def test_negative_z0_request_uses_below_range_offset(monkeypatch):
-    result, adjusted_fields_G = run_fallback(
+    result, adjusted_fields_G = run_feedback_recording_main_field_adjustments(
         monkeypatch,
         [10.5, 10.5, 10.0, 10.0, 10.0, 10.0],
         FakeShims(voltage_V=0.1),
@@ -192,7 +199,11 @@ def test_limited_z0_uses_limited_offset(
     shims,
     expected_current_reads,
 ):
-    result, adjusted_fields_G = run_fallback(monkeypatch, fields, shims)
+    result, adjusted_fields_G = run_feedback_recording_main_field_adjustments(
+        monkeypatch,
+        fields,
+        shims,
+    )
 
     assert result == 10.0
     assert adjusted_fields_G == [9.6]
