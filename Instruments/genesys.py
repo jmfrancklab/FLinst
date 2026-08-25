@@ -262,7 +262,7 @@ class genesys(vxi11.Instrument):
 
     @I_limit.setter
     def I_limit(self, A):
-        self.write(f":CURR {A:.3f}")
+        self.write(f":CURR {A:.6f}")
 
     # Output enable
     @property
