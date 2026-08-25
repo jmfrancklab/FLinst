@@ -82,10 +82,8 @@ def ramp_field(
     )
     z0_inst = shims.instrument("Z0")
     z0_channel = shims.channel("Z0")
-    Z0_max_voltage_V = config_dict["z0_max_voltage_V"]
-    Z0_current_limit_fraction = config_dict["z0_current_limit_fraction"]
     hardware_Z0_max_voltage_V = z0_inst.max_V[z0_channel]
-    if not 0 < Z0_max_voltage_V <= hardware_Z0_max_voltage_V:
+    if not 0 < config_dict["z0_max_voltage_V"] <= hardware_Z0_max_voltage_V:
         raise ValueError(
             "z0_max_voltage_V must be positive and no greater than the "
             f"hardware maximum of {hardware_Z0_max_voltage_V} V"
@@ -116,6 +114,7 @@ def ramp_field(
     temp_I_meas = gen.I_meas
     # np.linspace needs at least two points to apply both the measured starting
     # current and the requested endpoint, even when the change is very small.
+    # TODO ☐:  what is int(abs(I_setting - temp_I_meas) * 2)? Is this a not legible version of /0.5?
     ramp_steps = max(2, int(abs(I_setting - temp_I_meas) * 2))
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
@@ -182,32 +181,40 @@ def ramp_field(
                 time.sleep(config_dict["magnet_settle_short"])
                 main_field_target_G = (
                     B0_des_G
+                    # TODO ☐: I'm trying to make sense of
+                    #         z0_field_v_voltage_G_V -- description says
+                    #         "Field headroom left... after a requested
+                    #         shim voltage falls below its positive-only
+                    #         range".  What does that mean????
+                    #         Does the part after the ... mean "after a
+                    #         negative shim voltage (which is not
+                    #         possible) would have been required to reach
+                    #         the target field"
                     - config_dict["z0_below_range_main_field_offset_G"]
                 )
                 adjust_main_field(main_field_target_G, config_dict, h, gen)
                 num_field_matches = 0
                 continue
-            Z0_needs_to_increase = desired_Z0_voltage_V > Z0_initial_voltage_V
-            Z0_request_exceeds_max = desired_Z0_voltage_V > Z0_max_voltage_V
             fallback_reason = None
-            if Z0_request_exceeds_max:
+            if desired_Z0_voltage_V > config_dict["z0_max_voltage_V"]:
+                # Z0 exceeds max allowed value
                 fallback_reason = "requested voltage exceeds maximum"
-            elif Z0_needs_to_increase:
-                Z0_voltage_is_limited = (
-                    Z0_initial_voltage_V
-                    >= Z0_current_limit_fraction * Z0_max_voltage_V
-                )
-                if Z0_voltage_is_limited:
+            elif desired_Z0_voltage_V > Z0_initial_voltage_V:
+                # Z0 needs to increase
+                if (
+                        Z0_initial_voltage_V
+                        >= Z0_current_limit_fraction * config_dict["z0_max_voltage_V"]
+                        ):
+                    # Z0 needs to increase, but is voltage limited
                     fallback_reason = "voltage is already near maximum"
                 else:
-                    Z0_current_limit_A = shims.I_limit["Z0"]
-                    if Z0_current_limit_A > 0:
-                        Z0_current_A = shims.I_read["Z0"]
-                        Z0_current_is_limited = (
-                            Z0_current_A
-                            >= Z0_current_limit_fraction * Z0_current_limit_A
-                        )
-                        if Z0_current_is_limited:
+                    # Z0 needs to increase, and is NOT voltage limited
+                    if shims.I_limit["Z0"] > 0:
+                        if (
+                                shims.I_read["Z0"]
+                                >= Z0_current_limit_fraction * shims.I_limit["Z0"]
+                                ):
+                            # Z0 needs to increase, and is NOT voltage limited, but is current limited
                             fallback_reason = "current is already near limit"
             # A negative request means the main field is too high. Here the
             # main field is too low, but Z0 cannot reliably add enough field.
@@ -222,7 +229,7 @@ def ramp_field(
                     "zeroing Z0 before moving main field toward %0.3f G",
                     fallback_reason,
                     desired_Z0_voltage_V,
-                    Z0_max_voltage_V,
+                    config_dict["z0_max_voltage_V"],
                     Z0_initial_voltage_V,
                     main_field_target_G,
                 )

@@ -1,3 +1,6 @@
+# TODO ☐:  you need to diff this against run_field_dep_justMw,
+#          so that the two files can be compared somewhat reasonably
+
 """
 Field Sweep
 ===========

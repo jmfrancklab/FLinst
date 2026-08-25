@@ -1,9 +1,9 @@
+# TODO ☐:  I'm trying to avoid proliferation of random GPT - created tests. You should please actually review this code before pushing again.
 import importlib.util
 import pathlib
 import sys
 from types import SimpleNamespace
 import types
-
 import pytest
 import yaml
 
@@ -130,17 +130,19 @@ def no_sleep(monkeypatch):
     monkeypatch.setattr(field_feedback.time, "sleep", lambda _: None)
 
 
+# TODO ☐:  this should not be called run_fallback -- rather, it records what the field feedback module would do under certain circumstances
 def run_fallback(monkeypatch, fields, shims):
+    # {{{ set it up to capture info in adjusted_fields_G rather than actually
+    #     run the field sweep
     adjusted_fields_G = []
-
     def record_adjustment(B0_des_G, config_dict, h, gen):
         adjusted_fields_G.append(B0_des_G)
-
     monkeypatch.setattr(
         field_feedback,
         "adjust_main_field",
         record_adjustment,
     )
+    # }}}
     result = field_feedback.ramp_field(
         10.0,
         feedback_config(),
@@ -150,40 +152,6 @@ def run_fallback(monkeypatch, fields, shims):
         settling_attempts=10,
     )
     return result, adjusted_fields_G
-
-
-def test_configuration_supplies_z0_feedback_defaults():
-    config_path = (
-        pathlib.Path(__file__).resolve().parents[1]
-        / "SpinCore_pp"
-        / "config_params.yaml"
-    )
-    with config_path.open(encoding="utf-8") as config_file:
-        registered_params = yaml.safe_load(config_file)
-
-    expected_defaults = {
-        "z0_max_voltage_V": 5.71,
-        "z0_current_limit_fraction": 0.98,
-        "z0_below_range_main_field_offset_G": 1.0,
-        "z0_limited_main_field_offset_G": 0.4,
-    }
-    for parameter, expected_default in expected_defaults.items():
-        assert registered_params[parameter]["section"] == "current_params"
-        assert registered_params[parameter]["default"] == expected_default
-
-
-def test_small_ramp_applies_start_and_endpoint():
-    gen = FakeGenesys(measured_current_A=0.2)
-
-    field_feedback.ramp_field(
-        0.0,
-        feedback_config(),
-        FakeHall([0.0]),
-        gen,
-        FakeShims(),
-    )
-
-    assert gen.current_settings_A[:2] == [0.2, 0.0]
 
 
 def test_negative_z0_request_uses_below_range_offset(monkeypatch):
