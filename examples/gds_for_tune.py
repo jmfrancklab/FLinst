@@ -91,9 +91,9 @@ with GDS_scope() as g:
     freq_series = (
         carrierFreq_MHz + parser_dict["tuning_offset_jump_MHz"] * jump_series
     )
-    # TODO ☐:  the following seems unnecessary.  Given the def of jump_series, the center is just at jump_series[len(jump_series)//2]
+    # JF additon to code, AG does not now exactly why
     center_idx = np.where(jump_series == 0)[0].item()
-    # TODO ☐:  very unclear why the following line is needed (see prev. comment)
+    # JF additon to code, AG does not now exactly why
     freq_series = freq_series[
         r_[center_idx, 0:center_idx, center_idx + 1 : len(freq_series)]
     ]
@@ -120,7 +120,7 @@ with GDS_scope() as g:
             d_all["offset", j] = d
             d_all["t"] = d["t"]
             d_all["ch"] = d["ch"]
-            # TODO ☐: this is what we had before (I convert to kHz here, since it seems like you want that too) -- I understand moving it up, but don't understand the change
+            # JF additon to code, AG does not now exactly why
             # d_all.setaxis(
             #     "offset", parser_dict["tuning_offset_jump_MHz"] * jump_series * 1e3
             # ).set_units("offset", "kHz")
@@ -132,18 +132,18 @@ d_all.sort("offset")
 # {{{ analytic signal conversion
 d_all.ft("t", shift=True)
 d_all["t" : (carrierFreq_MHz * 2.3e6, None)] = 0
-d_all["t":(None, 0)] = 0
+d_all["t" : (None, 0)] = 0
 d_all *= 2
 d_all.ift("t")
 flat_slice = d_all["offset":0][
-    "t":(4.5e-6, 6.5e-6)
+    "t" : (4.5e-6, 6.5e-6)
 ]  # will always be the same since the scope settings are the same
 # }}}
 
 with figlist_var() as fl:
-    d_all[
-        "ch", 1
-    ] *= 2  # just empirically, I need to scale up the reflection by a
+    d_all["ch", 1] *= (
+        2  # just empirically, I need to scale up the reflection by a
+    )
     #         factor of 2 in order to get it to be the right size
     try_again = False
     while try_again:
