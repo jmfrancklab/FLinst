@@ -1,6 +1,3 @@
-# TODO ☐:  you need to diff this against run_field_dep_justMw,
-#          so that the two files can be compared somewhat reasonably
-
 """
 Field Sweep
 ===========
@@ -31,7 +28,6 @@ from SpinCore_pp.ppg import run_spin_echo
 
 from Instruments import instrument_control
 
-
 my_exp_type = "b27/field_dependent"
 assert os.path.exists(psd.getDATADIR(exp_type=my_exp_type))
 
@@ -45,32 +41,32 @@ config_dict = SpinCore_pp.configuration("active.ini")
 ) = get_integer_sampling_intervals(
     config_dict["SW_kHz"], config_dict["acq_time_ms"]
 )
-gamma_eff_MHz_G = config_dict["gamma_eff_MHz_G"]
 config_dict["type"] = "field_sweep"
-settle_s = config_dict["magnet_settle_medium"]
 if config_dict["nEchoes"] != 1:
     raise ValueError("run_spin_echo requires nEchoes = 1")
-mw_power_dBm = config_dict["field_sweep_microwave_power_dBm"]
 # }}}
 # {{{ build field axis
-requested_field_sweep_width_MHz = config_dict["field_sweep_width_MHz"]
-center_field_G = config_dict["carrierFreq_MHz"] / gamma_eff_MHz_G
+center_field_G = (
+    config_dict["carrierFreq_MHz"] / config_dict["gamma_eff_MHz_G"]
+)
 requested_field_sweep_width_G = (
-    requested_field_sweep_width_MHz / gamma_eff_MHz_G
+    config_dict["field_sweep_width_MHz"] / config_dict["gamma_eff_MHz_G"]
 )
-requested_resolution_G = config_dict["field_sweep_resolution_G"]
 n_intervals = int(
-    np.ceil(requested_field_sweep_width_G / requested_resolution_G)
+    np.ceil(
+        requested_field_sweep_width_G / config_dict["field_sweep_resolution_G"]
+    )
 )
-field_sweep_width_G = n_intervals * requested_resolution_G
-field_sweep_width_MHz = field_sweep_width_G * gamma_eff_MHz_G
+field_sweep_width_G = n_intervals * config_dict["field_sweep_resolution_G"]
+field_sweep_width_MHz = field_sweep_width_G * config_dict["gamma_eff_MHz_G"]
 left_field_G = center_field_G - field_sweep_width_G / 2
 right_field_G = center_field_G + field_sweep_width_G / 2
 assert right_field_G < 3700, "Are you crazy??? Field is too high!!!"
 assert left_field_G > 3300, "Are you crazy??? Field is too low!!!"
 field_axis = (
     center_field_G
-    + (np.arange(n_intervals + 1) - n_intervals / 2) * requested_resolution_G
+    + (np.arange(n_intervals + 1) - n_intervals / 2)
+    * config_dict["field_sweep_resolution_G"]
 )
 myinput = input(
     strm(
@@ -82,7 +78,7 @@ myinput = input(
         "\nrequested sweep width:",
         requested_field_sweep_width_G,
         "G /",
-        requested_field_sweep_width_MHz,
+        config_dict["field_sweep_width_MHz"],
         "MHz",
         "\nrounded sweep width:",
         field_sweep_width_G,
@@ -90,12 +86,12 @@ myinput = input(
         field_sweep_width_MHz,
         "MHz",
         "\nrequested resolution:",
-        requested_resolution_G,
+        config_dict["field_sweep_resolution_G"],
         "G",
         "\nsweep points:",
         len(field_axis),
         "\nmicrowave power:",
-        mw_power_dBm,
+        config_dict["field_sweep_microwave_power_dBm"],
         "dBm",
         "\nMicrowave power should be in the linear regime of the E(p) curve.",
         "\nDoes this look okay? [y/N]",
@@ -129,17 +125,29 @@ field_requested_G = []
 field_readback_G = []
 with instrument_control() as ic:
     ic.start_log()
-    if mw_power_dBm == -100:
+    if config_dict["field_sweep_microwave_power_dBm"] == -100:
         ic.mw_off()
     else:
         ic.set_power(10)
         ic.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
-        ic.set_power(mw_power_dBm)
+        ic.set_power(config_dict["field_sweep_microwave_power_dBm"])
         for _ in range(10):
             time.sleep(0.5)
-            if abs(ic.get_power_setting() - mw_power_dBm) <= 0.1:
+            if (
+                abs(
+                    ic.get_power_setting()
+                    - config_dict["field_sweep_microwave_power_dBm"]
+                )
+                <= 0.1
+            ):
                 break
-        if abs(ic.get_power_setting() - mw_power_dBm) > 0.1:
+        if (
+            abs(
+                ic.get_power_setting()
+                - config_dict["field_sweep_microwave_power_dBm"]
+            )
+            > 0.1
+        ):
             raise ValueError(
                 "After 10 tries, this power has still not settled"
             )
@@ -157,9 +165,13 @@ with instrument_control() as ic:
             )
             continue
         print("field set to", true_B0_G, "G")
-        print("waiting", settle_s, "s for the magnet to settle")
-        time.sleep(settle_s)
-        carrierFreq_MHz = gamma_eff_MHz_G * true_B0_G
+        print(
+            "waiting",
+            config_dict["magnet_settle_medium"],
+            "s for the magnet to settle",
+        )
+        time.sleep(config_dict["magnet_settle_medium"])
+        carrierFreq_MHz = config_dict["gamma_eff_MHz_G"] * true_B0_G
         acquired_idx = len(field_requested_G)
         logging.info(f"{field_idx + 1} of {len(field_axis)}")
         logging.info(
