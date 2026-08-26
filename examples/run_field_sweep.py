@@ -131,6 +131,11 @@ with instrument_control() as ic:
         ic.set_power(10)
         ic.set_freq(config_dict["uw_dip_center_GHz"] * 1e9)
         ic.set_power(config_dict["field_sweep_microwave_power_dBm"])
+        # {{{ Even though the B12 module makes sure our setting takes,
+        #     it can take some time for the amplifier to warm up to the
+        #     point that the power read on our power meter (a different
+        #     instrument, typically gigatronics) is stable.
+        #     That's what we're doing here
         for _ in range(10):
             time.sleep(0.5)
             if (
@@ -151,6 +156,7 @@ with instrument_control() as ic:
             raise ValueError(
                 "After 10 tries, this power has still not settled"
             )
+        # }}}
     for field_idx, desired_B0_G in enumerate(field_axis):
         try:
             true_B0_G = ic.set_field(desired_B0_G)
@@ -173,8 +179,8 @@ with instrument_control() as ic:
         time.sleep(config_dict["magnet_settle_medium"])
         carrierFreq_MHz = config_dict["gamma_eff_MHz_G"] * true_B0_G
         acquired_idx = len(field_requested_G)
-        logging.info(f"{field_idx + 1} of {len(field_axis)}")
-        logging.info(
+        logging.debug(f"{field_idx + 1} of {len(field_axis)}")
+        logging.debug(
             "The ratio of the field I want to the one I get is"
             f" {desired_B0_G / true_B0_G}\n"
             "In other words, the discrepancy is"
