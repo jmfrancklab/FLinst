@@ -112,11 +112,11 @@ def ramp_field(
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
     ramp_steps = max(
-        2, # make sure we take at least 2 steps so linspace doesn't choke
+        2,  # make sure we take at least 2 steps so linspace doesn't choke
         int(
             abs(I_setting - temp_I_meas)
             / config_dict["magnet_current_step_size_A"]
-            + 0.5 # for rounding
+            + 0.5  # for rounding
         ),
     )
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
@@ -154,8 +154,7 @@ def ramp_field(
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            field_discrepancy
-            > main_field_threshold_G
+            field_discrepancy > main_field_threshold_G
         ):
             adjust_main_field(
                 B0_des_G,
@@ -190,8 +189,7 @@ def ramp_field(
                 # To avoid further adjustment, we attempt to target setting Z0
                 # to its midpoint.
                 main_field_target_G = (
-                    B0_des_G
-                    - config_dict["z0_midpoint_setting_G"]
+                    B0_des_G - config_dict["z0_midpoint_setting_G"]
                 )
                 adjust_main_field(main_field_target_G, config_dict, h, gen)
                 num_field_matches = 0
@@ -204,7 +202,8 @@ def ramp_field(
                 # Z0 needs to increase
                 if (
                     Z0_initial_voltage_V
-                    >= 0.98 * config_dict["z0_max_voltage_V"] # we never want to quite hit the max, so only allow 98% of max
+                    >= 0.98 * config_dict["z0_max_voltage_V"]  # we never want
+                    # to quite hit the max, so only allow 98% of max
                 ):
                     # Z0 needs to increase, but is voltage limited
                     fallback_reason = "voltage is already near maximum"
@@ -215,18 +214,19 @@ def ramp_field(
                         Z0_current_A = shims.I_read["Z0"]
                         if (
                             Z0_current_A
-                            # TODO ☐:  in response to previous todo -- I think I understand now.  This is just a slop factor? if so, why not just hard-code the 0.98 and say it's a slop factor
-                            >= 0.98 * Z0_current_limit_A # we never want to quite hit the max, so only allow 98% of max
+                            >= 0.98 * Z0_current_limit_A  # we never want to
+                            # quite hit the max, so only allow 98% of max
                         ):
                             # Z0 needs to increase and is not voltage limited,
                             # but it is current limited.
                             fallback_reason = "current is already near limit"
-            # TODO ☐:  the following comment doesn't make sense -- what is a "negative request"???
-            # A negative request means the main field is too high. Here the
-            # main field is too low, but Z0 cannot reliably add enough field.
-            # Reset Z0 and leave configured headroom for a fresh shim request.
+            # The main field was initially set half the Z0 range below the
+            # target, leaving headroom for Z0 correction. If fallback is still
+            # required, Z0 cannot supply the necessary field. Move the main
+            # field closer to the target, leaving it one main-supply resolution
+            # step below the target so Z0 can provide the remaining correction
+            # at a lower voltage.
             if fallback_reason is not None:
-                # TODO ☐:  why is this a different number vs. z0_midpoint_setting_G?
                 main_field_target_G = (
                     B0_des_G - config_dict["z0_limited_main_field_offset_G"]
                 )
