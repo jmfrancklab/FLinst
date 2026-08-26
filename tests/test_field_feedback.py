@@ -117,7 +117,7 @@ def feedback_config(**overrides):
         "tolerance_Hz": 10000.0,
         "z0_midpoint_setting_G": 1.0,
         "z0_field_v_voltage_G_V": 1.0,
-        "z0_limited_main_field_offset_G": 0.4,
+        "main_field_resolution_G": 0.4,
         "z0_max_voltage_V": 5.71,
     }
     values.update(overrides)

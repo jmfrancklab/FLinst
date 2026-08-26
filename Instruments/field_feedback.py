@@ -234,7 +234,8 @@ def ramp_field(
             # at a lower voltage.
             if fallback_reason is not None:
                 main_field_target_G = (
-                    B0_des_G - config_dict["z0_limited_main_field_offset_G"]
+                    B0_des_G
+                    - config_dict["main_field_resolution_G"]
                 )
                 logging.debug(
                     "Z0 fallback because %s: desired %0.3f V with max "

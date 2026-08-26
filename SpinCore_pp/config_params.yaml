@@ -254,14 +254,14 @@ z0_midpoint_setting_G:
     When we need to push the field down, we want to target a required Z0
     current at the approximate midpoint of our adjustable range.
     This is the field supplied by the Z0 at that midpoint.
-z0_limited_main_field_offset_G:
+main_field_resolution_G:
   type: float
   section: current_params
   default: 0.4
   description: |-
-    Amount by which the main-field target is placed below the desired
-    field after Z0 reaches its voltage or current limit.
-    This leaves positive-voltage headroom for the final correction.
+    Main-field resolution in G. After Z0 reaches its voltage or current
+    limit, the main-field target is placed this far below the desired field,
+    leaving positive-voltage headroom for the final correction.
 magnet_current_step_size_A:
   type: float
   section: current_params
