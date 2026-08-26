@@ -147,7 +147,6 @@ def record_main_field_adjustments(
         record_adjustment,
     )
     # }}}
-    # TODO ☐:  retval of ramp_field is not documented
     result = field_feedback.ramp_field(
         10.0,
         feedback_config(),
