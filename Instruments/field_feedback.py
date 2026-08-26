@@ -48,6 +48,7 @@ def ramp_field(
     main_field_threshold_G=2.0,
     Z0_min_voltage_V=0.0,
 ):
+    # TODO ☐:  this returns something that's not documented
     """Ramp the field from where we are to where we want to be.
 
     **If we start at 0**: Calibrate the zero-point of the hall sensor
@@ -88,8 +89,6 @@ def ramp_field(
             "z0_max_voltage_V must be positive and no greater than the "
             f"hardware maximum of {hardware_Z0_max_voltage_V} V"
         )
-    if not 0 < config_dict["z0_current_limit_fraction"] <= 1:
-        raise ValueError("z0_current_limit_fraction must be in (0, 1]")
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     # {{{ First, we ramp from whatever
     #     our current is (zero or not)
@@ -112,9 +111,14 @@ def ramp_field(
     except Exception:
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
-    # Use two ramp points per ampere of absolute current change, with at least
-    # two points so both the measured starting current and target are applied.
-    ramp_steps = max(2, int(abs(I_setting - temp_I_meas) * 2))
+    ramp_steps = max(
+        2, # make sure we take at least 2 steps so linspace doesn't choke
+        int(
+            abs(I_setting - temp_I_meas)
+            / config_dict["magnet_current_step_size_A"]
+            + 0.5 # for rounding
+        ),
+    )
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
         gen.I_limit = thisI
@@ -150,7 +154,8 @@ def ramp_field(
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            field_discrepancy > main_field_threshold_G
+            field_discrepancy
+            > main_field_threshold_G
         ):
             adjust_main_field(
                 B0_des_G,
@@ -177,13 +182,16 @@ def ramp_field(
             if desired_Z0_voltage_V < Z0_min_voltage_V:
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
-                # The field we can set with Z0 is about 2 G. So we set the main
-                # 1 G below the desired field if the required fine correction
-                # is lower than the the minimum voltage we allow for Z0. Then,
-                # Z0 can correct the remaining 1 G to reach the desired field.
+                # The field we can set with Z0 is about 2 G.
+                # We cannot set the current through Z0 exactly to 0 (the
+                # minimum is a small positive value).
+                # If we calculate that we need the Z0 to be less than that
+                # minimum, we need to push the main field down.
+                # To avoid further adjustment, we attempt to target setting Z0
+                # to its midpoint.
                 main_field_target_G = (
                     B0_des_G
-                    - config_dict["z0_below_range_main_field_offset_G"]
+                    - config_dict["z0_midpoint_setting_G"]
                 )
                 adjust_main_field(main_field_target_G, config_dict, h, gen)
                 num_field_matches = 0
@@ -196,8 +204,7 @@ def ramp_field(
                 # Z0 needs to increase
                 if (
                     Z0_initial_voltage_V
-                    >= config_dict["z0_current_limit_fraction"]
-                    * config_dict["z0_max_voltage_V"]
+                    >= 0.98 * config_dict["z0_max_voltage_V"] # we never want to quite hit the max, so only allow 98% of max
                 ):
                     # Z0 needs to increase, but is voltage limited
                     fallback_reason = "voltage is already near maximum"
@@ -208,16 +215,18 @@ def ramp_field(
                         Z0_current_A = shims.I_read["Z0"]
                         if (
                             Z0_current_A
-                            >= config_dict["z0_current_limit_fraction"]
-                            * Z0_current_limit_A
+                            # TODO ☐:  in response to previous todo -- I think I understand now.  This is just a slop factor? if so, why not just hard-code the 0.98 and say it's a slop factor
+                            >= 0.98 * Z0_current_limit_A # we never want to quite hit the max, so only allow 98% of max
                         ):
                             # Z0 needs to increase and is not voltage limited,
                             # but it is current limited.
                             fallback_reason = "current is already near limit"
+            # TODO ☐:  the following comment doesn't make sense -- what is a "negative request"???
             # A negative request means the main field is too high. Here the
             # main field is too low, but Z0 cannot reliably add enough field.
             # Reset Z0 and leave configured headroom for a fresh shim request.
             if fallback_reason is not None:
+                # TODO ☐:  why is this a different number vs. z0_midpoint_setting_G?
                 main_field_target_G = (
                     B0_des_G - config_dict["z0_limited_main_field_offset_G"]
                 )

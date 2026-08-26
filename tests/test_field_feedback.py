@@ -4,10 +4,8 @@ import importlib.util
 import pathlib
 import sys
 import types
-
-from types import SimpleNamespace
-
 import pytest
+from types import SimpleNamespace
 
 # Load field_feedback without importing the Instruments package, whose
 # __init__ imports optional hardware drivers that are not available in CI.
@@ -117,8 +115,7 @@ def feedback_config(**overrides):
         "magnet_settle_medium": 0.0,
         "magnet_settle_short": 0.0,
         "tolerance_Hz": 10000.0,
-        "z0_below_range_main_field_offset_G": 1.0,
-        "z0_current_limit_fraction": 0.98,
+        "z0_midpoint_setting_G": 1.0,
         "z0_field_v_voltage_G_V": 1.0,
         "z0_limited_main_field_offset_G": 0.4,
         "z0_max_voltage_V": 5.71,
@@ -132,7 +129,7 @@ def no_sleep(monkeypatch):
     monkeypatch.setattr(field_feedback.time, "sleep", lambda _: None)
 
 
-def run_feedback_recording_main_field_adjustments(
+def record_main_field_adjustments(
     monkeypatch,
     fields,
     shims,
@@ -150,6 +147,7 @@ def run_feedback_recording_main_field_adjustments(
         record_adjustment,
     )
     # }}}
+    # TODO ☐:  retval of ramp_field is not documented
     result = field_feedback.ramp_field(
         10.0,
         feedback_config(),
@@ -161,8 +159,12 @@ def run_feedback_recording_main_field_adjustments(
     return result, adjusted_fields_G
 
 
+# TODO ☐: JF needs to review the rest to see what all the tests are doing
+#         (tests start with test_, everything else is a helper function)
+#         (Just delete this comment when other TODOs are addressed --
+#         that will be my sign to make sure this is reviewed)
 def test_negative_z0_request_uses_below_range_offset(monkeypatch):
-    result, adjusted_fields_G = run_feedback_recording_main_field_adjustments(
+    result, adjusted_fields_G = record_main_field_adjustments(
         monkeypatch,
         [10.5, 10.5, 10.0, 10.0, 10.0, 10.0],
         FakeShims(voltage_V=0.1),
@@ -199,7 +201,7 @@ def test_limited_z0_uses_limited_offset(
     shims,
     expected_current_reads,
 ):
-    result, adjusted_fields_G = run_feedback_recording_main_field_adjustments(
+    result, adjusted_fields_G = record_main_field_adjustments(
         monkeypatch,
         fields,
         shims,
@@ -270,18 +272,6 @@ def test_invalid_z0_maximum_is_rejected(maximum_voltage_V):
         field_feedback.ramp_field(
             10.0,
             feedback_config(z0_max_voltage_V=maximum_voltage_V),
-            FakeHall([10.0]),
-            FakeGenesys(),
-            FakeShims(),
-        )
-
-
-@pytest.mark.parametrize("limit_fraction", [0.0, 1.1])
-def test_invalid_z0_current_limit_fraction_is_rejected(limit_fraction):
-    with pytest.raises(ValueError, match="z0_current_limit_fraction"):
-        field_feedback.ramp_field(
-            10.0,
-            feedback_config(z0_current_limit_fraction=limit_fraction),
             FakeHall([10.0]),
             FakeGenesys(),
             FakeShims(),
