@@ -174,22 +174,16 @@ vd_list_us = (
     * 1e6
 )  # convert to microseconds
 T1_hot_us = (
-    1
-    * (
-        1.0
-        / (
-            config_dict["concentration"] * config_dict["krho_hot"]
-            + 1.0 / config_dict["T1water_hot"]
-        )
+    1.0
+    / (
+        config_dict["concentration"] * config_dict["krho_hot"]
+        + 1.0 / config_dict["T1water_hot"]
     )
-    * 1e6
-)
+) * 1e6
 # 5*T_1
-repetition_us = 5 * T1_hot_us
-config_dict["repetition_us"] = repetition_us
+config_dict["repetition_us"] = 5 * T1_hot_us
 # 2*T_1 (Weiss), equation 14 in Franck & Han Book Chapter
-FIR_rep_us = 2 * T1_hot_us
-config_dict["FIR_rep_us"] = FIR_rep_us
+config_dict["FIR_rep_us"] = 2 * T1_hot_us
 # }}}
 # {{{Power settings
 dB_settings = Ep_spacing_from_phalf(
