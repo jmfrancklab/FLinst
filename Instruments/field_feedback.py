@@ -48,7 +48,6 @@ def ramp_field(
     main_field_threshold_G=2.0,
     Z0_min_voltage_V=0.0,
 ):
-    # TODO ☐:  this returns something that's not documented
     """Ramp the field from where we are to where we want to be.
 
     **If we start at 0**: Calibrate the zero-point of the hall sensor
@@ -77,6 +76,13 @@ def ramp_field(
         consider it a "Z0" discrepancy and adjust Z0.
     Z0_min_voltage_V: float (default 0)
         The minimum voltage we allow for the Z0 shim coil.
+
+    Returns
+    -------
+    float
+        Hall-probe field reading in gauss. For a zero-field request, this is
+        read after the Z0 shim and main supply are turned off. For a nonzero
+        request, this is read after the field has stabilized within tolerance.
     """
     field_tolerance_G = (
         config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
