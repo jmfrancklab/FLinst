@@ -57,7 +57,6 @@ from SpinCore_pp.ppg import run_spin_echo, run_IR
 from Instruments import instrument_control
 from datetime import datetime
 
-
 def IR_measurement(
     vd_list_us,
     nPoints,
@@ -132,7 +131,6 @@ def IR_measurement(
     print(("Name of saved data", vd_data.name()))
     return
 
-
 final_log = []
 
 logger = psd.init_logging(level="debug")
@@ -180,7 +178,6 @@ T1_hot_us = (
         + 1.0 / config_dict["T1water_hot"]
     )
 ) * 1e6
-# 5*T_1
 config_dict["repetition_us"] = 5 * T1_hot_us
 # 2*T_1 (Weiss), equation 14 in Franck & Han Book Chapter
 config_dict["FIR_rep_us"] = 2 * T1_hot_us
