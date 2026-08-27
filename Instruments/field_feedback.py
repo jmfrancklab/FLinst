@@ -187,24 +187,10 @@ def ramp_field(
             # }}}
             # {{{ we can only use Z0 to increase the voltage, and we don't want
             #     to ask for an unreasonable voltage
-            if desired_Z0_voltage_V < Z0_min_voltage_V:
-                shims.V_limit["Z0"] = 0
-                time.sleep(config_dict["magnet_settle_short"])
-                # The field we can set with Z0 is about 2 G.
-                # We cannot set the current through Z0 exactly to 0 (the
-                # minimum is a small positive value).
-                # If we calculate that we need the Z0 to be less than that
-                # minimum, we need to push the main field down.
-                # To avoid further adjustment, we attempt to target setting Z0
-                # to its midpoint.
-                main_field_target_G = (
-                    B0_des_G - config_dict["z0_midpoint_setting_G"]
-                )
-                adjust_main_field(main_field_target_G, config_dict, h, gen)
-                num_field_matches = 0
-                continue
             fallback_reason = None
-            if desired_Z0_voltage_V > config_dict["z0_max_voltage_V"]:
+            if desired_Z0_voltage_V < Z0_min_voltage_V:
+                fallback_reason = "would need to set negative (or unallowed small) shim"
+            elif desired_Z0_voltage_V > config_dict["z0_max_voltage_V"]:
                 # Z0 exceeds max allowed value
                 fallback_reason = "requested voltage exceeds maximum"
             elif desired_Z0_voltage_V > Z0_initial_voltage_V:
@@ -234,21 +220,7 @@ def ramp_field(
                             # Z0 needs to increase and is not voltage limited,
                             # but it is current limited.
                             fallback_reason = "current is already near limit"
-            # The main field was initially set half the Z0 range below the
-            # target, leaving maximum room for adjustment
-            # -- specifically we set the main field z0_midpoint_setting_G below
-            # the desired field.
-            # All of the "fallback" reasons above are subsets of the condition
-            # where an attempt to get to the required field via an adjustment
-            # of Z0 would result in exceeding the max current or voltage of Z0.
-            # Move the main field closer to the target, leaving it one
-            # main-supply resolution step below the target so Z0 can provide
-            # the remaining correction at a lower voltage.
             if fallback_reason is not None:
-                main_field_target_G = (
-                    B0_des_G
-                    - config_dict["main_field_resolution_G"]
-                )
                 logging.debug(
                     "Z0 fallback because %s: desired %0.3f V with max "
                     "%0.3f V (current Z0 %0.3f V); "
@@ -261,10 +233,23 @@ def ramp_field(
                 )
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
+                # The field we can set with Z0 is about 2 G.
+                # We cannot set the current through Z0 exactly to 0 (the
+                # minimum is a small positive value).
+                # If we calculate that we need the Z0 to be less than that
+                # minimum, we need to push the main field down.
+                # To avoid further adjustment, we attempt to target setting Z0
+                # to its midpoint.
+                if "negative" in fallback_reason:
+                    main_field_target_G = (
+                        B0_des_G - config_dict["z0_midpoint_setting_G"]
+                    )
+                else:
+                    main_field_target_G = (
+                        B0_des_G - config_dict["main_field_resolution_G"]
+                    )
                 adjust_main_field(main_field_target_G, config_dict, h, gen)
                 num_field_matches = 0
-                # The main-field move invalidates the old shim request. Read
-                # the field again and calculate a new request on the next pass.
                 continue
             # }}}
             shims.V_limit["Z0"] = shims.round_to_allowed(

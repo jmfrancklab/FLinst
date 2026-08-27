@@ -259,9 +259,7 @@ main_field_resolution_G:
   section: current_params
   default: 0.4
   description: |-
-    Main-field resolution in G. After Z0 reaches its voltage or current
-    limit, the main-field target is placed this far below the desired field,
-    leaving positive-voltage headroom for the final correction.
+    Main-field resolution in G.
 magnet_current_step_size_A:
   type: float
   section: current_params
