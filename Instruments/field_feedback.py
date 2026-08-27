@@ -80,9 +80,12 @@ def ramp_field(
     Returns
     -------
     float
-        Hall-probe field reading in gauss. For a zero-field request, this is
-        read after the Z0 shim and main supply are turned off. For a nonzero
-        request, this is read after the field has stabilized within tolerance.
+        Hall-probe read after the field has
+        stabilized within tolerance (gauss).
+
+        *If zero-field was requested*, 
+        read after the Z0 shim and main
+        supply are turned off.
     """
     field_tolerance_G = (
         config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
@@ -118,11 +121,11 @@ def ramp_field(
         raise TypeError("The power supply is not connected.")
     temp_I_meas = gen.I_meas
     ramp_steps = max(
-        2,  # make sure we take at least 2 steps so linspace doesn't choke
+        2, # make sure we take at least 2 steps so linspace doesn't choke
         int(
             abs(I_setting - temp_I_meas)
             / config_dict["magnet_current_step_size_A"]
-            + 0.5  # for rounding
+            + 0.5 # for rounding
         ),
     )
     logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
@@ -209,7 +212,10 @@ def ramp_field(
                 if (
                     Z0_initial_voltage_V
                     >= 0.98 * config_dict["z0_max_voltage_V"]  # we never want
-                    # to quite hit the max, so only allow 98% of max
+                    #                                            to quite hit
+                    #                                            the max, so
+                    #                                            only allow 98%
+                    #                                            of max
                 ):
                     # Z0 needs to increase, but is voltage limited
                     fallback_reason = "voltage is already near maximum"
@@ -221,17 +227,23 @@ def ramp_field(
                         if (
                             Z0_current_A
                             >= 0.98 * Z0_current_limit_A  # we never want to
-                            # quite hit the max, so only allow 98% of max
+                            #                               quite hit the max,
+                            #                               so only allow 98%
+                            #                               of max
                         ):
                             # Z0 needs to increase and is not voltage limited,
                             # but it is current limited.
                             fallback_reason = "current is already near limit"
             # The main field was initially set half the Z0 range below the
-            # target, leaving headroom for Z0 correction. If fallback is still
-            # required, Z0 cannot supply the necessary field. Move the main
-            # field closer to the target, leaving it one main-supply resolution
-            # step below the target so Z0 can provide the remaining correction
-            # at a lower voltage.
+            # target, leaving maximum room for adjustment
+            # -- specifically we set the main field z0_midpoint_setting_G below
+            # the desired field.
+            # All of the "fallback" reasons above are subsets of the condition
+            # where an attempt to get to the required field via an adjustment
+            # of Z0 would result in exceeding the max current or voltage of Z0.
+            # Move the main field closer to the target, leaving it one
+            # main-supply resolution step below the target so Z0 can provide
+            # the remaining correction at a lower voltage.
             if fallback_reason is not None:
                 main_field_target_G = (
                     B0_des_G
