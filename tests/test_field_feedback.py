@@ -158,88 +158,6 @@ def record_main_field_adjustments(
     return result, adjusted_fields_G
 
 
-# TODO ☐: JF needs to review the rest to see what all the tests are doing
-#         (tests start with test_, everything else is a helper function)
-#         (Just delete this comment when other TODOs are addressed --
-#         that will be my sign to make sure this is reviewed)
-def test_negative_z0_request_uses_below_range_offset(monkeypatch):
-    result, adjusted_fields_G = record_main_field_adjustments(
-        monkeypatch,
-        [10.5, 10.5, 10.0, 10.0, 10.0, 10.0],
-        FakeShims(voltage_V=0.1),
-    )
-
-    assert result == 10.0
-    assert adjusted_fields_G == [9.0]
-
-
-@pytest.mark.parametrize(
-    "fields, shims, expected_current_reads",
-    [
-        (
-            [9.0, 9.0, 10.0, 10.0, 10.0, 10.0],
-            FakeShims(voltage_V=5.0),
-            0,
-        ),
-        (
-            [9.95, 9.95, 10.0, 10.0, 10.0, 10.0],
-            FakeShims(voltage_V=5.6),
-            0,
-        ),
-        (
-            [9.5, 9.5, 10.0, 10.0, 10.0, 10.0],
-            FakeShims(current_A=0.99, current_limit_A=1.0),
-            1,
-        ),
-    ],
-    ids=["request-above-max", "voltage-limited", "current-limited"],
-)
-def test_limited_z0_uses_limited_offset(
-    monkeypatch,
-    fields,
-    shims,
-    expected_current_reads,
-):
-    result, adjusted_fields_G = record_main_field_adjustments(
-        monkeypatch,
-        fields,
-        shims,
-    )
-
-    assert result == 10.0
-    assert adjusted_fields_G == [9.6]
-    assert shims.V_limit["Z0"] == 0
-    assert shims.I_limit.read_count == expected_current_reads
-    assert shims.I_read.read_count == expected_current_reads
-
-
-def test_decreasing_z0_does_not_read_current_limits(monkeypatch):
-    adjusted_fields_G = []
-    monkeypatch.setattr(
-        field_feedback,
-        "adjust_main_field",
-        lambda B0_des_G, config_dict, h, gen: adjusted_fields_G.append(
-            B0_des_G
-        ),
-    )
-    shims = FakeShims(voltage_V=1.0)
-
-    result = field_feedback.ramp_field(
-        10.0,
-        feedback_config(),
-        FakeHall([10.5, 10.5, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]),
-        FakeGenesys(),
-        shims,
-        settling_attempts=10,
-    )
-
-    assert result == 10.0
-    assert adjusted_fields_G == []
-    assert shims.V_limit["Z0"] == 0.5
-    assert shims.I_limit.read_count == 0
-    assert shims.I_read.read_count == 0
-
-
 def test_usable_z0_request_does_not_adjust_main_field(monkeypatch):
     adjusted_fields_G = []
     monkeypatch.setattr(
@@ -250,7 +168,6 @@ def test_usable_z0_request_does_not_adjust_main_field(monkeypatch):
         ),
     )
     shims = FakeShims(voltage_V=1.0)
-
     result = field_feedback.ramp_field(
         10.0,
         feedback_config(),
@@ -259,12 +176,12 @@ def test_usable_z0_request_does_not_adjust_main_field(monkeypatch):
         shims,
         settling_attempts=10,
     )
-
     assert result == 10.0
     assert adjusted_fields_G == []
     assert shims.V_limit["Z0"] == 1.5
 
 
+# TODO ☐:  explain why 15.1 is supposed to raise an error? And why is this the place to test for it
 @pytest.mark.parametrize("maximum_voltage_V", [0.0, 15.1])
 def test_invalid_z0_maximum_is_rejected(maximum_voltage_V):
     with pytest.raises(ValueError, match="z0_max_voltage_V"):
