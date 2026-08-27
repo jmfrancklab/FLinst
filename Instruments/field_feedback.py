@@ -241,6 +241,7 @@ def ramp_field(
                 # To avoid further adjustment, we attempt to target setting Z0
                 # to its midpoint.
                 if "negative" in fallback_reason:
+                    # TODO ☐:  here, just clearly explain why this is different vs the other case
                     main_field_target_G = (
                         B0_des_G - config_dict["z0_midpoint_setting_G"]
                     )
