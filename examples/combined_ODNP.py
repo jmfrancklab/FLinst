@@ -15,31 +15,34 @@ This needs to be run in sync with the power control server. To do so:
     progressive power saturation dataset, and a log of the power over time
     saved as nodes in an h5 file.
 
-The FIR repetition delay is set to 2*T1, where T1 is estimated from the
-high-temperature/maximum-power ODNP relaxation model
 
-    1/T1 = concentration*krho_hot + 1/T1water_hot.
+The FIR repetition delay is set to :math:`2 T_1` [Becker1980]_, where
+:math:`T_1` is estimated from the high-temperature/maximum-power ODNP
+relaxation model [FranckHan2019]_
+
+:math:`\\frac{1}{T_1} = C_{SL} k_{\\rho}(T_{hot}) + \\frac{1}{T_{1w}(T_{hot})}`
 
 This is shorter than the conventional fully relaxed delay used for a simple
 inversion recovery experiment.  In a fast inversion recovery experiment the
 magnetization is not forced to return completely to equilibrium between scans;
-instead, the steady-state offset/equilibrium magnetization and T1 are fit from
-the recovery data.  Becker, Ferretti, Gupta, and Weiss showed that a waiting
-time of about 2*T1 is optimal or nearly optimal for fast inversion recovery
-over a broad range of prior T1 uncertainty, so this script uses 2*T1 to reduce
-total acquisition time while preserving T1 precision.
+instead, the steady-state offset/equilibrium magnetization and :math:`T_1` are
+fit from the recovery data.
+Becker, Ferretti, Gupta, and Weiss showed that a
+waiting time of about :math:`2 T_1` is optimal or nearly optimal for fast
+inversion recovery over a broad range of prior :math:`T_1` uncertainty,
+so this script uses :math:`2 T_1` to reduce total acquisition time while
+preserving :math:`T_1` precision [Becker1980]_.
 
 References
 ----------
-Becker, E. D., Ferretti, J. A., Gupta, R. K., & Weiss, G. H. (1980).
-The choice of optimal parameters for measurement of spin-lattice relaxation
-times. II. Comparison of saturation recovery, inversion recovery, and fast
-inversion recovery experiments. Journal of Magnetic Resonance, 37, 381-394.
-https://doi.org/10.1016/0022-2364(80)90045-1
-
-Franck, J. M., & Han, S. (2019). Overhauser dynamic nuclear polarization for
-the study of hydration dynamics, explained. Methods in Enzymology, 615,
-131-175. https://doi.org/10.1016/bs.mie.2018.09.024
+.. [Becker1980] Becker, E. D., Ferretti, J. A., Gupta, R. K., & Weiss, G. H.
+   (1980). The choice of optimal parameters for measurement of spin-lattice
+   relaxation times. II. Comparison of saturation recovery, inversion recovery,
+   and fast inversion recovery experiments. *Journal of Magnetic Resonance*,
+   37, 381-394. https://doi.org/10.1016/0022-2364(80)90045-1
+.. [FranckHan2019] Franck, J. M., & Han, S. (2019). Overhauser dynamic nuclear
+   polarization for the study of hydration dynamics, explained. *Methods in
+   Enzymology*, 615, 131-175. https://doi.org/10.1016/bs.mie.2018.09.024
 """
 
 from numpy import r_, zeros_like
@@ -172,22 +175,15 @@ vd_list_us = (
     * 1e6
 )  # convert to microseconds
 T1_hot_us = (
-    1
-    * (
-        1.0
-        / (
-            config_dict["concentration"] * config_dict["krho_hot"]
-            + 1.0 / config_dict["T1water_hot"]
-        )
+    1.0
+    / (
+        config_dict["concentration"] * config_dict["krho_hot"]
+        + 1.0 / config_dict["T1water_hot"]
     )
-    * 1e6
-)
-# 5*T_1
-repetition_us = 5 * T1_hot_us
-config_dict["repetition_us"] = repetition_us
+) * 1e6
+config_dict["repetition_us"] = 5 * T1_hot_us
 # 2*T_1 (Weiss), equation 14 in Franck & Han Book Chapter
-FIR_rep_us = 2 * T1_hot_us
-config_dict["FIR_rep_us"] = FIR_rep_us
+config_dict["FIR_rep_us"] = 2 * T1_hot_us
 # }}}
 # {{{Power settings
 dB_settings = Ep_spacing_from_phalf(
@@ -418,8 +414,8 @@ with instrument_control() as ic:
                 break
         else:
             raise ValueError(
-                f"After 10 tries, the power has still not settled at {this_dB}"
-                f"dB. I am getting {meter_power}dB"
+                f"After waiting for 5 seconds, the power has still not settled"
+                f" at {this_dB} dB. I am getting {meter_power} dB"
             )
         time.sleep(5)
         meter_power = ic.get_power_setting()
