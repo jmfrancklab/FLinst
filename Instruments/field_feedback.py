@@ -189,7 +189,9 @@ def ramp_field(
             #     to ask for an unreasonable voltage
             fallback_reason = None
             if desired_Z0_voltage_V < Z0_min_voltage_V:
-                fallback_reason = "would need to set negative (or unallowed small) shim"
+                fallback_reason = (
+                    "would need to set negative (or unallowed small) shim"
+                )
             elif desired_Z0_voltage_V > config_dict["z0_max_voltage_V"]:
                 # Z0 exceeds max allowed value
                 fallback_reason = "requested voltage exceeds maximum"
@@ -221,6 +223,20 @@ def ramp_field(
                             # but it is current limited.
                             fallback_reason = "current is already near limit"
             if fallback_reason is not None:
+                if desired_Z0_voltage_V < Z0_min_voltage_V:
+                    # The requested Z0 voltage is below its usable range, so
+                    # the main field is too high. Leave enough of the desired
+                    # field for Z0 to operate near the middle of its range.
+                    main_field_target_G = (
+                        B0_des_G - config_dict["z0_midpoint_setting_G"]
+                    )
+                else:
+                    # Z0 cannot supply enough positive field. Move the main
+                    # field closer to the target so Z0 only needs to provide
+                    # the remaining main-field resolution step.
+                    main_field_target_G = (
+                        B0_des_G - config_dict["main_field_resolution_G"]
+                    )
                 logging.debug(
                     "Z0 fallback because %s: desired %0.3f V with max "
                     "%0.3f V (current Z0 %0.3f V); "
@@ -233,22 +249,6 @@ def ramp_field(
                 )
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
-                # The field we can set with Z0 is about 2 G.
-                # We cannot set the current through Z0 exactly to 0 (the
-                # minimum is a small positive value).
-                # If we calculate that we need the Z0 to be less than that
-                # minimum, we need to push the main field down.
-                # To avoid further adjustment, we attempt to target setting Z0
-                # to its midpoint.
-                if "negative" in fallback_reason:
-                    # TODO ☐:  here, just clearly explain why this is different vs the other case
-                    main_field_target_G = (
-                        B0_des_G - config_dict["z0_midpoint_setting_G"]
-                    )
-                else:
-                    main_field_target_G = (
-                        B0_des_G - config_dict["main_field_resolution_G"]
-                    )
                 adjust_main_field(main_field_target_G, config_dict, h, gen)
                 num_field_matches = 0
                 continue
