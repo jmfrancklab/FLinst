@@ -163,8 +163,7 @@ def ramp_field(
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            field_discrepancy
-            > main_field_threshold_G
+            field_discrepancy > main_field_threshold_G
         ):
             adjust_main_field(
                 B0_des_G,
@@ -226,12 +225,6 @@ def ramp_field(
             if fallback_reason is not None:
                 shims.V_limit["Z0"] = 0
                 time.sleep(config_dict["magnet_settle_short"])
-                # TODO ☐:  double-check.  There was a bug where the log
-                #          needs to come at the end, but you moved the
-                #          shim turn off later, as well.  I checked w/
-                #          codex -- none of your previous commits have
-                #          done it that way, and it also doesn't make
-                #          sense.
                 if desired_Z0_voltage_V < Z0_min_voltage_V:
                     main_field_target_G = (
                         B0_des_G - config_dict["z0_midpoint_setting_G"]
