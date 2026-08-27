@@ -163,7 +163,8 @@ def ramp_field(
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            field_discrepancy > main_field_threshold_G
+            field_discrepancy
+            > main_field_threshold_G
         ):
             adjust_main_field(
                 B0_des_G,
@@ -223,20 +224,34 @@ def ramp_field(
                             # but it is current limited.
                             fallback_reason = "current is already near limit"
             if fallback_reason is not None:
+                shims.V_limit["Z0"] = 0
+                time.sleep(config_dict["magnet_settle_short"])
+                # TODO ☐:  double-check.  There was a bug where the log
+                #          needs to come at the end, but you moved the
+                #          shim turn off later, as well.  I checked w/
+                #          codex -- none of your previous commits have
+                #          done it that way, and it also doesn't make
+                #          sense.
                 if desired_Z0_voltage_V < Z0_min_voltage_V:
-                    # The requested Z0 voltage is below its usable range, so
-                    # the main field is too high. Leave enough of the desired
-                    # field for Z0 to operate near the middle of its range.
                     main_field_target_G = (
                         B0_des_G - config_dict["z0_midpoint_setting_G"]
                     )
                 else:
-                    # Z0 cannot supply enough positive field. Move the main
-                    # field closer to the target so Z0 only needs to provide
-                    # the remaining main-field resolution step.
+                    # NOTE FOR FUTURE: the presence of this logical
+                    #                  branch is not rigorously
+                    #                  justified.  Always setting Z0 to
+                    #                  the middle of its adjustment range
+                    #                  might be more robust.  Certainly,
+                    #                  we should go that route unless
+                    #                  it's possible to design a test (w/
+                    #                  hooked up instrument) that will
+                    #                  fail unless the "else" here is
+                    #                  present.
                     main_field_target_G = (
                         B0_des_G - config_dict["main_field_resolution_G"]
                     )
+                adjust_main_field(main_field_target_G, config_dict, h, gen)
+                num_field_matches = 0
                 logging.debug(
                     "Z0 fallback because %s: desired %0.3f V with max "
                     "%0.3f V (current Z0 %0.3f V); "
@@ -247,10 +262,6 @@ def ramp_field(
                     Z0_initial_voltage_V,
                     main_field_target_G,
                 )
-                shims.V_limit["Z0"] = 0
-                time.sleep(config_dict["magnet_settle_short"])
-                adjust_main_field(main_field_target_G, config_dict, h, gen)
-                num_field_matches = 0
                 continue
             # }}}
             shims.V_limit["Z0"] = shims.round_to_allowed(
