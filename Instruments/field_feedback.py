@@ -32,7 +32,7 @@ def adjust_main_field(B0_des_G, config_dict, h, gen):
     )
     # In order to get the A/G value, use the current flowing through the
     # magnet NOW and the field NOW
-    config_dict["current_v_field_A_G"] = gen.I_meas / true_B0_G
+    config_dict["current_v_field_A_G"] = gen.I_limit / true_B0_G
     logging.debug(strm("to", config_dict["current_v_field_A_G"]))
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     gen.I_limit = I_setting
@@ -83,7 +83,7 @@ def ramp_field(
         Hall-probe read after the field has
         stabilized within tolerance (gauss).
 
-        *If zero-field was requested*, 
+        *If zero-field was requested*,
         read after the Z0 shim and main
         supply are turned off.
     """
@@ -119,16 +119,16 @@ def ramp_field(
             logging.info("The power supply is on.")
     except Exception:
         raise TypeError("The power supply is not connected.")
-    temp_I_meas = gen.I_meas
+    temp_I_meas = gen.I_limit
     ramp_steps = max(
-        2, # make sure we take at least 2 steps so linspace doesn't choke
+        2,  # make sure we take at least 2 steps so linspace doesn't choke
         int(
             abs(I_setting - temp_I_meas)
             / config_dict["magnet_current_step_size_A"]
-            + 0.5 # for rounding
+            + 0.5  # for rounding
         ),
     )
-    logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
+    logging.info(f"Ramping the field from {gen.I_limit} to {I_setting}")
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
         gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
