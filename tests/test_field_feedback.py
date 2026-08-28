@@ -181,9 +181,9 @@ def test_usable_z0_request_does_not_adjust_main_field(monkeypatch):
     assert shims.V_limit["Z0"] == 1.5
 
 
-# {{{ 15.1 V exceeds FakeShims' 15.0 V hardware maximum.  This belongs in a
-#     ramp_field test because ramp_field is where the configured Z0 limit can
-#     be validated against the actual shim instrument's limit before ramping.
+# {{{ 15.1 V exceeds FakeShims' 15.0 V hardware maximum see that trying
+#     to set it raises an error.
+#     Similarly 0 V is slightly below the lower limit.
 @pytest.mark.parametrize("maximum_voltage_V", [0.0, 15.1])
 def test_invalid_z0_maximum_is_rejected(maximum_voltage_V):
     with pytest.raises(ValueError, match="z0_max_voltage_V"):

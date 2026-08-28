@@ -163,7 +163,8 @@ def ramp_field(
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            field_discrepancy > main_field_threshold_G
+            field_discrepancy
+            > main_field_threshold_G
         ):
             adjust_main_field(
                 B0_des_G,
