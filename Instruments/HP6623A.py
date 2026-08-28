@@ -128,6 +128,7 @@ class HP6623A(gpib_eth):
         self.min_V = [0.000, 0.002, 0.018]
         self.max_V = [6, 10.5, 50.5]
         self.max_I = [5.15, 10.30, 2.06]
+        self.min_I = [0.083, 0.13, 0.05]
         idstring = self.read()
         if idstring[0:2] == "HP":
             logger.debug(

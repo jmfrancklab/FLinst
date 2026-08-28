@@ -32,7 +32,7 @@ def adjust_main_field(B0_des_G, config_dict, h, gen):
     )
     # In order to get the A/G value, use the current flowing through the
     # magnet NOW and the field NOW
-    config_dict["current_v_field_A_G"] = gen.I_meas / true_B0_G
+    config_dict["current_v_field_A_G"] = gen.I_limit / true_B0_G
     logging.debug(strm("to", config_dict["current_v_field_A_G"]))
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     gen.I_limit = I_setting
@@ -47,7 +47,6 @@ def ramp_field(
     settling_attempts=60,
     main_field_threshold_G=2.0,
     Z0_min_voltage_V=0.0,
-    Z0_max_voltage_V=6,
 ):
     """Ramp the field from where we are to where we want to be.
 
@@ -77,14 +76,28 @@ def ramp_field(
         consider it a "Z0" discrepancy and adjust Z0.
     Z0_min_voltage_V: float (default 0)
         The minimum voltage we allow for the Z0 shim coil.
-    Z0_max_voltage_V: float or None
-        The maximum voltage we allow for the Z0 shim coil. If None, use the
-        hardware maximum for the mapped Z0 channel.
+
+    Returns
+    -------
+    float
+        Hall-probe read after the field has
+        stabilized within tolerance (gauss).
+
+        *If zero-field was requested*,
+        read after the Z0 shim and main
+        supply are turned off.
     """
+    field_tolerance_G = (
+        config_dict["tolerance_Hz"] * 1e-6 / config_dict["gamma_eff_mhz_g"]
+    )
     z0_inst = shims.instrument("Z0")
     z0_channel = shims.channel("Z0")
-    if Z0_max_voltage_V is None:
-        Z0_max_voltage_V = z0_inst.max_V[z0_channel]
+    hardware_Z0_max_voltage_V = z0_inst.max_V[z0_channel]
+    if not 0 < config_dict["z0_max_voltage_V"] <= hardware_Z0_max_voltage_V:
+        raise ValueError(
+            "z0_max_voltage_V must be positive and no greater than the "
+            f"hardware maximum of {hardware_Z0_max_voltage_V} V"
+        )
     I_setting = B0_des_G * config_dict["current_v_field_A_G"]
     # {{{ First, we ramp from whatever
     #     our current is (zero or not)
@@ -106,9 +119,16 @@ def ramp_field(
             logging.info("The power supply is on.")
     except Exception:
         raise TypeError("The power supply is not connected.")
-    temp_I_meas = gen.I_meas
-    ramp_steps = int(abs(I_setting - temp_I_meas) * 2)
-    logging.info(f"Ramping the field from {gen.I_meas} to {I_setting}")
+    temp_I_meas = gen.I_limit
+    ramp_steps = max(
+        2,  # make sure we take at least 2 steps so linspace doesn't choke
+        int(
+            abs(I_setting - temp_I_meas)
+            / config_dict["magnet_current_step_size_A"]
+            + 0.5  # for rounding
+        ),
+    )
+    logging.info(f"Ramping the field from {gen.I_limit} to {I_setting}")
     for thisI in np.linspace(temp_I_meas, I_setting, ramp_steps):
         gen.I_limit = thisI
         time.sleep(config_dict["magnet_settle_short"])
@@ -126,21 +146,14 @@ def ramp_field(
     # {{{ now, adjust current_v_field_A_G
     #     to get the field we want,
     #     just once at the beginning
-    # {{{ try to stabilize the field
-    #     within 0.8 G of our desired
-    #     value
+    # {{{ try to stabilize the field within the configured tolerance
     num_field_matches = 0
     for j in range(settling_attempts):
         time.sleep(config_dict["magnet_settle_short"])
         field_discrepancy = abs(h.field_in_G - B0_des_G)
         if field_discrepancy > 2.0:
             time.sleep(config_dict["magnet_settle_medium"])
-        if (
-            field_discrepancy
-            < config_dict["tolerance_Hz"]
-            * 1e-6
-            / config_dict["gamma_eff_mhz_g"]
-        ):
+        if field_discrepancy < field_tolerance_G:
             logging.info(
                 "your match to the desired field is within tolerance!"
             )
@@ -150,7 +163,8 @@ def ramp_field(
         elif (
             # as we approach lower fields, we encounter a no-current
             # discrepancy that can't be calibrated out.
-            field_discrepancy > main_field_threshold_G
+            field_discrepancy
+            > main_field_threshold_G
         ):
             adjust_main_field(
                 B0_des_G,
@@ -174,10 +188,75 @@ def ramp_field(
             # }}}
             # {{{ we can only use Z0 to increase the voltage, and we don't want
             #     to ask for an unreasonable voltage
+            fallback_reason = None
             if desired_Z0_voltage_V < Z0_min_voltage_V:
-                adjust_main_field(B0_des_G - 1.0, config_dict, h, gen)
-            elif desired_Z0_voltage_V > Z0_max_voltage_V:
-                adjust_main_field(B0_des_G, config_dict, h, gen)
+                fallback_reason = (
+                    "would need to set negative (or unallowed small) shim"
+                )
+            elif desired_Z0_voltage_V > config_dict["z0_max_voltage_V"]:
+                # Z0 exceeds max allowed value
+                fallback_reason = "requested voltage exceeds maximum"
+            elif desired_Z0_voltage_V > Z0_initial_voltage_V:
+                # Z0 needs to increase
+                if (
+                    Z0_initial_voltage_V
+                    >= 0.98 * config_dict["z0_max_voltage_V"]  # we never want
+                    #                                            to quite hit
+                    #                                            the max, so
+                    #                                            only allow 98%
+                    #                                            of max
+                ):
+                    # Z0 needs to increase, but is voltage limited
+                    fallback_reason = "voltage is already near maximum"
+                else:
+                    # Z0 needs to increase, and is NOT voltage limited
+                    Z0_current_limit_A = shims.I_limit["Z0"]
+                    if Z0_current_limit_A > 0:
+                        Z0_current_A = shims.I_read["Z0"]
+                        if (
+                            Z0_current_A
+                            >= 0.98 * Z0_current_limit_A  # we never want to
+                            #                               quite hit the max,
+                            #                               so only allow 98%
+                            #                               of max
+                        ):
+                            # Z0 needs to increase and is not voltage limited,
+                            # but it is current limited.
+                            fallback_reason = "current is already near limit"
+            if fallback_reason is not None:
+                shims.V_limit["Z0"] = 0
+                time.sleep(config_dict["magnet_settle_short"])
+                if desired_Z0_voltage_V < Z0_min_voltage_V:
+                    main_field_target_G = (
+                        B0_des_G - config_dict["z0_midpoint_setting_G"]
+                    )
+                else:
+                    # NOTE FOR FUTURE: the presence of this logical
+                    #                  branch is not rigorously
+                    #                  justified.  Always setting Z0 to
+                    #                  the middle of its adjustment range
+                    #                  might be more robust.  Certainly,
+                    #                  we should go that route unless
+                    #                  it's possible to design a test (w/
+                    #                  hooked up instrument) that will
+                    #                  fail unless the "else" here is
+                    #                  present.
+                    main_field_target_G = (
+                        B0_des_G - config_dict["main_field_resolution_G"]
+                    )
+                adjust_main_field(main_field_target_G, config_dict, h, gen)
+                num_field_matches = 0
+                logging.debug(
+                    "Z0 fallback because %s: desired %0.3f V with max "
+                    "%0.3f V (current Z0 %0.3f V); "
+                    "zeroing Z0 before moving main field toward %0.3f G",
+                    fallback_reason,
+                    desired_Z0_voltage_V,
+                    config_dict["z0_max_voltage_V"],
+                    Z0_initial_voltage_V,
+                    main_field_target_G,
+                )
+                continue
             # }}}
             shims.V_limit["Z0"] = shims.round_to_allowed(
                 "V",
@@ -185,18 +264,17 @@ def ramp_field(
                 desired_Z0_voltage_V,
             )
             if (shims.V_read["Z0"] - Z0_initial_voltage_V) != 0:
-                # {{{ Check if the field is stabilizing
+                # {{{ Check if the field is stabilizing at the target
                 num_field_matches = 0
                 B0_last_G = 0
                 for j in range(settling_attempts):
                     time.sleep(config_dict["magnet_settle_short"])
                     B0_now_G = h.field_in_G
-                    field_discrepancy = abs(B0_now_G - B0_last_G)
+                    field_change_G = abs(B0_now_G - B0_last_G)
+                    field_error_G = abs(B0_now_G - B0_des_G)
                     if (
-                        field_discrepancy
-                        < config_dict["tolerance_Hz"]
-                        * 1e-6
-                        / config_dict["gamma_eff_mhz_g"]
+                        field_change_G < field_tolerance_G
+                        and field_error_G < field_tolerance_G
                     ):
                         num_field_matches += 1
                     else:

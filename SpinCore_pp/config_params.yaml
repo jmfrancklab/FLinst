@@ -127,6 +127,18 @@ field_width:
   default: 6
   description: |-
     number of points collected in a field sweep, for a finer data acquisition increase this number
+field_sweep_width_MHz:
+  type: float
+  section: acq_params
+  default: 0.28
+  description: |-
+    Total NMR field sweep width in MHz, centered at carrierFreq_MHz.
+field_sweep_resolution_G:
+  type: float
+  section: acq_params
+  default: 0.5
+  description: |-
+    Field sweep step resolution in G.
 tau_extra_us:
   type: float
   section: acq_params
@@ -184,6 +196,12 @@ max_power:
   section: odnp_params
   default: null
   description: the highest power you plan on acquiring data at - in W
+field_sweep_microwave_power_dBm:
+  type: float
+  section: odnp_params
+  default: 20.0
+  description: |-
+    Microwave power in dBm for field sweeps.
 uw_dip_center_GHz:
   type: float
   section: odnp_params
@@ -218,7 +236,35 @@ z0_field_v_voltage_G_V:
   section: acq_params
   default: 0.434244
   description: |-
-    the ratio of the field to the current at the center of the Z0 shim, in G/A
+    Change in the field at the center of the Z0 shim per applied voltage, in
+    G/V.
+z0_max_voltage_V:
+  type: float
+  section: current_params
+  default: 5.71
+  description: Maximum useful voltage for the positive-only Z0 shim coil.
+  description: |-
+    Fraction of the Z0 voltage or current limit at which the shim is treated
+    as unable to supply additional field.
+z0_midpoint_setting_G:
+  type: float
+  section: current_params
+  default: 1.0
+  description: |-
+    When we need to push the field down, we want to target a required Z0
+    current at the approximate midpoint of our adjustable range.
+    This is the field supplied by the Z0 at that midpoint.
+main_field_resolution_G:
+  type: float
+  section: current_params
+  default: 0.4
+  description: |-
+    Main-field resolution in G.
+magnet_current_step_size_A:
+  type: float
+  section: current_params
+  default: 0.5
+  description: When executing a ramp, what is the approximate step size (in A) that we should use?
 magnet_settle_long:
   type: float
   section: current_params
